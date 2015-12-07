@@ -17,7 +17,9 @@ from skimage.segmentation import find_boundaries
 from skimage import draw
 from skimage.graph import route_through_array
 from scipy import ndimage as ndi
+from scipy.spatial.distance  import cdist,pdist,squareform
 
+import itertools
 
 #decorator to kill cache
 def cache_clear(f):
@@ -284,6 +286,18 @@ class lnPi(np.ma.MaskedArray):
         N = (self.pi_norm*self.coords).reshape(self.ndim,-1).sum(axis=-1).data
         return N
 
+
+    # @cache_prop
+    # def Nvar2(self):
+    #     NSq = ( self.pi_norm * (self.coords)**2 ).reshape(self.ndim,-1).sum(axis=-1).data
+    #     return NSq - (self.Nave)**2
+
+    @cache_prop
+    def Nvar(self):
+        x = (self.coords - self.Nave.reshape((-1,) + (1,)*self.ndim))**2
+        return ( self.pi_norm * x ).reshape(self.ndim,-1).sum(axis=-1).data
+        
+
     @property
     def molfrac(self):
         n = self.Nave
@@ -437,7 +451,7 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #segmentation
-    def _get_labels(self,indices,structure='set',size=3,footprint=None,**kwargs):
+    def _get_labels(self,indices,structure='set',size=3,footprint=None,smooth=False,smooth_kwargs={},**kwargs):
         """
         get labels from watershed segmentation
 
@@ -453,10 +467,36 @@ class lnPi(np.ma.MaskedArray):
          if None, use default.
          if 'set', use np.one((3,)*data.ndim)
          else, use structure
+
+        size : size parameter to _labels_watershed
+
+        footprint : footprint parameter to _labels_watershed
+
+        smooth : bool (Default False)
+            if True, use smoothed data for label creation
+
+        smooth_kwargs : dict
+            arguments to self.smooth()
+
+        **kwargs : dict
+            arguments to _labels_watershed
+
+        Returns
+        -------
+        labels
         """
 
+        
+        
         markers,n = _indices_to_markers(indices,self.shape,structure)
-        labels = _labels_watershed(-self.data,markers,mask=(~self.mask),size=size,footprint=footprint,**kwargs)
+
+
+        if smooth:
+            xx = self.Pad().smooth(**smooth_kwargs)
+        else:
+            xx = self
+        
+        labels = _labels_watershed(-xx.data,markers,mask=(~self.mask),size=size,footprint=footprint,**kwargs)
 
         return labels
 
@@ -479,22 +519,23 @@ class lnPi(np.ma.MaskedArray):
         return self._get_list_regmask(regmask,SegLenOne)
     
 
-    def _get_list_indices(self,indices,SegLenOne=False,labels_kwargs={},masks_kwargs={}):
+    def _get_list_indices(self,indices,SegLenOne=False,smooth=False,smooth_kwargs={},labels_kwargs={},masks_kwargs={}):
         """
         create list of lnpi's from indices
         """
         if not SegLenOne and len(indices[0])==1:
             return None#[self]
         else:
-            labels = self._get_labels(indices,**labels_kwargs)
+            labels = self._get_labels(indices,smooth=smooth,smooth_kwargs=smooth_kwargs,**labels_kwargs)
             return self._get_list_labels(labels,SegLenOne,**masks_kwargs)
 
 
     def get_phases(self,indices=None,regmask=None,labels=None,
                    get=False,
                    SegLenOne=False,
-                   sort=True,comp=0,
                    phases=True,
+                   smooth=False,
+                   smooth_kwargs={},
                    argmax_kwargs={},
                    labels_kwargs={},
                    masks_kwargs={},**kwargs):
@@ -520,11 +561,6 @@ class lnPi(np.ma.MaskedArray):
         SegLenOne : bool (Default False)
           if False and nphase==1, phases=[self]
 
-        sort : bool (Default True)
-         if True, sort output
-        
-        comp : int (Default 0)
-         component to sort along
 
         phases: bool (Default True)
          if True, return lnPi_phases object
@@ -537,6 +573,13 @@ class lnPi(np.ma.MaskedArray):
         masks_kwargs : dict of optoins to labels_to_masks
 
         **kwargs : extra kwargs to creation of new lnpi objects
+
+
+        smooth : bool (Default False)
+            if True, and using indices, use smooth lnPi for determining labels
+
+        smooth_kwargs : dict
+            arguments to smooth
 
         Returns
         -------
@@ -558,13 +601,12 @@ class lnPi(np.ma.MaskedArray):
         elif labels is not None:
             output = self._get_list_labels(labels,SegLenOne,**mask_kwargs)
         elif indices is not None:
-            output = self._get_list_indices(indices,SegLenOne,labels_kwargs,masks_kwargs)
+            output = self._get_list_indices(indices,SegLenOne=SegLenOne,smooth=smooth,
+                                            smooth_kwargs=smooth_kwargs,
+                                            labels_kwargs=labels_kwargs,
+                                            masks_kwargs=masks_kwargs)
         else:
             raise ValueError('must specify one of regmask, labels, indices')
-
-
-        if output is not None and sort:
-            output = sort_lnPis(output,comp)    
 
 
         if phases:
@@ -572,6 +614,15 @@ class lnPi(np.ma.MaskedArray):
         else:
             return output
 
+
+
+    def to_phases(self,argmax_kwargs={},phases_kwargs={},ftag_phases=tag_phases_binary):
+        """
+        return lnPi_phases object with placeholders for phases/argmax
+        """
+
+        return lnPi_phases(self,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,
+                           ftag_phases=ftag_phases)
 
 
         
@@ -653,9 +704,15 @@ class lnPi(np.ma.MaskedArray):
         beta : float
             inverse temperature
 
-        ZeroMax : bool
+        ZeroMax : bool (Default False)
 
-        Pad : bool
+        Pad : bool (Default False)
+        
+        phases : bool (Default False)
+            if True, return lnPi_phases(base=self.reweight())
+
+        phases : dict
+        
             
         Returns
         -------
@@ -672,11 +729,11 @@ class lnPi(np.ma.MaskedArray):
 
 
         Z.adjust(ZeroMax=ZeroMax,Pad=Pad,inplace=True)
-                
+
         return Z
 
 
-    
+        
     def new_mask(self,mask=None,**kwargs):
         return lnPi(self.data,mask=mask,mu=self.mu,num_phases_max=self.num_phases_max,**kwargs)
 
@@ -858,6 +915,8 @@ class lnPi_phases(object):
         self.phases = phases
         self.argmax = argmax
 
+        if ftag_phases is None:
+            ftag_phases = tag_phases_binary
         self._ftag_phases = ftag_phases
 
         
@@ -928,14 +987,23 @@ class lnPi_phases(object):
     def phaseIDs(self):
         return self._ftag_phases(self)
 
-
+    
     def phaseIDs_to_indicies(self,IDs):
         """
         convert IDs to indicies in self.phases
         """
         l = list(self.phaseIDs)
         return np.array([l.index(i) for i in IDs])
- 
+
+
+    @property
+    def has_phaseIDs(self):
+        """
+        return array of bools which are True if index=phaseID is present
+        """
+        b = np.zeros(self.base.num_phases_max,dtype=bool)
+        b[self.phaseIDs] = True
+        return b
 
     def __len__(self):
         return len(self.argmax[0])
@@ -983,8 +1051,17 @@ class lnPi_phases(object):
             Omegas[i] = x
         return Omegas
 
+    @property
+    def Nvars(self):
+        return np.array([x.Nvar for x in self.phases])
 
-        
+    @property
+    def Nvars_phaseIDs(self):
+        ret = np.empty((self.base.num_phases_max,self.base.ndim),dtype=float)*np.nan
+
+        ret[self.phaseIDs,:] = self.Nvars
+        return ret
+    
 
     @property
     def pis(self):
@@ -1078,50 +1155,99 @@ class lnPi_phases(object):
         return b
 
 
-    def betaEmin(self,pair=(0,1)):
+    @property
+    def betaEmin(self):
         """
-        value of beta E at minima
-        
-        beta E_min ~ -max{lnPi}
+        betaE_min = -max{lnPi}
         """
+        return -np.array([p.max() for p in self.phases])
+    
 
-        return -self.base[self.argmax].filled()[np.asarray(pair)]
-
-
-    def betaEtransition(self,pair=(0,1),**kwargs):
+    def betaEtransition_pair(self,pair=(0,1),**kwargs):
         """
-        Transition point energy.  
-
         minimum value of energy at boundary between phases
         beta E_boundary = - max{lnPi}_{along boundary}
+
+        if no boundary found between phases (i.e., they are not connected),
+        then return vmax
         """
 
         b = self._get_boundaries(pair,**kwargs)
 
+        if b.sum()==0:
+            return np.nan
+        else:
+            return -(self.base[b].max())
 
-        return -(self.base[b].max())
 
-
-    def DeltabetaE(self,pair=(0,1),**kwargs):
+    def betaEtransition_matrix(self,**kwargs):
         """
-        betaE_transition - betaEmin
+        Transition point energy for all pairs
+
+        out[i,j] = transition energy between phase[i] and phase[j]
+        """
+        out = np.empty((self.nphase,)*2,dtype=float)*np.nan
+
+        for i,j in itertools.combinations(range(self.nphase),2):
+            x = self.betaEtransition_pair((i,j),**kwargs)
+            out[i,j] = x
+            out[j,i] = x
+
+        return out
+        
+
+    def DeltabetaE_matrix(self,vmax=1e20,**kwargs):
+        """
+        out[i,j]=DeltaE between phase[i] and phase[j]
+
+        if no transition between (i,j) , out[i,j] = vmax
+        """
+        out = self.betaEtransition_matrix(**kwargs) - \
+             self.betaEmin[:,None]
+
+        #where nan and not on diagonal, set to vmax
+        out[np.isnan(out)] = vmax
+        np.fill_diagonal(out,np.nan)
+
+        return out
+
+
+    def DeltabetaE_matrix_phaseIDs(self,vmin=0.0,vmax=1e20,**kwargs):
+        """
+        out[i,j] =Delta E between phaseID==i and phaseID==j
+
+        if i does not exist, then out[i,j] = vmin
+        if not transition to j, then out[i,j] = vmax
         """
         
-        return self.betaEtransition(pair,**kwargs) - self.betaEmin(pair)
+        out = np.empty((self.base.num_phases_max,)*2,dtype=float)*np.nan
+
+        phaseIDs = self.phaseIDs
+        dE = self.DeltabetaE_matrix(vmax,**kwargs)
+
+        for i,ID in enumerate(phaseIDs):
+            out[ID,phaseIDs] = dE[i,:]
+
+        #where nan fill in with vmax
+        out[np.isnan(out)] = vmax
+
+        #where phase does not exist, fill with vmin
+        has_phaseIDs = self.has_phaseIDs
+        out[~has_phaseIDs,:] = vmin
+
+        np.fill_diagonal(out,np.nan)
+
+        return out
 
 
-    def DeltabetaE_phaseIDs(self,IDs=(0,1),**kwargs):
+
+    def DeltabetaE_phaseIDs(self,vmin=0.0,vmax=1e20,**kwargs):
         """
-        find delta E between basin and transition points
+        minimum transition energy from phaseID to any other phase
+        """
 
-        IDs = pairID of each phaseIDs
+        return np.nanmin(self.DeltabetaE_matrix_phaseIDs(vmin,vmax,**kwargs),axis=-1)
         
-        return in order of IDs
-        """
-
-        pair = self.phaseIDs_to_indicies(IDs)
-
-        return self.DeltabetaE(pair,**kwargs)
         
 
 
@@ -1159,6 +1285,26 @@ class lnPi_phases(object):
         i = tuple(np.array(i).T)
 
         return -(self.base[i].min())
+
+
+    def sort_by_phaseIDs(self,inplace=False):
+        """
+        sort self so that self.phaseIDs are increasing
+        """
+
+        idx = np.argsort(self.phaseIDs)
+        argmax = tuple(x[idx] for x in self.argmax)
+        argmax = tuple(np.array(self.argmax).T[idx,:].T)
+        L = [self._phases[i] for i in idx]
+
+        if inplace:
+            self.argmax = argmax
+            self.phases = L
+        else:
+            return lnPi_phases(self.base,L,argmax,
+                               self._argmax_kwargs,
+                               self._phases_kwargs,
+                               self._ftag_phases)
 
 
     ##################################################
@@ -1243,29 +1389,48 @@ class lnPi_collection(object):
         self._lnpis = self._parse_lnpis(val)
 
 
-    def append(self,val):
-        self._lnpis.append(self._parse_lnpi(val))
+    def append(self,val,unique=True,decimals=5):
+
+        if unique:
+           if self._unique_mus(val.mu,decimals):
+               self._lnpis.append(self._parse_lnpi(val))
+        else:
+            self._lnpis.append(self._parse_lnpi(val))
 
 
-    def extend(self,x):
+    def extend(self,x,unique=True,decimals=5):
+
+        if isinstance(x,lnPi_collection):
+            x = x._lnpis
+        
         if isinstance(x,list):
+            if unique:
+                x = self._unique_list(x,decimals)
             self._lnpis.extend(self._parse_lnpis(x))
-        elif isinstance(x,lnPi_collection):
-            self._lnpis.extend(x._lnpis)
         else:
             raise ValueError('only lists or lnPi_collections can be added')
 
 
-    def extend_by_mu(self,ref,mu,x,**kwargs):
+    def extend_by_mu_iter(self,ref,mus,unique=True,decimals=5,**kwargs):
+        """
+        extend by mus
+        """
+        if unique:
+            mus = self._unique_mus(mus,decimals=decimals)
+
+        new = lnPi_collection.from_mu_iter(ref,mus,
+                                           self._argmax_kwargs,
+                                           self._phases_kwargs,
+                                           self._ftag_phases,**kwargs)
+        self.extend(new,unique=False)
+
+    def extend_by_mu(self,ref,mu,x,unique=True,decimals=5,**kwargs):
         """
         extend self my mu values
         """
 
-        new = lnPi_collection.from_mu(ref,mu,x,
-                                      self._argmax_kwargs,
-                                      self._phases_kwargs,
-                                      self._ftag_phases,**kwargs)
-        self.extend(new)
+        mus = get_mu_iter(mu,x)
+        self.extend_by_mu_iter(ref,mus,unique,decimals,**kwargs)
         
 
     def __add__(self,x):
@@ -1293,11 +1458,162 @@ class lnPi_collection(object):
             self._lnpis = L
         else:
             return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._ftag_phases)
+
+
+    def _unique_list(self,L,decimals=5):
+        """
+        limit list such that output[i].mu not in self.mus
+        """
+
+        tol = 0.5*10**(-decimals)
+
+        mus = np.array([x.mu for x in L])
+        new = np.atleast_2d(mus)
+
+        msk = np.all(cdist(self.mus,new)>tol,axis=0)
+
+        return [x for x,m in zip(L,msk) if m]
+
     
+
+    def _unique_mus(self,mus,decimals=5):
+        """
+        return only those mus not already in self
         
+        Parameters
+        ----------
+        mus : arrray of new mus 
+            shape is (ncomp,) or (m,ncomp). make 2d if not already
+
+        decimals : int (Default 5)
+            consider mu replicated if dist between any mu already in 
+            self and mus[i] <0.5*10**(-decimals)
+        
+
+        Returns
+        -------
+        output : bool or array of bools
+        """
+
+        tol = 0.5*10**(-decimals)
+        
+
+        mus = np.asarray(mus)
+        new = np.atleast_2d(mus)
+
+        msk = np.all(cdist(self.mus,new)>tol,axis=0)
+
+        return new[msk,:]
+
+    def drop_duplicates(self,decimals=5):
+        """
+        drop doubles of given mu
+        """
+        tol = 0.5*10**(-decimals)
+        
+        mus = self.mus
+        msk = squareform(pdist(mus))<tol
+        np.fill_diagonal(msk,False)
+
+        a,b = np.where(msk)
+
+        b = b[b>a]
+
+        keep = np.ones(mus.shape[0],dtype=bool)
+        keep[b] = False
+
+        self._lnpis = [x for x,m in zip(self._lnpis,keep) if m]
+
+
+
+
+    def extend_mus_right(self,ref,ID,mu_in,efac=1.0,n=20,dmu=0.5,sort=True,comp=0,**kwargs):
+        """
+        extend a phase down
+        """
+
+        mu_idx = mu_in.index(None)
+
+        has_phaseIDs = self.has_phaseIDs
+
+        msk = has_phaseIDs[:,ID]
+
+        
+
+        w = np.where(msk)[0]
+
+
+        i = w[-1]
+        left = None
+        while i>=0:
+            if self[i].DeltabetaE_phaseIDs()[ID]>efac:
+                left=i
+                break
+            i = i -1
+
+        if left is None:
+            left = self[0].mu[mu_idx] - dmu
+        else:
+            left = self[left].mu[mu_idx]
+
+        right = w[-1]+1
+        if right>=len(self):
+            right = self[-1].mu[mu_idx] + dmu
+        else:
+            right = self[right].mu[mu_idx]
+
+        x = np.linspace(left,right,n)
+
+        #return x
+        self.extend_by_mu(ref,mu_in,x,**kwargs)
+
+        if sort:
+            self.sort_by_mu(comp,inplace=True)
+
+
+    def extend_mus_left(self,ref,ID,mu_in,efac=1.0,n=20,dmu=0.5,sort=True,comp=0,**kwargs):
+        mu_idx = mu_in.index(None)
+        
+        has_phaseIDs = self.has_phaseIDs
+
+        msk = has_phaseIDs[:,ID]
+
+        w = np.where(msk)[0]
+
+
+        i = w[0]
+        right = None
+        while i<len(self):
+            if self[i].DeltabetaE_phaseIDs()[ID]>efac:
+                right=i
+                break
+            i = i + 1
+
+        if right is None:
+            right = self[-1].mu[mu_idx] + dmu
+        else:
+            right = self[right].mu[mu_idx]
+
+        left = w[0]-1
+        if left<0:
+            left = self[0].mu[mu_idx] - dmu
+        else:
+            left = self[left].mu[mu_idx]
+
+        x = np.linspace(left,right,n)
+
+        #return x
+        self.extend_by_mu(ref,mu_in,x,**kwargs)
+
+        if sort:
+            self.sort_by_mu(comp,inplace=True)
+
+        
+
+
     
     def __getitem__(self,i):
-        if type(i) is int:
+        if isinstance(i,np.int):
             return self.lnpis[i]
         
         elif type(i) is slice:
@@ -1321,7 +1637,7 @@ class lnPi_collection(object):
                                self._argmax_kwargs,
                                self._phases_kwargs)
 
-
+    
 
     
 
@@ -1338,6 +1654,10 @@ class lnPi_collection(object):
 
 
     @property
+    def has_phaseIDs(self):
+        return np.array([x.has_phaseIDs for x in self.lnpis])
+    
+    @property
     def molfracs(self):
         return [x.molfracs for x in self.lnpis]
 
@@ -1351,24 +1671,24 @@ class lnPi_collection(object):
 
 
 
-    def DeltabetaE(self,pair=(0,1),**kwargs):
-        return np.array([x.DeltabetaE(pair,**kwargs) for x in self])
+    # def DeltabetaE(self,pair=(0,1),**kwargs):
+    #     return np.array([x.DeltabetaE(pair,**kwargs) for x in self])
 
-    def DeltabetaE_phaseIDs(self,IDs=(0,1),**kwargs):
-        return np.array([x.DeltabetaE_phaseIDs(IDs,**kwargs) for x in self])
+    def DeltabetaE_phaseIDs(self,vmin=0.0,vmax=1e20,**kwargs):
+        return np.array([x.DeltabetaE_phaseIDs(vmin,vmax,**kwargs) for x in self])
     
     
 
-    def get_binodal_interp(self,mu_axis,phases=(0,1)):
+    def get_binodal_interp(self,mu_axis,IDs=(0,1)):
         """
         get position of Omega[i]==Omega[j] by interpolation
         """
         
-        idx = np.asarray(phases)
+        idx = np.asarray(IDs)
 
         assert(len(idx)==2)
         
-        x = self.Omegas_padded()[:,idx]
+        x = self.Omegas_phaseIDs()[:,idx]
         msk = np.prod(~np.isnan(x),axis=1).astype(bool)
         assert(msk.sum()>0)
 
@@ -1382,8 +1702,8 @@ class lnPi_collection(object):
         return np.interp(0.0,diff[i],mu[i])
 
 
-    def get_binodal_solve(self,mu_axis,phases=(0,1)):
-        pass
+    # def get_binodal_solve(self,mu_axis,phases=(0,1)):
+    #     pass
     
     
     ##################################################
@@ -1490,7 +1810,7 @@ class lnPi_collection(object):
 from scipy import optimize
 
 def get_binodal_point(reference,mu_in,a,b,
-                      phases=(0,1),
+                      IDs=(0,1),
                       reweight_kwargs={},
                       phases_kwargs={},
                       **kwargs):
@@ -1500,14 +1820,15 @@ def get_binodal_point(reference,mu_in,a,b,
     
     idx = mu_in.index(None)
     reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
-
     phases_kwargs = dict(dict(get=True),**phases_kwargs)
     
     def f(x):
         mu = mu_in[:]
         mu[idx] = x
         c = reference.reweight(mu,**reweight_kwargs).get_phases(**phases_kwargs)
-        return c[phases[0]].Omega() - c[phases[1]].Omega()
+        Omegas = c.Omegas_phaseIDs()
+        
+        return Omegas[IDs[0]] - Omegas[IDs[1]]
     
     xx = optimize.brentq(f,a,b,**kwargs)
     
@@ -1517,8 +1838,8 @@ def get_binodal_point(reference,mu_in,a,b,
     return mu,res
 
 
-def get_spinodal_point(ref,mu_in,a,b,
-                       phases=(0,1)
+# def get_spinodal_point(ref,mu_in,a,b,
+#                        phases=(0,1)
             
 
 
