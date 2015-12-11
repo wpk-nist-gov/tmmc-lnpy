@@ -83,7 +83,7 @@ def _initial_bracket_spinodal_right(C,ID,mu_in,efac=1.0,
     
     if left is None:
         #need to find a new value mu bounding thing
-        new_mu = mu_in
+        new_mu = mu_in[:]
         new_mu[mu_idx] = C[w[0]].mu[mu_idx]
         new_mu = np.asarray(new_mu)
         
@@ -114,7 +114,7 @@ def _initial_bracket_spinodal_right(C,ID,mu_in,efac=1.0,
         if w[-1]+1<len(C):
             right = C[w[-1]+1]
         else:
-            new_mu = mu_in
+            new_mu = mu_in[:]
             new_mu[mu_idx] = C[w[-1]].mu[mu_idx]
             new_mu = np.asarray(new_mu)
 
@@ -184,44 +184,52 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
     left = L
     right = R
 
+    
 
-
-    close_kwargs = dict(dict(atol=1e-4),**close_kwargs)
+    close_kwargs = dict(dict(atol=1e-5),**close_kwargs)
     
     for i in range(nmax):
         v = left.DeltabetaE_phaseIDs()[ID]
-        
         if v<vmax and v>efac:
             doneLeft=True
-        vL = v
             
         v = right.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
         if v>vmin and v<efac:
             doneRight=True
             
-        vR = v
 
-        #must be done left to have a solution
-        if doneLeft:
 
-            if doneRight:
-                r = optimize.zeros.RootResults(root=None,iterations=i,function_calls=i,flag=1)
+        #########
+        #checks
+        if doneLeft and doneRight:
+            #find bracket
+            r = optimize.zeros.RootResults(root=None,iterations=i,function_calls=i,flag=1)
+            return left,right,r
+
+
+        ########
+        #converged?
+        if np.allclose(left.mu,right.mu,**close_kwargs):
+            #we've reached a breaking point
+            if doneLeft:
+                #can't find a lower bound to efac, just return where we're at
+                r = optimize.zeros.RootResults(root=left.mu,iterations=i+1,function_calls=i,flag=0)
+                setattr(r,'left',left)
+                setattr(r,'right',right)
+                setattr(r,'info','all close and doneLeft')
                 return left,right,r
 
+            #elif not doneLeft and not doneRight:
             else:
-                #check relative difference between left and right
-                if np.allclose(left.mu,right.mu,**close_kwargs):
-                    #left is good, but couldn't get small enough, but converged anyway
-                    r = optimize.zeros.RootResults(root=left.mu,iterations=i,function_calls=i,flag=0)
-                    setattr(r,'left',left)
-                    setattr(r,'right',right)
-                    
-                    return left,right,r
+                #all close, and no good on either end -> no spinodal
+                r = optimize.zeros.RootResults(root=None,iterations=i+1,function_calls=i,flag=1)
+                setattr(r,'left',left)
+                setattr(r,'right',right)
+                setattr(r,'doneLeft',doneLeft)
+                setattr(r,'doneRight',doneRight)
+                setattr(r,'info','all close and not done Left')
+                return None,None,r
 
-            
-
-        
-            
         mu_mid = 0.5*(left.mu+right.mu)
         #print mu_mid
         mid = ref.reweight(mu_mid,**reweight_kwargs).to_phases(
@@ -235,16 +243,17 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
             left = mid
 
 
+    print ID
+    print left.mu
+    print right.mu
 
-    #if got this far check to see if got anywhere
-    if not doneLeft and not doneRight:
-        if np.allclose(left.mu,right.mu,**close_kwargs):
-            r = optimize.zeros.RootResults(root=None,iterations=i+1,function_calls=i+1,flag=1)
-            setattr(r,'left',left)
-            setattr(r,'right',right)
-            
-            return None,None,r
-            
+    print left.DeltabetaE_phaseIDs()
+    print right.DeltabetaE_phaseIDs()
+
+    print doneLeft
+    print doneRight
+    print np.allclose(left.mu,right.mu)
+
     raise RuntimeError('did not finish')
         
 
@@ -257,27 +266,28 @@ def _solve_spinodal(ref,ID,mu_in,a,b,efac=1.0,
                 ftag_phases = None,
                 DeltabetaE_kwargs={},
                 **kwargs):
-    
+
     idx = mu_in.index(None)
     reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
         
-    def f(x,cL):
+    def f(x):
         mu = mu_in[:]
         mu[idx] = x
         c = ref.reweight(mu,**reweight_kwargs).to_phases(
             argmax_kwargs,phases_kwargs,ftag_phases)
-        cL[0] = c
+
+        f.lnpi = c
         
+        return c.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID] - efac
 
-        ret = c.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
-        return ret - efac
+    xx,r = optimize.brentq(f,a,b,full_output=True,**kwargs)
 
-    cL = [None]
-    xx,r = optimize.brentq(f,a,b,args=(cL,),full_output=True,**kwargs)
-    
+    r.residual = f(xx)
+
+
     mu = mu_in[:]
     mu[idx] = xx
-    return mu,r,cL[0]
+    return mu,r,f.lnpi
 
 
 def _get_step(C,ID,**kwargs):
@@ -396,7 +406,8 @@ def get_spinodal(C,ID,efac=1.0,
     mu_idx = np.where(msk)[0][0]
     mu_in = list(C[0].mu[:])
     mu_in[mu_idx] = None
-    
+
+
 
 
     #get initial bracket
@@ -404,13 +415,14 @@ def get_spinodal(C,ID,efac=1.0,
                                           dmu=dmu,vmax=vmax,ntry=ntry,step=step,
                                           reweight_kwargs=reweight_kwargs,
                                           DeltabetaE_kwargs=DeltabetaE_kwargs)
-
+    
 
     left,right,rr = _refine_bracket_spinodal_right(L,R,ID,efac=efac,nmax=nmax,
                                                   vmin=vmin,vmax=vmax,
                                                   reweight_kwargs=reweight_kwargs,
                                                   DeltabetaE_kwargs=DeltabetaE_kwargs)
 
+    
     if left is None and right is None:
         #no spinodal found and left and right are close
         spin = None

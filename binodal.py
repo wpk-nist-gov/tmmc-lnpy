@@ -51,26 +51,28 @@ def get_binodal_point(ref,IDs,muA,muB,
 
     assert len(IDs)==2
 
+    muA = np.asarray(muA)
+    muB = np.asarray(muB)
+    
     
     msk = muA != muB
     if msk.sum()!=1:
         raise ValueError('only one value can vary between muA and muB')
 
     mu_idx = np.where(msk)[0][0]
-    mu_in = muA[:]
+    mu_in = muA.copy()
 
     a,b = sorted([x[mu_idx] for x in [muA,muB]])
     
     reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
 
-    cL = [None]
     
     def f(x):
         mu = mu_in[:]
         mu[mu_idx] = x
         c = ref.reweight(mu,**reweight_kwargs).to_phases(
             argmax_kwargs,phases_kwargs,ftag_phases)
-        cL[0] = c
+        f.lnpi = c
         
         Omegas = c.Omegas_phaseIDs()
         
@@ -78,10 +80,11 @@ def get_binodal_point(ref,IDs,muA,muB,
 
 
     xx,r = optimize.brentq(f,a,b,full_output=True,**kwargs)
-    
+
+    r.residual = f(xx)
 
     if full_output:
-        return cL[0],r
+        return f.lnpi,r
     else:
-        return cL[0]
+        return f.lnpi
 

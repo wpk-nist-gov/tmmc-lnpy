@@ -102,20 +102,6 @@ def _get_shift(shape,mu):
     return shift
 
 
-# def _get_coords(shape,indexing='ij'):
-#     args=tuple([np.arange(s) for s in shape])
-#     coords = np.meshgrid(*args,indexing=indexing)
-#     return coords
-
-
-# _CACHE_ = {}
-
-# def _get_cache_coords(shape):
-#     if 'coords' not in _CACHE_ or shape!=_CACHE_['coords'].shape:
-#         _CACHE_['coords'] = np.array(_get_coords(shape,indexing='ij'))
-#     return _CACHE_['coords']
-        
-
 class lnPi(np.ma.MaskedArray):
     """
     class to store masked ln[Pi(n0,n1,...)].
@@ -378,7 +364,7 @@ class lnPi(np.ma.MaskedArray):
         return x,n
 
 
-    def argmax_local(self,min_distance=[10,15,20,25,30],smooth='fail',smooth_kwargs={},info=False,**kwargs):
+    def argmax_local(self,min_distance=[5,10,15,20,25],smooth='fail',smooth_kwargs={},info=False,**kwargs):
         """
         find local max with fall backs min_distance and filter
 
@@ -443,7 +429,7 @@ class lnPi(np.ma.MaskedArray):
                         return x
 
         #if got here than error
-        raise RuntimeError('%i maxima found greater than %i'%(n,num_phases_max))    
+        raise RuntimeError('%i maxima found greater than %i at mu %s'%(n,num_phases_max,repr(self.mu)))    
 
 
     
@@ -616,7 +602,7 @@ class lnPi(np.ma.MaskedArray):
 
 
 
-    def to_phases(self,argmax_kwargs={},phases_kwargs={},ftag_phases=tag_phases_binary):
+    def to_phases(self,argmax_kwargs={},phases_kwargs={},ftag_phases=None):
         """
         return lnPi_phases object with placeholders for phases/argmax
         """
@@ -652,7 +638,19 @@ class lnPi(np.ma.MaskedArray):
         """
         pad self.data rows and columns by last value
         """
-        data = _interp_matrix(self.data,self.mask)
+        if self.ndim==1:
+
+            msk = self.mask
+            last = self[~msk][-1]
+
+            data = self.data.copy()
+            data[msk] = last
+
+        elif self.ndim==2:
+            data = _interp_matrix(self.data,self.mask)
+
+        else:
+            raise ValueError('padding only implemented for ndim<=2')
         
             
         if inplace:
@@ -880,7 +878,7 @@ class lnPi_phases(object):
     def __init__(self,base,phases='get',argmax='get',
                  argmax_kwargs={},
                  phases_kwargs={},
-                 ftag_phases=tag_phases_binary):
+                 ftag_phases=None):
         """
         object to store base and phases
 
@@ -1038,7 +1036,21 @@ class lnPi_phases(object):
         for i,mf in zip(self.phaseIDs,self.molfracs):
             molfrac[i,:] = mf
         return molfrac
-         
+
+
+    @property
+    def Naves(self):
+        return np.array([x.Nave for x in self])
+
+
+    @property
+    def Naves_phaseIDs(self):
+        out = np.zeros((self.base.num_phases_max,self.base.ndim),dtype=float)*np.nan
+
+        for i,x in zip(self.phaseIDs,self.Naves):
+            out[i,:] = x
+        return out
+
 
     def Omegas(self,zval=None):
         return np.array([x.Omega(zval)  for x in self])
@@ -1075,41 +1087,6 @@ class lnPi_phases(object):
     def mu(self):
         return self.base.mu
 
-
-
-    
-
-
-
-
-    # ##################################################
-    # #fill
-    # def set_argmax(self,value='get',**kwargs):
-    #     """
-    #     set argmax by value
-    #     """
-    #     if value=='get':
-    #         value = self.base.argmax_local(**kwargs)
-
-        
-    #     self.argmax = value
-    #     self._check_other()
-        
-
-    # def set_phases(self,value='get',**kwargs):
-    #     """
-    #     set phases by value
-    #     """
-    #     if value=='get':
-    #         value = self.base._get_list_indices(self.argmax,**kwargs)
-
-    #     self.phases = value
-    #     self._check_phases()
-
-
-    # def set_all(self,argmax='get',phases='get',argmax_kwargs={},phases_kwargs={}):
-    #     self.fill_argmax(indices,**argmax_kwargs)
-    #     self.fill_phases(indices,**phases_kwargs)
     
 
 
@@ -1146,12 +1123,13 @@ class lnPi_phases(object):
 
         for i in pair:
             p = self.phases[i]
-            msk = ~p.mask
-            b.append(find_boundaries(msk.astype(int),mode=mode,connectivity=connectivity,**kwargs))
+            msk = np.atleast_2d( (~p.mask).astype(int) ) 
+            b.append(find_boundaries(msk,mode=mode,connectivity=connectivity,**kwargs))
 
-        b = np.prod(b,axis=0).astype(bool)
+        b = np.prod(b,axis=0).astype(bool).reshape(self.base.shape)
         b *= ~self.base.mask
 
+        
         return b
 
 
@@ -1257,7 +1235,7 @@ class lnPi_phases(object):
         find transition energy from line connecting location of maxima
         """
 
-        args = tuple(np.array(self.argmax).T.flatten())
+        args = tuple(np.array(self.argmax).T[pair,:].flatten())
 
         img = np.zeros(self.base.shape,dtype=int)
         img[draw.line(*args)] = 1
@@ -1315,6 +1293,160 @@ class lnPi_phases(object):
         else:
             x = self.nphase
         return 'lnPi_phases: nphase=%s, mu=%s'%(x,self.base.mu)
+
+
+
+    
+    # def merge_phases(self,efac=1.0,vmax=1e20,inplace=False,**kwargs):
+    #     """
+    #     if DeltabetaE from i->j <efac, then merge those phases into
+    #     a single phase
+    #     """
+    #     mat = self.DeltabetaE_matrix(vmax,**kwargs)
+
+    #     keep = np.any(mat>=efac,axis=-1)
+
+    #     #convert to array
+    #     amax = np.array(self.argmax).T
+
+        
+    #     if keep.sum()==0:
+    #         #dropping all
+    #         #pick the largest argmax
+    #         idx = self.base[self.argmax].argmax()
+    #         new_amax = amax[idx:idx+1]
+    #         phases = None
+
+    #     else:
+    #         new_amax = amax[keep]
+    #         phases = 'get'
+
+
+    #     #convert back to indices
+    #     new_argmax = tuple(new_amax.T)
+
+            
+    #     if inplace:
+    #         self.argmax = new_argmax
+    #         self.phases = phases
+
+    #     else:
+    #         return lnPi_phases(self.base,phases,new_argmax,
+    #                            self._argmax_kwargs,
+    #                            self._phases_kwargs,
+    #                            self._ftag_phases)
+
+
+    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
+
+        if inplace:
+            t = self
+        else:
+            t = lnPi_phases(self.base,self._phases,self.argmax,
+                            self._argmax_kwargs,
+                            self._phases_kwargs,
+                            self._ftag_phases)
+            
+        
+
+        while True:
+            if t.nphase == 1:
+                break
+
+            #check out DeltabetaE
+            mat = t.DeltabetaE_matrix(vmax,**kwargs)
+            #find min value
+            min_val = np.nanmin(mat)
+
+            #check done
+            if min_val>=efac-tol:
+                break
+
+            #else, we have some work to do.
+            #find index of min
+            idx = np.where(mat==min_val)
+            if len(idx[0])!=1:
+                raise ValueError('more than one min found')
+            #from kill to keep
+            idx_kill,idx_keep = [x[0] for x in idx]
+
+            t._merge_pair(idx_keep,idx_kill,inplace=True)
+
+
+        if not inplace:
+            return t
+                    
+            
+            # #new argmax
+            # t.argmax = tuple(np.delete(x,idx_kill for x in t.argmax))
+
+            # #new phases
+            # if t.nphase == 2:
+            #     #only have one phase left, so:
+            #     t.phases = None
+
+            # else:
+            #     #new mask:
+            #     mask = t[idx_keep].mask & t[idx_kill].mask
+            #     tnew = t[idx_keep].new_mask(new_mask)
+
+            #     #add in new
+            #     t._phases[idx_keep] = tnew
+            #     #pop old
+            #     t._phases.pop(idx_kill)
+            
+            
+            
+            
+    def _merge_pair(self,idx_keep,idx_kill,inplace=False):
+        """
+        merge idx_kill to idx_keep
+        """
+
+        #new argmax:
+        argmax = tuple(np.delete(x,idx_kill) for x in self.argmax)
+                
+        if self.nphase == 2:
+            #will end up with one phase only
+            phases = None
+        else:
+            #new mask
+            mask = self[idx_keep].mask & self[idx_kill].mask
+
+            tnew = self[idx_keep].new_mask(mask)
+            
+            phases = self._phases[:]
+            phases[idx_keep] = tnew
+            phases.pop(idx_kill)
+
+
+        if inplace:
+            self.phases = phases
+            self.argmax = argmax
+
+        else:
+            return lnPi_phases(self.base,phases,argmax,
+                               self._argmax_kwargs,
+                               self._phases_kwargs,
+                               self._ftag_phases)
+                               
+            
+        
+            
+
+
+        
+        
+
+
+        
+
+
+        
+            
+        
+
+            
         
         
 
@@ -1354,7 +1486,7 @@ class lnPi_collection(object):
         elif type(x) is lnPi_phases:
             return x
         else:
-            raise ValueError('bad value while parsing element %i'%(i))
+            raise ValueError('bad value while parsing element %s'%(type(x)))
             
     def _parse_lnpis(self,lnpis):
         """
@@ -1637,6 +1769,15 @@ class lnPi_collection(object):
                                self._argmax_kwargs,
                                self._phases_kwargs)
 
+
+
+    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
+        L = [x.merge_phases(efac,vmax,tol,inplace,**kwargs) for x in self.lnpis]
+
+        if not inplace:
+            return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._ftag_phases)
+        
+
     
 
     
@@ -1664,7 +1805,16 @@ class lnPi_collection(object):
     @property
     def molfracs_phaseIDs(self):
         return np.array([x.molfracs_phaseIDs for x in self.lnpis])
-    
+
+
+
+    @property
+    def Naves(self):
+        return [x.Naves for x in self.lnpis]
+
+    @property
+    def Naves_phaseIDs(self):
+        return np.array([x.Naves_phaseIDs for x in self.lnpis])
 
     def Omegas_phaseIDs(self,zval=None):
         return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
@@ -1718,7 +1868,7 @@ class lnPi_collection(object):
     @staticmethod
     def from_mu_iter(ref,mus,
                      argmax_kwargs={},phases_kwargs={},
-                     ftag_phases=tag_phases_binary,**kwargs):
+                     ftag_phases=None,**kwargs):
         """
         build lnPi_collection from mus
 
@@ -1750,16 +1900,16 @@ class lnPi_collection(object):
         kwargs = dict(dict(ZeroMax=True),**kwargs)
         L = []
         for mu in mus:
-            L.append( lnPi_phases(ref.reweight(mu,**kwargs)))
+            L.append( ref.reweight(mu,**kwargs) )
 
 
-        return lnPi_collection(L,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,ftag_phases=tag_phases_binary)
+        return lnPi_collection(L,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,ftag_phases=ftag_phases)
                       
 
     @staticmethod
     def from_mu(ref,mu,x,
                 argmax_kwargs={},phases_kwargs={},
-                ftag_phases=tag_phases_binary,**kwargs):
+                ftag_phases=None,**kwargs):
         """
         build lnPi_collection from mu builder
 
@@ -1795,8 +1945,10 @@ class lnPi_collection(object):
        
         mus = get_mu_iter(mu,x)
         return lnPi_collection.from_mu_iter(ref,mus,
-                                            argmax_kwargs,phases_kwargs,
-                                            ftag_phases,**kwargs)
+                                            argmax_kwargs=argmax_kwargs,
+                                            phases_kwargs=phases_kwargs,
+                                            ftag_phases=ftag_phases,
+                                            **kwargs)
     
         
                       
