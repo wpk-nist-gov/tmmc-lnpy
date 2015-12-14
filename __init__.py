@@ -21,6 +21,11 @@ from scipy.spatial.distance  import cdist,pdist,squareform
 
 import itertools
 
+
+import spinodal
+import binodal
+
+
 #decorator to kill cache
 def cache_clear(f):
     def wrapper(*args):
@@ -157,7 +162,7 @@ class lnPi(np.ma.MaskedArray):
     from_data : create lnPi object from data array
     """
 
-    def __new__(cls, data, mu=None,ZeroMax=False,Pad=False,num_phases_max=None,**kwargs):
+    def __new__(cls, data, mu=None,ZeroMax=False,Pad=False,num_phases_max=None,volume=None,beta=None,**kwargs):
         """
         constructor
 
@@ -199,6 +204,8 @@ class lnPi(np.ma.MaskedArray):
 
         obj.mu = mu
         obj.num_phases_max = num_phases_max
+        obj.volume =volume
+        obj.beta = beta
 
 
         obj.adjust(ZeroMax=ZeroMax,Pad=Pad,inplace=True)
@@ -245,6 +252,27 @@ class lnPi(np.ma.MaskedArray):
     def num_phases_max(self,val):
         if val is not None:
             self._optinfo['num_phases_max'] = val
+
+
+    @property
+    def volume(self):
+        return self._optinfo.get('volume',None)
+
+    @volume.setter
+    def volume(self,val):
+        if val is not None:
+            self._optinfo['volume'] = val
+
+
+    @property
+    def beta(self):
+        return self._optinfo.get('beta',None)
+
+    @beta.setter
+    def beta(self,val):
+        if val is not None:
+            self._optinfo['beta'] = val
+        
         
 
     @property
@@ -257,7 +285,8 @@ class lnPi(np.ma.MaskedArray):
         """
         basic pi = exp(lnpi)
         """
-        pi = np.exp(self)
+        shift = self.max()
+        pi = np.exp(self-shift)
         return pi
 
     @property
@@ -273,10 +302,9 @@ class lnPi(np.ma.MaskedArray):
         return N
 
 
-    # @cache_prop
-    # def Nvar2(self):
-    #     NSq = ( self.pi_norm * (self.coords)**2 ).reshape(self.ndim,-1).sum(axis=-1).data
-    #     return NSq - (self.Nave)**2
+    @property
+    def density(self):
+        return self.Nave/self.volume
 
     @cache_prop
     def Nvar(self):
@@ -289,7 +317,6 @@ class lnPi(np.ma.MaskedArray):
         n = self.Nave
         return n/n.sum()
 
-
     def Omega(self,zval=None):
         """
         get omega = zval - ln(sum(pi))
@@ -301,16 +328,18 @@ class lnPi(np.ma.MaskedArray):
         """
 
         if zval is None:
-            zval = self.data.ravel()[0]
+            zval = self.data.ravel()[0] - self.max()
 
-        omega = zval - np.log(self.pi.sum())
+        omega = (zval - np.log(self.pi.sum()))/self.beta
 
         return omega
 
     @property
     def ncomp(self):
         return self.ndim
-    
+
+
+        
 
     ##################################################
     #setters
@@ -327,7 +356,7 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #maxima
-    def _peak_local_max(self,min_distance=1,**kwargs):
+    def _peak_local_max(self,min_distance=1,threshold_rel=0.00,threshold_abs=0.2,**kwargs):
         """
         find local maxima using skimage.feature.peak_local_max
 
@@ -352,7 +381,9 @@ class lnPi(np.ma.MaskedArray):
 
         data = self.data - np.nanmin(self.data)
 
-        x = peak_local_max(data,min_distance=min_distance,**kwargs)
+        x = peak_local_max(data,min_distance=min_distance,
+                           threshold_rel=threshold_rel,threshold_abs=threshold_abs,
+                           **kwargs)
 
         if kwargs.get('indices',True):
             #return indices
@@ -364,7 +395,10 @@ class lnPi(np.ma.MaskedArray):
         return x,n
 
 
-    def argmax_local(self,min_distance=[5,10,15,20,25],smooth='fail',smooth_kwargs={},info=False,**kwargs):
+    def argmax_local(self,min_distance=[5,10,15,20,25],
+                     threshold_rel=0.00,threshold_abs=0.2,
+                     smooth='fail',smooth_kwargs={},
+                     num_phases_max=None,info=False,**kwargs):
         """
         find local max with fall backs min_distance and filter
 
@@ -383,6 +417,10 @@ class lnPi(np.ma.MaskedArray):
         smooth_kwargs : dict
             extra arguments to self.smooth
 
+        num_phases_max : int (Default None)
+            max number of maxima to find. if None, use self.num_phases_max
+
+
         info : bool (Default False)
             if True, return out_info
 
@@ -398,7 +436,8 @@ class lnPi(np.ma.MaskedArray):
 
 
         """
-        num_phases_max = self.num_phases_max
+        if num_phases_max is None:
+            num_phases_max = self.num_phases_max
 
 
         if not isinstance(min_distance,Iterable):
@@ -420,7 +459,9 @@ class lnPi(np.ma.MaskedArray):
                 xx = self
 
             for md in min_distance:
-                x,n = xx._peak_local_max(min_distance=md,**kwargs)
+                x,n = xx._peak_local_max(min_distance=md,
+                                         threshold_rel=0.00,threshold_abs=0.2,
+                                         **kwargs)
 
                 if n <= num_phases_max:
                     if info:
@@ -690,7 +731,7 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #new object/modification
-    def reweight(self,mu,beta=1.0,ZeroMax=False,Pad=False):
+    def reweight(self,mu,ZeroMax=False,Pad=False):
         """
         get lnpi at new mu
         
@@ -722,7 +763,7 @@ class lnPi(np.ma.MaskedArray):
         
         dmu = Z.mu - self.mu
         
-        s = _get_shift(self.shape,dmu)
+        s = _get_shift(self.shape,dmu)*self.beta
         Z.set_data(Z.data+s)
 
 
@@ -733,7 +774,7 @@ class lnPi(np.ma.MaskedArray):
 
         
     def new_mask(self,mask=None,**kwargs):
-        return lnPi(self.data,mask=mask,mu=self.mu,num_phases_max=self.num_phases_max,**kwargs)
+        return lnPi(self.data,mask=mask,**dict(self._optinfo,**kwargs))
 
     
     def add_mask(self,mask,**kwargs):
@@ -865,9 +906,6 @@ def tag_phases_binary(x):
     return np.array(L)
         
 
-    
-    
-
 
 class lnPi_phases(object):
     """
@@ -912,7 +950,7 @@ class lnPi_phases(object):
         self.base = base
         self.phases = phases
         self.argmax = argmax
-
+        
         if ftag_phases is None:
             ftag_phases = tag_phases_binary
         self._ftag_phases = ftag_phases
@@ -944,20 +982,22 @@ class lnPi_phases(object):
 
     @argmax.setter
     def argmax(self,val):
-        if val=='get':
+        if val == 'get':
             pass
         else:
             assert self.base.ndim == len(val)
             assert len(val[0]) <= self.base.num_phases_max
             
         self._argmax = val
-        
+
+
+    
 
     @property
     def phases(self):
         if self._phases == 'get':
             self.phases = self._base._get_list_indices(self.argmax,**self._phases_kwargs)
-
+            
         if self._phases is None:
             return [self.base]
         else:
@@ -978,8 +1018,8 @@ class lnPi_phases(object):
 
                 if np.any(self.base.mu!=p.mu):
                     raise ValueError('bad mu between base and comp %i: %s, %s'%(i,base.mu,p.mu))
-            self._phases = phases
 
+            self._phases = phases
 
     @property
     def phaseIDs(self):
@@ -1052,6 +1092,19 @@ class lnPi_phases(object):
         return out
 
 
+    @property
+    def densities(self):
+        return np.array([x.density for x in self])
+
+    @property
+    def densities_phaseIDs(self):
+        out = np.empty((self.base.num_phases_max,self.base.ndim),dtype=float)*np.nan
+
+        for i,x in zip(self.phaseIDs,self.densities):
+            out[i,:] = x
+        return out
+
+
     def Omegas(self,zval=None):
         return np.array([x.Omega(zval)  for x in self])
 
@@ -1087,7 +1140,7 @@ class lnPi_phases(object):
     def mu(self):
         return self.base.mu
 
-    
+
 
 
     ##################################################
@@ -1233,7 +1286,7 @@ class lnPi_phases(object):
     def _betaEtransition_line(self,pair=(0,1),connectivity=None):
         """
         find transition energy from line connecting location of maxima
-        """
+k        """
 
         args = tuple(np.array(self.argmax).T[pair,:].flatten())
 
@@ -1297,48 +1350,37 @@ class lnPi_phases(object):
 
 
     
-    # def merge_phases(self,efac=1.0,vmax=1e20,inplace=False,**kwargs):
-    #     """
-    #     if DeltabetaE from i->j <efac, then merge those phases into
-    #     a single phase
-    #     """
-    #     mat = self.DeltabetaE_matrix(vmax,**kwargs)
-
-    #     keep = np.any(mat>=efac,axis=-1)
-
-    #     #convert to array
-    #     amax = np.array(self.argmax).T
-
+    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
+        """
+        merge phases such that DeltabetaE[i,j]>efac-tol for all phases
         
-    #     if keep.sum()==0:
-    #         #dropping all
-    #         #pick the largest argmax
-    #         idx = self.base[self.argmax].argmax()
-    #         new_amax = amax[idx:idx+1]
-    #         phases = None
+        Parameters
+        ----------
+        efac : float (Default 1.0)
+            cutoff
 
-    #     else:
-    #         new_amax = amax[keep]
-    #         phases = 'get'
+        vmax : float (1e20)
+            vmax parameter in DeltabetaE calculation
 
+        tol : float (1e-4)
+            tolerance parameter
 
-    #     #convert back to indices
-    #     new_argmax = tuple(new_amax.T)
+        inplace : bool (Default False)
+            if True, do inplace modificaiton, else return 
 
-            
-    #     if inplace:
-    #         self.argmax = new_argmax
-    #         self.phases = phases
-
-    #     else:
-    #         return lnPi_phases(self.base,phases,new_argmax,
-    #                            self._argmax_kwargs,
-    #                            self._phases_kwargs,
-    #                            self._ftag_phases)
+        force : bool (Default False)
+            if True, iteratively remove minimum energy difference 
+            (even if DeltabetaE>efac) maxima until have 
+            exactly self.base.num_phases_max
 
 
-    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
+        **kwargs : arguments to DeltabetE_matrix
 
+
+        Return
+        ------
+        out : lnPi_phases object (if inplace is False)
+        """
         if inplace:
             t = self
         else:
@@ -1355,20 +1397,28 @@ class lnPi_phases(object):
 
             #check out DeltabetaE
             mat = t.DeltabetaE_matrix(vmax,**kwargs)
+
             #find min value
             min_val = np.nanmin(mat)
 
             #check done
             if min_val>=efac-tol:
-                break
+                if not force:
+                    break
+                elif t.nphase<=t.base.num_phases_max:
+                    break
 
             #else, we have some work to do.
             #find index of min
             idx = np.where(mat==min_val)
-            if len(idx[0])!=1:
-                raise ValueError('more than one min found')
-            #from kill to keep
-            idx_kill,idx_keep = [x[0] for x in idx]
+
+            # if len(idx[0])!=1:
+            #     #WARGINING?
+            #     raise ValueError('more than one min found with val %s'%(min_val))
+            # #from kill to keep
+            # idx_kill,idx_keep = [x[0] for x in idx]
+
+            idx_kill,idx_keep = idx[0][0],idx[1][0]
 
             t._merge_pair(idx_keep,idx_kill,inplace=True)
 
@@ -1376,26 +1426,6 @@ class lnPi_phases(object):
         if not inplace:
             return t
                     
-            
-            # #new argmax
-            # t.argmax = tuple(np.delete(x,idx_kill for x in t.argmax))
-
-            # #new phases
-            # if t.nphase == 2:
-            #     #only have one phase left, so:
-            #     t.phases = None
-
-            # else:
-            #     #new mask:
-            #     mask = t[idx_keep].mask & t[idx_kill].mask
-            #     tnew = t[idx_keep].new_mask(new_mask)
-
-            #     #add in new
-            #     t._phases[idx_keep] = tnew
-            #     #pop old
-            #     t._phases.pop(idx_kill)
-            
-            
             
             
     def _merge_pair(self,idx_keep,idx_kill,inplace=False):
@@ -1421,34 +1451,72 @@ class lnPi_phases(object):
 
 
         if inplace:
-            self.phases = phases
-            self.argmax = argmax
+            self._phases = phases
+            self._argmax = argmax
 
         else:
             return lnPi_phases(self.base,phases,argmax,
                                self._argmax_kwargs,
                                self._phases_kwargs,
                                self._ftag_phases)
-                               
-            
-        
-            
-
-
-        
-        
 
 
         
 
+    def build_phases(self,nmax_start=10,
+                     efac=0.2,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
+        """
+        iteratively build phases by finding argmax merging phases
 
-        
-            
+        Parameters
+        ----------
+        nmax_start : int (Default 10)
+            max number of phases argmax_local to start with
+
+
+        efac : float (Default 0.2)
+            merge all phases where DeltabetaE_matrix()[i,j] < efac-tol
+
+        vmax : float (Default 1e20)
+            value of DeltabetaE if phase transition between i and j does not exist
         
 
-            
-        
-        
+        tol : float (Default 1e-4)
+            fudge factor for cutoff
+
+        inplace : bool (Default False)
+            if True, do inplace modification
+
+        **kwargs : extra arguments to self.merge_phases
+
+        Returns
+        -------
+        out : lnPi_phases (optional, if inplace is False)
+        """
+
+        if inplace:
+            t = self
+        else:
+            t = lnPi_phases(self.base,
+                            argmax_kwargs = self._argmax_kwargs,
+                            phases_kwargs = self._phases_kwargs,
+                            ftag_phases = self._ftag_phases)
+
+        #use _argmax to avoid num_phases_max check
+        t._argmax = t._base.argmax_local(num_phases_max=nmax_start,**t._argmax_kwargs)
+
+        t._phases = self._base._get_list_indices(t._argmax,**t._phases_kwargs)
+
+        t.merge_phases(efac=efac,vmax=vmax,tol=tol,inplace=True,force=True,**kwargs)
+
+
+        #do a sanity check
+        t.argmax = t._argmax
+        t.phases = t._phases
+
+
+        if not inplace:
+            return t
 
 
 ################################################################################
@@ -1465,6 +1533,7 @@ class lnPi_collection(object):
         ----------
         lnpis : iterable of lnpi objects
         """
+
 
         self._argmax_kwargs = argmax_kwargs
         self._phases_kwargs = phases_kwargs
@@ -1770,7 +1839,6 @@ class lnPi_collection(object):
                                self._phases_kwargs)
 
 
-
     def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
         L = [x.merge_phases(efac,vmax,tol,inplace,**kwargs) for x in self.lnpis]
 
@@ -1816,18 +1884,140 @@ class lnPi_collection(object):
     def Naves_phaseIDs(self):
         return np.array([x.Naves_phaseIDs for x in self.lnpis])
 
+
+    @property
+    def densities_phaseIDs(self):
+        return np.array([x.densities_phaseIDs for x in self.lnpis])
+    
+
     def Omegas_phaseIDs(self,zval=None):
         return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
 
 
-
-    # def DeltabetaE(self,pair=(0,1),**kwargs):
-    #     return np.array([x.DeltabetaE(pair,**kwargs) for x in self])
-
     def DeltabetaE_phaseIDs(self,vmin=0.0,vmax=1e20,**kwargs):
         return np.array([x.DeltabetaE_phaseIDs(vmin,vmax,**kwargs) for x in self])
+
+
+
     
+    ##################################################
+    #spinodal
+    def get_spinodal_phaseID(self,ID,efac=1.0,
+                             dmu=0.5,vmin=0.0,vmax=1e20,ntry=20,step=None,nmax=20,
+                             reweight_kwargs={},DeltabetaE_kwargs={},close_kwargs={},
+                             solve_kwargs={},full_output=False):
+        """
+        locate spinodal for phaseID ID
+        """
+
+        s,r = spinodal.get_spinodal(self,ID,efac=efac,dmu=dmu,vmin=vmin,vmax=vmax,
+                                    ntry=ntry,step=step,nmax=20,
+                                    reweight_kwargs=reweight_kwargs,
+                                    DeltabetaE_kwargs=DeltabetaE_kwargs,
+                                    close_kwargs=close_kwargs,
+                                    solve_kwargs=solve_kwargs,
+                                    full_output=True)
+
+        if full_output:
+            return s,r
+        else:
+            return s
+
+
+    def get_spinodals(self,efac=1.0,
+                      dmu=0.5,vmin=0.0,vmax=1e20,ntry=20,step=None,nmax=20,
+                      reweight_kwargs={},DeltabetE_kwargs={},close_kwargs={},
+                      solve_kwargs={},inplace=True):
+
+        L = []
+        info = []
+        for ID in range(self[0].base.num_phases_max):
+            s,r = self.get_spinodal_phaseID(ID,efac=efac,dmu=dmu,vmin=vmin,vmax=vmax,
+                                            ntry=ntry,step=step,nmax=20,
+                                            reweight_kwargs=reweight_kwargs,
+                                            DeltabetaE_kwargs=DeltabetE_kwargs,
+                                            close_kwargs=close_kwargs,
+                                            solve_kwargs=solve_kwargs,
+                                            full_output=True)
+
+            L.append(s)
+            info.append(r)
+
+
+
+        if inplace:
+            self._spinodals = L
+            self._spinodals_info = info
+        else:
+            return L,info
+
+    @property
+    def spinodals(self):
+        if not hasattr(self,'_spinodals'):
+            raise AttributeError('spinodal not set')
+        
+        return self._spinodals
+
     
+
+
+    ##################################################
+    #binodal
+    def get_binodal_pair(self,IDs,spinodals=None,reweight_kwargs={},
+                    full_output=False,
+                    **kwargs):
+
+        if spinodals is None:
+            spinodals = self.spinodals
+        spin = [self.spinodals[i] for i in IDs]
+        
+        if None in spin:
+            raise ValueError('one of spinodals is Zero')
+
+        b,r = binodal.get_binodal_point(self[0].base,IDs,spin[0].mu,spin[1].mu,
+                                  reweight_kwargs=reweight_kwargs,
+                                  argmax_kwargs=self._argmax_kwargs,
+                                  phases_kwargs=self._phases_kwargs,
+                                  ftag_phases=self._ftag_phases,
+                                  full_output=True,
+                                  **kwargs)
+
+        if full_output:
+            return b,r
+
+
+    def get_binodals(self,spinodals=None,reweight_kwargs={},inplace=True,
+                    **kwargs):
+
+        if spinodals is None:
+            spinodals = self.spinodals
+        
+        L= []
+        info = []
+        for IDs in itertools.combinations(range(self[0].base.num_phases_max),2):
+
+            b,r = self.get_binodal_pair(IDs,spinodals,reweight_kwargs=reweight_kwargs,
+                                        full_output=True,**kwargs)
+
+            L.append(b)
+            info.append(r)
+
+        if inplace:
+            self._binodals = L
+            self._binodals_info = info
+        else:
+            return L,info
+
+    
+        
+    @property
+    def binodals(self):
+        if not hasattr(self,'_binodals'):
+            raise AttributeError('binodals not set')
+
+        return self._binodals
+
+
 
     def get_binodal_interp(self,mu_axis,IDs=(0,1)):
         """
@@ -1850,10 +2040,8 @@ class lnPi_collection(object):
         
         
         return np.interp(0.0,diff[i],mu[i])
+    
 
-
-    # def get_binodal_solve(self,mu_axis,phases=(0,1)):
-    #     pass
     
     
     ##################################################
@@ -1959,41 +2147,6 @@ class lnPi_collection(object):
 ##################################################
 #calculations
 ##################################################
-from scipy import optimize
-
-def get_binodal_point(reference,mu_in,a,b,
-                      IDs=(0,1),
-                      reweight_kwargs={},
-                      phases_kwargs={},
-                      **kwargs):
-    """
-    calculate binodal point where Omega0==Omega1
-    """
-    
-    idx = mu_in.index(None)
-    reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
-    phases_kwargs = dict(dict(get=True),**phases_kwargs)
-    
-    def f(x):
-        mu = mu_in[:]
-        mu[idx] = x
-        c = reference.reweight(mu,**reweight_kwargs).get_phases(**phases_kwargs)
-        Omegas = c.Omegas_phaseIDs()
-        
-        return Omegas[IDs[0]] - Omegas[IDs[1]]
-    
-    xx = optimize.brentq(f,a,b,**kwargs)
-    
-    mu = mu_in[:]
-    mu[idx] = xx
-    res = f(xx)
-    return mu,res
-
-
-# def get_spinodal_point(ref,mu_in,a,b,
-#                        phases=(0,1)
-            
-
 
 def get_mu_iter(mu,x):
     """
