@@ -95,8 +95,6 @@ def _interp_matrix(Z,empty):
     return ZRC
 
 
-
-
 def _get_shift(shape,mu):
     """
     shift[i,j,...] = n1[i]*mu[1]+n2[j]*mu[2]+...
@@ -124,7 +122,11 @@ class lnPi(np.ma.MaskedArray):
 
     pi_norm : pi/pi.sum()
 
-    Nave : average number of particles of each component
+    Nave : average number of particles of each component    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", 
+                              size="2%", 
+                              pad=cbar_pad)
+
 
     molfrac : mol fraction of each component
 
@@ -914,8 +916,8 @@ class lnPi_phases(object):
 
 
     def __init__(self,base,phases='get',argmax='get',
-                 argmax_kwargs={},
-                 phases_kwargs={},
+                 argmax_kwargs=None,
+                 phases_kwargs=None,
                  ftag_phases=None):
         """
         object to store base and phases
@@ -955,7 +957,11 @@ class lnPi_phases(object):
             ftag_phases = tag_phases_binary
         self._ftag_phases = ftag_phases
 
-        
+
+        if argmax_kwargs is None:
+            argmax_kwargs = {}
+        if phases_kwargs is None:
+            phases_kwargs = {}
 
         self._argmax_kwargs = argmax_kwargs
         self._phases_kwargs = phases_kwargs
@@ -1350,6 +1356,118 @@ k        """
 
 
     
+    # def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
+    #     """
+    #     merge phases such that DeltabetaE[i,j]>efac-tol for all phases
+        
+    #     Parameters
+    #     ----------
+    #     efac : float (Default 1.0)
+    #         cutoff
+
+    #     vmax : float (1e20)
+    #         vmax parameter in DeltabetaE calculation
+
+    #     tol : float (1e-4)
+    #         tolerance parameter
+
+    #     inplace : bool (Default False)
+    #         if True, do inplace modificaiton, else return 
+
+    #     force : bool (Default False)
+    #         if True, iteratively remove minimum energy difference 
+    #         (even if DeltabetaE>efac) maxima until have 
+    #         exactly self.base.num_phases_max
+
+
+    #     **kwargs : arguments to DeltabetE_matrix
+
+
+    #     Return
+    #     ------
+    #     out : lnPi_phases object (if inplace is False)
+    #     """
+    #     if inplace:
+    #         t = self
+    #     else:
+    #         t = lnPi_phases(self.base,self._phases,self.argmax,
+    #                         self._argmax_kwargs,
+    #                         self._phases_kwargs,
+    #                         self._ftag_phases)
+            
+
+
+    #     while True:
+    #         if t.nphase == 1:
+    #             break
+
+    #         #check out DeltabetaE
+    #         mat = t.DeltabetaE_matrix(vmax,**kwargs)
+
+    #         #find min value
+    #         min_val = np.nanmin(mat)
+
+    #         #check done
+    #         if min_val>=efac-tol:
+    #             if not force:
+    #                 break
+    #             elif t.nphase<=t.base.num_phases_max:
+    #                 break
+
+    #         #else, we have some work to do.
+    #         #find index of min
+    #         idx = np.where(mat==min_val)
+
+    #         # if len(idx[0])!=1:
+    #         #     #WARGINING?
+    #         #     raise ValueError('more than one min found with val %s'%(min_val))
+    #         # #from kill to keep
+    #         # idx_kill,idx_keep = [x[0] for x in idx]
+
+    #         idx_kill,idx_keep = idx[0][0],idx[1][0]
+
+    #         t._merge_pair(idx_keep,idx_kill,inplace=True)
+
+
+    #     if not inplace:
+    #         return t
+                    
+            
+            
+    # def _merge_pair(self,idx_keep,idx_kill,inplace=False):
+    #     """
+    #     merge idx_kill to idx_keep
+    #     """
+
+    #     #new argmax:
+    #     argmax = tuple(np.delete(x,idx_kill) for x in self.argmax)
+                
+    #     if self.nphase == 2:
+    #         #will end up with one phase only
+    #         phases = None
+    #     else:
+    #         #new mask
+    #         mask = self[idx_keep].mask & self[idx_kill].mask
+
+    #         tnew = self[idx_keep].new_mask(mask)
+            
+    #         phases = self._phases[:]
+    #         phases[idx_keep] = tnew
+    #         phases.pop(idx_kill)
+
+
+    #     if inplace:
+    #         self._phases = phases
+    #         self._argmax = argmax
+
+    #     else:
+    #         return lnPi_phases(self.base,phases,argmax,
+    #                            self._argmax_kwargs,
+    #                            self._phases_kwargs,
+    #                            self._ftag_phases)
+
+
+
     def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
         """
         merge phases such that DeltabetaE[i,j]>efac-tol for all phases
@@ -1381,85 +1499,78 @@ k        """
         ------
         out : lnPi_phases object (if inplace is False)
         """
-        if inplace:
-            t = self
-        else:
-            t = lnPi_phases(self.base,self._phases,self.argmax,
-                            self._argmax_kwargs,
-                            self._phases_kwargs,
-                            self._ftag_phases)
-            
-        
+
+
+        #first get Etrans,Emin
+        Etrans = self.betaEtransition_matrix()
+        Emin = self.betaEmin
+
+        number = np.arange(Emin.shape[0])
+        L = [[i] for i in range(len(Emin))]
+
 
         while True:
-            if t.nphase == 1:
+            nphase = len(Emin)
+            if nphase==1:
                 break
 
-            #check out DeltabetaE
-            mat = t.DeltabetaE_matrix(vmax,**kwargs)
 
-            #find min value
-            min_val = np.nanmin(mat)
+            DE = _get_DE(Etrans,Emin,vmax=vmax)
 
-            #check done
-            if min_val>=efac-tol:
+            min_val = np.nanmin(DE)
+
+            if min_val > efac - tol:
                 if not force:
                     break
-                elif t.nphase<=t.base.num_phases_max:
+                elif nphase <= self.base.num_phases_max:
                     break
 
-            #else, we have some work to do.
-            #find index of min
-            idx = np.where(mat==min_val)
-
-            # if len(idx[0])!=1:
-            #     #WARGINING?
-            #     raise ValueError('more than one min found with val %s'%(min_val))
-            # #from kill to keep
-            # idx_kill,idx_keep = [x[0] for x in idx]
-
+            idx = np.where(DE==min_val)
             idx_kill,idx_keep = idx[0][0],idx[1][0]
 
-            t._merge_pair(idx_keep,idx_kill,inplace=True)
+            #add in new row taking min of each transition energy 
+            new_row = np.nanmin(Etrans[[idx_kill,idx_keep],:],axis=0)
+            new_row[idx_keep] = np.nan
 
-
-        if not inplace:
-            return t
-                    
+            #add in new row/col
+            Etrans[idx_keep,:] = new_row
+            Etrans[:,idx_keep] = new_row
             
-            
-    def _merge_pair(self,idx_keep,idx_kill,inplace=False):
-        """
-        merge idx_kill to idx_keep
-        """
+            #delete idx_kill
+            Etrans = np.delete(np.delete(Etrans,idx_kill,0),idx_kill,1)
+            Emin = np.delete(Emin,idx_kill)
 
-        #new argmax:
-        argmax = tuple(np.delete(x,idx_kill) for x in self.argmax)
-                
-        if self.nphase == 2:
-            #will end up with one phase only
-            phases = None
-        else:
-            #new mask
-            mask = self[idx_keep].mask & self[idx_kill].mask
+            #update L
+            L[number[idx_keep]] += L[number[idx_kill]]
+            L[number[idx_kill]] = None
+            #update number
+            number = np.delete(number,idx_kill)
 
-            tnew = self[idx_keep].new_mask(mask)
-            
-            phases = self._phases[:]
-            phases[idx_keep] = tnew
-            phases.pop(idx_kill)
+
+        msk = np.array([x is not None for x in L])
+        
+        argmax_new = tuple(x[msk] for x in self._argmax)
+
+        phases_new = []
+
+        for x in L:
+            if x is None: continue
+            mask = np.all([self._phases[i].mask for i in x],axis=0)
+            phases_new.append(self.base.new_mask(mask))
 
 
         if inplace:
-            self._phases = phases
-            self._argmax = argmax
-
+            self.argmax = argmax_new
+            self.phases = phases_new
         else:
-            return lnPi_phases(self.base,phases,argmax,
-                               self._argmax_kwargs,
-                               self._phases_kwargs,
-                               self._ftag_phases)
-
+            return lnPi_phases(self.base,phases=phases_new,argmax=argmax_new,
+                            argmax_kwargs = self._argmax_kwargs,
+                            phases_kwargs = self._phases_kwargs,
+                            ftag_phases = self._ftag_phases)
+            
+            
+        
+        
 
         
 
@@ -1527,13 +1638,17 @@ class lnPi_collection(object):
     class containing several lnPis
     """
 
-    def __init__(self,lnpis,argmax_kwargs={},phases_kwargs={},ftag_phases=tag_phases_binary):
+    def __init__(self,lnpis,argmax_kwargs=None,phases_kwargs=None,ftag_phases=tag_phases_binary):
         """
         Parameters
         ----------
         lnpis : iterable of lnpi objects
         """
 
+        if argmax_kwargs is None:
+            argmax_kwargs = {}
+        if phases_kwargs is None:
+            phases_kwargs = {}
 
         self._argmax_kwargs = argmax_kwargs
         self._phases_kwargs = phases_kwargs
@@ -2424,3 +2539,10 @@ def masks_to_labels(masks,feature_value=False,**kwargs):
     
 
 
+
+
+def _get_DE(Etrans,Emin,vmax=1e20):
+    DE = Etrans - Emin[:,None]
+    DE[np.isnan(DE)] = vmax
+    np.fill_diagonal(DE,np.nan)
+    return DE        
