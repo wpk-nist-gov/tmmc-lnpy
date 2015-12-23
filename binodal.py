@@ -7,9 +7,6 @@ from scipy import optimize
 
 def get_binodal_point(ref,IDs,muA,muB,
                       reweight_kwargs={},
-                      argmax_kwargs={},
-                      phases_kwargs={},
-                      ftag_phases=None,
                       full_output=False,
                       **kwargs):
     """
@@ -17,7 +14,7 @@ def get_binodal_point(ref,IDs,muA,muB,
 
     Parameters
     ----------
-    ref : lnPi object
+    ref : lnPi_phases object
         object to reweight
 
     IDs : (ID0,ID1)
@@ -28,15 +25,6 @@ def get_binodal_point(ref,IDs,muA,muB,
     reweight_kwargs : dict
         extra arguments to reweight
     
-    argmax_kwargs : dict
-        extra argument to lnPi.argmax_local
-
-    phase_kwargs : dict
-        extra arguments to lnPi.get_phases
-
-    ftag_phases : function or None
-        phaseID tagging function
-
     full_output : bool (Default False)
         if True, return solve stats
 
@@ -70,8 +58,7 @@ def get_binodal_point(ref,IDs,muA,muB,
     def f(x):
         mu = mu_in[:]
         mu[mu_idx] = x
-        c = ref.reweight(mu,**reweight_kwargs).to_phases(
-            argmax_kwargs,phases_kwargs,ftag_phases)
+        c = ref.reweight(mu,**reweight_kwargs)
         f.lnpi = c
         
         Omegas = c.Omegas_phaseIDs()

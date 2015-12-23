@@ -234,7 +234,7 @@ class lnPi(np.ma.MaskedArray):
         mu = self._optinfo.get('mu',None)
         if mu is None:
             mu = np.zeros(self.ndim)
-        mu = np.atleast_1d(mu)
+        mu = np.atleast_1d(mu).astype(self.dtype)
         
         if len(mu) != self.ndim:
             raise ValueError('bad len on mu %s'%mu)
@@ -276,12 +276,11 @@ class lnPi(np.ma.MaskedArray):
             self._optinfo['beta'] = val
         
         
-
     @property
     def coords(self):
         return np.indices(self.shape)
 
-
+    #calculated properties
     @cache_prop
     def pi(self):
         """
@@ -480,7 +479,7 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #segmentation
-    def _get_labels(self,indices,structure='set',size=3,footprint=None,smooth=False,smooth_kwargs={},**kwargs):
+    def get_labels_watershed(self,indices,structure='set',size=3,footprint=None,smooth=False,smooth_kwargs={},**kwargs):
         """
         get labels from watershed segmentation
 
@@ -530,7 +529,7 @@ class lnPi(np.ma.MaskedArray):
         return labels
 
 
-    def _get_list_regmask(self,regmask,SegLenOne=False):
+    def get_list_regmask(self,regmask,SegLenOne=False):
         """
         create list of lnPi objects with mask = self.mask + regmask[i]
         """
@@ -540,117 +539,120 @@ class lnPi(np.ma.MaskedArray):
             return  [self.add_mask(r) for r in regmask]
         
 
-    def _get_list_labels(self,labels,SegLenOne=False,**kwargs):
+    def get_list_labels(self,labels,SegLenOne=False,**kwargs):
         """
         create list of lnpi's from labels
         """
         regmask = labels_to_masks(labels,**kwargs)
-        return self._get_list_regmask(regmask,SegLenOne)
+        return self.get_list_regmask(regmask,SegLenOne)
     
 
-    def _get_list_indices(self,indices,SegLenOne=False,smooth=False,smooth_kwargs={},labels_kwargs={},masks_kwargs={}):
+    def get_list_indices(self,indices,SegLenOne=False,smooth=False,smooth_kwargs={},labels_kwargs={},masks_kwargs={}):
         """
-        create list of lnpi's from indices
+        create list of lnpi's from indices of features (argmax's)
         """
         if not SegLenOne and len(indices[0])==1:
             return None#[self]
         else:
-            labels = self._get_labels(indices,smooth=smooth,smooth_kwargs=smooth_kwargs,**labels_kwargs)
-            return self._get_list_labels(labels,SegLenOne,**masks_kwargs)
+            labels = self.get_labels_watershed(indices,smooth=smooth,smooth_kwargs=smooth_kwargs,**labels_kwargs)
+            return self.get_list_labels(labels,SegLenOne,**masks_kwargs)
 
 
-    def get_phases(self,indices=None,regmask=None,labels=None,
-                   get=False,
-                   SegLenOne=False,
-                   phases=True,
-                   smooth=False,
-                   smooth_kwargs={},
-                   argmax_kwargs={},
-                   labels_kwargs={},
-                   masks_kwargs={},**kwargs):
-        """
-        get list of lnPi objects by regmask,labels, or indices
+    # def get_phases(self,indices=None,regmask=None,labels=None,
+    #                get=False,
+    #                SegLenOne=False,
+    #                phases=True,
+    #                smooth=False,
+    #                smooth_kwargs={},
+    #                argmax_kwargs={},
+    #                labels_kwargs={},
+    #                masks_kwargs={},**kwargs):
+    #     """
+    #     get list of lnPi objects by regmask,labels, or indices
 
-        Parameters
-        ----------
-        indices : tuple of arrays
-            indices of self where features are located
-            (labels = self._get_labels(**label_kwargs))
+    #     Parameters
+    #     ----------
+    #     indices : tuple of arrays
+    #         indices of self where features are located
+    #         (labels = self._get_labels(**label_kwargs))
 
-        regmask : list of masks
+    #     regmask : list of masks
 
-        labels : array of labels
-            create an lnPi object for each label.
-            regmask = labels_to_masks(labels,**masks_kwargs)
+    #     labels : array of labels
+    #         create an lnPi object for each label.
+    #         regmask = labels_to_masks(labels,**masks_kwargs)
 
-        get : bool (Default False)
-            if True, indices = self.argmax_local(**argmax_kwargs)
-            i.e., do total get in one step
+    #     get : bool (Default False)
+    #         if True, indices = self.argmax_local(**argmax_kwargs)
+    #         i.e., do total get in one step
 
-        SegLenOne : bool (Default False)
-          if False and nphase==1, phases=[self]
+    #     SegLenOne : bool (Default False)
+    #       if False and nphase==1, phases=[self]
 
 
-        phases: bool (Default True)
-         if True, return lnPi_phases object
-         otherwise, return list of lnpi objects
+    #     phases: bool (Default True)
+    #      if True, return lnPi_phases object
+    #      otherwise, return list of lnpi objects
         
-        argmax_kwargs : dict of options to self.argmax_local
+    #     argmax_kwargs : dict of options to self.argmax_local
 
-        labels_kwargs : dict of options to self._get_labels
+    #     labels_kwargs : dict of options to self._get_labels
 
-        masks_kwargs : dict of optoins to labels_to_masks
+    #     masks_kwargs : dict of optoins to labels_to_masks
 
-        **kwargs : extra kwargs to creation of new lnpi objects
+    #     **kwargs : extra kwargs to creation of new lnpi objects
 
 
-        smooth : bool (Default False)
-            if True, and using indices, use smooth lnPi for determining labels
+    #     smooth : bool (Default False)
+    #         if True, and using indices, use smooth lnPi for determining labels
 
-        smooth_kwargs : dict
-            arguments to smooth
+    #     smooth_kwargs : dict
+    #         arguments to smooth
 
-        Returns
-        -------
-        output : lnPi_phases or list or None
-         if phases is True, return lnPi_phases object.
-         otherwise, return list of lnPi objects. if len(regmask)==1,
-         return None
+    #     Returns
+    #     -------
+    #     output : lnPi_phases or list or None
+    #      if phases is True, return lnPi_phases object.
+    #      otherwise, return list of lnPi objects. if len(regmask)==1,
+    #      return None
          
-        Notes
-        -----
-        One of regmask,labels, or indices must be specified
-        """
-        if get:
-            indices = self.argmax_local(**argmax_kwargs)
+    #     Notes
+    #     -----
+    #     One of regmask,labels, or indices must be specified
+    #     """
+    #     if get:
+    #         indices = self.argmax_local(**argmax_kwargs)
         
         
-        if regmask is not None:
-            output = self._get_list_regmask(regmask,SegLenOne)
-        elif labels is not None:
-            output = self._get_list_labels(labels,SegLenOne,**mask_kwargs)
-        elif indices is not None:
-            output = self._get_list_indices(indices,SegLenOne=SegLenOne,smooth=smooth,
-                                            smooth_kwargs=smooth_kwargs,
-                                            labels_kwargs=labels_kwargs,
-                                            masks_kwargs=masks_kwargs)
-        else:
-            raise ValueError('must specify one of regmask, labels, indices')
+    #     if regmask is not None:
+    #         output = self._get_list_regmask(regmask,SegLenOne)
+    #     elif labels is not None:
+    #         output = self._get_list_labels(labels,SegLenOne,**mask_kwargs)
+    #     elif indices is not None:
+    #         output = self._get_list_indices(indices,SegLenOne=SegLenOne,smooth=smooth,
+    #                                         smooth_kwargs=smooth_kwargs,
+    #                                         labels_kwargs=labels_kwargs,
+    #                                         masks_kwargs=masks_kwargs)
+    #     else:
+    #         raise ValueError('must specify one of regmask, labels, indices')
 
 
-        if phases:
-            return lnPi_phases(base=self,phases=output,argmax=indices)
-        else:
-            return output
+    #     if phases:
+    #         return lnPi_phases(base=self,phases=output,argmax=indices)
+    #     else:
+    #         return output
 
 
 
-    def to_phases(self,argmax_kwargs={},phases_kwargs={},ftag_phases=None):
+    def to_phases(self,argmax_kwargs=None,phases_kwargs=None,build_kwargs=None,ftag_phases=None):
         """
         return lnPi_phases object with placeholders for phases/argmax
         """
 
-        return lnPi_phases(self,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,
+        return lnPi_phases(self,
+                           argmax_kwargs=argmax_kwargs,
+                           phases_kwargs=phases_kwargs,
+                           build_kwargs=build_kwargs,
                            ftag_phases=ftag_phases)
 
 
@@ -893,6 +895,15 @@ class lnPi(np.ma.MaskedArray):
 
 
 
+
+
+
+
+
+################################################################################
+#phases
+################################################################################
+
 def tag_phases_binary(x):
     if x.base.num_phases_max !=2:
         raise ValueError('bad tag function')
@@ -918,6 +929,7 @@ class lnPi_phases(object):
     def __init__(self,base,phases='get',argmax='get',
                  argmax_kwargs=None,
                  phases_kwargs=None,
+                 build_kwargs=None,
                  ftag_phases=None):
         """
         object to store base and phases
@@ -937,10 +949,14 @@ class lnPi_phases(object):
             if str and 'get', get argmax on demand
         
         argmax_kwargs : dict 
-            if argmax=='get', self.argmax = self.base.argmax_local(**argmax_kwargs)
+            if argmax=='get', use self.build_phases
 
         phases_kwargs : dict
-            if phases=='get', self.phases = self.base._get_list_indices(self.argmax,**phases_kwargs)
+            if phases=='get', use self.build_phases
+
+
+        build_kwargs : dict
+            arguments to self.buiild_phases
 
         ftag_phases : function (default tag_phases_binary)
             function which returns integer phase_id for each phase
@@ -962,9 +978,49 @@ class lnPi_phases(object):
             argmax_kwargs = {}
         if phases_kwargs is None:
             phases_kwargs = {}
+        if build_kwargs is None:
+            build_kwargs = {}
+                
 
         self._argmax_kwargs = argmax_kwargs
         self._phases_kwargs = phases_kwargs
+        self._build_kwargs = build_kwargs
+
+
+    ##################################################
+    #copy
+    def copy(self,**kwargs):
+        """
+        create shallow copy of self
+
+        **kwargs : named arguments to lnPi_collection.__init__
+        if argument is given, it will overide that in self
+        """
+
+        d = {}
+        for k in ['base','phases','argmax',
+                  'argmax_kwargs','phases_kwargs','build_kwargs',
+                  'ftag_phases']:
+            if k in kwargs:
+                d[k] = kwargs[k]
+            else:
+                _k = '_'+k
+                d[k] = getattr(self,_k)
+
+        return lnPi_phases(**d)
+
+
+    ##################################################
+    #reweight
+    def reweight(self,mu,ZeroMax=True,Pad=False,**kwargs):
+        """
+        create a new lnpi_phases reweighted to new mu
+        """
+
+        return self.copy(base=self.base.reweight(mu,ZeroMax=ZeroMax,Pad=Pad,**kwargs),
+                         phases='get',argmax='get')
+
+                
 
     ##################################################
     #properties
@@ -983,7 +1039,8 @@ class lnPi_phases(object):
     def argmax(self):
         #set on access
         if self._argmax == 'get':
-            self.argmax = self.base.argmax_local(**self._argmax_kwargs)
+            #self.argmax = self.base.argmax_local(**self._argmax_kwargs)
+            self.build_phases(inplace=True,**self._build_kwargs)
         return self._argmax
 
     @argmax.setter
@@ -996,13 +1053,15 @@ class lnPi_phases(object):
             
         self._argmax = val
 
-
-    
-
     @property
     def phases(self):
         if self._phases == 'get':
-            self.phases = self._base._get_list_indices(self.argmax,**self._phases_kwargs)
+            #self.phases = self.base.get_list_indices(self.argmax,**self._phases_kwargs)
+            if self._argmax == 'get':
+                self.build_phases(inplace=True,**self._build_kwargs)
+            else:
+                self._phases = self.base.get_list_indices(self.argmax,**self._phases_kwargs)
+                
             
         if self._phases is None:
             return [self.base]
@@ -1012,7 +1071,7 @@ class lnPi_phases(object):
     @phases.setter
     def phases(self,phases):
         if phases is None or phases == 'get':
-            self._phases = phases
+            pass
         else:
             #check
             if not isinstance(phases,(tuple,list)):
@@ -1025,13 +1084,24 @@ class lnPi_phases(object):
                 if np.any(self.base.mu!=p.mu):
                     raise ValueError('bad mu between base and comp %i: %s, %s'%(i,base.mu,p.mu))
 
-            self._phases = phases
+        self._phases = phases
 
+    def __len__(self):
+        return len(self.argmax[0])
+
+    def __getitem__(self,i):
+        return self.phases[i]
+
+    @property
+    def nphase(self):
+        return len(self)
+
+
+    
     @property
     def phaseIDs(self):
         return self._ftag_phases(self)
 
-    
     def phaseIDs_to_indicies(self,IDs):
         """
         convert IDs to indicies in self.phases
@@ -1049,16 +1119,6 @@ class lnPi_phases(object):
         b[self.phaseIDs] = True
         return b
 
-    def __len__(self):
-        return len(self.argmax[0])
-
-    def __getitem__(self,i):
-        return self.phases[i]
-
-    
-    @property
-    def nphase(self):
-        return len(self)
 
 
     @property
@@ -1145,8 +1205,6 @@ class lnPi_phases(object):
     @property
     def mu(self):
         return self.base.mu
-
-
 
 
     ##################################################
@@ -1256,11 +1314,13 @@ class lnPi_phases(object):
         if i does not exist, then out[i,j] = vmin
         if not transition to j, then out[i,j] = vmax
         """
+
+        dE = self.DeltabetaE_matrix(vmax,**kwargs)        
         
         out = np.empty((self.base.num_phases_max,)*2,dtype=float)*np.nan
 
         phaseIDs = self.phaseIDs
-        dE = self.DeltabetaE_matrix(vmax,**kwargs)
+
 
         for i,ID in enumerate(phaseIDs):
             out[ID,phaseIDs] = dE[i,:]
@@ -1338,10 +1398,12 @@ k        """
             self.argmax = argmax
             self.phases = L
         else:
-            return lnPi_phases(self.base,L,argmax,
-                               self._argmax_kwargs,
-                               self._phases_kwargs,
-                               self._ftag_phases)
+            return self.copy(phases=L)
+            # return lnPi_phases(self.base,L,argmax,
+            #                    self._argmax_kwargs,
+            #                    self._phases_kwargs,
+            #                    self._build_kwargs,
+            #                    self._ftag_phases)
 
 
     ##################################################
@@ -1500,7 +1562,15 @@ k        """
         out : lnPi_phases object (if inplace is False)
         """
 
+        if self._phases is None:
+            if inplace:
+                return
+            else:
+                return self.copy()
 
+            
+            
+        
         #first get Etrans,Emin
         Etrans = self.betaEtransition_matrix()
         Emin = self.betaEmin
@@ -1563,10 +1633,12 @@ k        """
             self.argmax = argmax_new
             self.phases = phases_new
         else:
-            return lnPi_phases(self.base,phases=phases_new,argmax=argmax_new,
-                            argmax_kwargs = self._argmax_kwargs,
-                            phases_kwargs = self._phases_kwargs,
-                            ftag_phases = self._ftag_phases)
+            return self.copy(phases=phases_new,argmax=argmax_new)
+            # return lnPi_phases(self.base,phases=phases_new,argmax=argmax_new,
+            #                    argmax_kwargs = self._argmax_kwargs,
+            #                    phases_kwargs = self._phases_kwargs,
+            #                    build_kwargs = self._build_kwargs,
+            #                    ftag_phases = self._ftag_phases)
             
             
         
@@ -1575,7 +1647,7 @@ k        """
         
 
     def build_phases(self,nmax_start=10,
-                     efac=0.2,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
+                     efac=0.1,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
         """
         iteratively build phases by finding argmax merging phases
 
@@ -1605,26 +1677,26 @@ k        """
         out : lnPi_phases (optional, if inplace is False)
         """
 
+        #print 'building phase'
+
         if inplace:
             t = self
         else:
-            t = lnPi_phases(self.base,
-                            argmax_kwargs = self._argmax_kwargs,
-                            phases_kwargs = self._phases_kwargs,
-                            ftag_phases = self._ftag_phases)
+            t = self.copy()
 
         #use _argmax to avoid num_phases_max check
         t._argmax = t._base.argmax_local(num_phases_max=nmax_start,**t._argmax_kwargs)
 
-        t._phases = self._base._get_list_indices(t._argmax,**t._phases_kwargs)
+        #use _phases to avoid checks
+        t._phases = self._base.get_list_indices(t._argmax,**t._phases_kwargs)
 
-        t.merge_phases(efac=efac,vmax=vmax,tol=tol,inplace=True,force=True,**kwargs)
+        if t.nphase>1:
+            t.merge_phases(efac=efac,vmax=vmax,tol=tol,inplace=True,force=force,**kwargs)
 
 
         #do a sanity check
         t.argmax = t._argmax
         t.phases = t._phases
-
 
         if not inplace:
             return t
@@ -1638,7 +1710,7 @@ class lnPi_collection(object):
     class containing several lnPis
     """
 
-    def __init__(self,lnpis,argmax_kwargs=None,phases_kwargs=None,ftag_phases=tag_phases_binary):
+    def __init__(self,lnpis,argmax_kwargs=None,phases_kwargs=None,build_kwargs=None,ftag_phases=tag_phases_binary):
         """
         Parameters
         ----------
@@ -1649,13 +1721,42 @@ class lnPi_collection(object):
             argmax_kwargs = {}
         if phases_kwargs is None:
             phases_kwargs = {}
+        if build_kwargs is None:
+            build_kwargs = {}
+                
 
         self._argmax_kwargs = argmax_kwargs
         self._phases_kwargs = phases_kwargs
+        self._build_kwargs = build_kwargs
         self._ftag_phases = ftag_phases
+
         
 
         self.lnpis = lnpis
+
+
+    ##################################################
+    #copy
+    def copy(self,**kwargs):
+        """
+        create shallow copy of self
+        
+        **kwargs : named arguments to lnPi_collection.__init__
+        if argument is given, it will overide that in self
+        """
+
+        d = {}
+        for k in ['lnpis',
+                  'argmax_kwargs','phases_kwargs','build_kwargs',
+                  'ftag_phases']:
+            if k in kwargs:
+                d[k] = kwargs[k]
+            else:
+                _k = '_'+k
+                d[k] = getattr(self,_k)
+
+        return lnPi_collection(**d)
+        
 
 
     ##################################################
@@ -1664,9 +1765,10 @@ class lnPi_collection(object):
         if type(x) is lnPi:
             #create placeholder from x
             return  lnPi_phases(base=x,
-                             argmax_kwargs=self._argmax_kwargs,
-                             phases_kwargs=self._phases_kwargs,
-                             ftag_phases=self._ftag_phases)
+                                argmax_kwargs=self._argmax_kwargs,
+                                phases_kwargs=self._phases_kwargs,
+                                build_kwargs=self._build_kwargs,
+                                ftag_phases=self._ftag_phases)
         elif type(x) is lnPi_phases:
             return x
         else:
@@ -1680,11 +1782,8 @@ class lnPi_collection(object):
         if not isinstance(lnpis,(list,tuple)):
             raise ValueError('lnpis must be list or tuple')
         
-        L = []
-        for i,x in enumerate(lnpis):
-            L.append(self._parse_lnpi(x))
-            
-        return L
+        return [self._parse_lnpi(x) for x in lnpis]
+
             
     ##################################################
     #properties
@@ -1735,9 +1834,10 @@ class lnPi_collection(object):
             mus = self._unique_mus(mus,decimals=decimals)
 
         new = lnPi_collection.from_mu_iter(ref,mus,
-                                           self._argmax_kwargs,
-                                           self._phases_kwargs,
-                                           self._ftag_phases,**kwargs)
+                                           argmax_kwargs=self._argmax_kwargs,
+                                           phases_kwargs=self._phases_kwargs,
+                                           build_kwargs=self._build_kwargs,
+                                           ftag_phases=self._ftag_phases,**kwargs)
         self.extend(new,unique=False)
 
     def extend_by_mu(self,ref,mu,x,unique=True,decimals=5,**kwargs):
@@ -1756,9 +1856,22 @@ class lnPi_collection(object):
             L = self._lnpis + x._lnpis
         else:
             raise ValueError('only lists or lnPi_collections can be added')
-            
-        return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._ftag_phases)
 
+        return self.copy(lnpis=L)
+            
+
+    def __iadd__(self,x):
+        if isinstance(x,list):
+            L = self._parse_lnpis(x)
+        elif isinstance(x,lnPi_collection):
+            L = x._lnpis
+        else:
+            raise ValueError('only list or lnPi_collections can be added')
+
+        self._lnpis += L
+        return self
+
+        
 
     def sort_by_mu(self,comp=0,inplace=False):
         """
@@ -1773,7 +1886,8 @@ class lnPi_collection(object):
         if inplace:
             self._lnpis = L
         else:
-            return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._ftag_phases)
+            return self.copy(lnpis=L)
+            # return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._build_kwargs,self._ftag_phases)
 
 
     def _unique_list(self,L,decimals=5):
@@ -1839,7 +1953,6 @@ class lnPi_collection(object):
         keep[b] = False
 
         self._lnpis = [x for x,m in zip(self._lnpis,keep) if m]
-
 
 
 
@@ -1924,8 +2037,6 @@ class lnPi_collection(object):
         if sort:
             self.sort_by_mu(comp,inplace=True)
 
-        
-
 
     
     def __getitem__(self,i):
@@ -1949,19 +2060,24 @@ class lnPi_collection(object):
                 raise KeyError('bad key')
                 
 
-        return lnPi_collection(L,
-                               self._argmax_kwargs,
-                               self._phases_kwargs)
+        return self.copy(lnpis=L)
+        # return lnPi_collection(L,
+        #                        self._argmax_kwargs,
+        #                        self._phases_kwargs,
+        #                        self._build_kwargs,
+        #                        self._ftag_phases)
 
 
     def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
         L = [x.merge_phases(efac,vmax,tol,inplace,**kwargs) for x in self.lnpis]
-
         if not inplace:
-            return lnPi_collection(L,self._argmax_kwargs,self._phases_kwargs,self._ftag_phases)
-        
-
-    
+            return self.copy(lnpis=L)
+            # return lnPi_collection(L,
+            #                        argmax_kwargs=self._argmax_kwargs,
+            #                        phases_kwargs=self._phases_kwargs,
+            #                        build_kwargs=self._build_kwargs,
+            #                        ftag_phases=self._ftag_phases)
+            
 
     
 
@@ -1988,8 +2104,6 @@ class lnPi_collection(object):
     @property
     def molfracs_phaseIDs(self):
         return np.array([x.molfracs_phaseIDs for x in self.lnpis])
-
-
 
     @property
     def Naves(self):
@@ -2063,6 +2177,8 @@ class lnPi_collection(object):
         if inplace:
             self._spinodals = L
             self._spinodals_info = info
+            self.lnpis.extend(L)
+            
         else:
             return L,info
 
@@ -2089,16 +2205,15 @@ class lnPi_collection(object):
         if None in spin:
             raise ValueError('one of spinodals is Zero')
 
-        b,r = binodal.get_binodal_point(self[0].base,IDs,spin[0].mu,spin[1].mu,
+        b,r = binodal.get_binodal_point(self[0],IDs,spin[0].mu,spin[1].mu,
                                   reweight_kwargs=reweight_kwargs,
-                                  argmax_kwargs=self._argmax_kwargs,
-                                  phases_kwargs=self._phases_kwargs,
-                                  ftag_phases=self._ftag_phases,
                                   full_output=True,
                                   **kwargs)
 
         if full_output:
             return b,r
+        else:
+            return b
 
 
     def get_binodals(self,spinodals=None,reweight_kwargs={},inplace=True,
@@ -2120,6 +2235,8 @@ class lnPi_collection(object):
         if inplace:
             self._binodals = L
             self._binodals_info = info
+            self.lnpis.extend(L)
+
         else:
             return L,info
 
@@ -2170,7 +2287,7 @@ class lnPi_collection(object):
     ##################################################
     @staticmethod
     def from_mu_iter(ref,mus,
-                     argmax_kwargs={},phases_kwargs={},
+                     argmax_kwargs=None,phases_kwargs=None,build_kwargs=None,
                      ftag_phases=None,**kwargs):
         """
         build lnPi_collection from mus
@@ -2206,12 +2323,13 @@ class lnPi_collection(object):
             L.append( ref.reweight(mu,**kwargs) )
 
 
-        return lnPi_collection(L,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,ftag_phases=ftag_phases)
+        return lnPi_collection(L,argmax_kwargs=argmax_kwargs,phases_kwargs=phases_kwargs,build_kwargs=build_kwargs,ftag_phases=ftag_phases)
                       
 
     @staticmethod
     def from_mu(ref,mu,x,
-                argmax_kwargs={},phases_kwargs={},
+                argmax_kwargs=None,phases_kwargs=None,
+                build_kwargs=None,
                 ftag_phases=None,**kwargs):
         """
         build lnPi_collection from mu builder
@@ -2250,6 +2368,7 @@ class lnPi_collection(object):
         return lnPi_collection.from_mu_iter(ref,mus,
                                             argmax_kwargs=argmax_kwargs,
                                             phases_kwargs=phases_kwargs,
+                                            build_kwargs=build_kwargs,
                                             ftag_phases=ftag_phases,
                                             **kwargs)
     
