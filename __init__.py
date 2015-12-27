@@ -5,103 +5,27 @@ utilities to work with lnPi(N)
 import numpy as np
 from scipy.ndimage import filters
 
-from collections import defaultdict, Iterable
 
-from functools import wraps
-
-from skimage import draw
-from skimage.feature import peak_local_max
-from skimage.morphology import watershed
-from skimage.segmentation import find_boundaries
-from skimage.graph import route_through_array
-
-from scipy import ndimage as ndi
 from scipy.spatial.distance  import cdist,pdist,squareform
 
 import itertools
+from collections import defaultdict, Iterable
 
+
+
+from _cache import *
+from _utils import _interp_matrix,get_mu_iter 
+
+from _segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
+from skimage.feature import peak_local_max
+from skimage.segmentation import find_boundaries
+from skimage import draw
+from skimage.graph import route_through_array
 
 import spinodal
 import binodal
 
 
-#decorator to kill cache
-def cache_clear(f):
-    def wrapper(*args):
-        self = args[0]
-        self._clear_cache()
-        return f(*args)
-    return wrapper
-
-
-#decorator to cache property
-def cache_prop(fn):
-    key = fn.__name__
-    @property
-    def wrapper(self):
-        if self._cached[key] is None:
-            #print 'generating',key
-            self._cached[key] = fn(self)
-        return self._cached[key]
-    return wrapper
-
-
-#decorator to cache function
-def cache_func(fn):
-    key0 = fn.__name__
-    @wraps(fn)
-    def wrapper(*args):
-        self = args[0]
-        key = (key0,) + args[1:]
-        if self._cached[key] is None:
-            #print 'generating',key
-            self._cached[key] = fn(*args)
-        return self._cached[key]
-    return wrapper
-
-
-def _pad_rows(Z,empty):
-    #fill empty parts of Z
-    ZR = Z.copy()
-    for i in range(1,Z.shape[0]):
-        msk = empty[i,:]
-        last = Z[i,~msk][-1]
-        ZR[i,msk] = last
-    return ZR
-    
-def _pad_matrix(Z,empty):
-    #fill empty parts of Z
-    
-    ZR = _pad_rows(Z,empty)
-    ZC = _pad_rows(Z.T,empty.T).T
-    ZRC = (ZR+ZC)*0.5
-    return ZRC
-
-
-def _interp_rows(Z,empty):
-    ZR = Z.copy()
-    x = np.arange(Z.shape[1])
-    
-    for i in range(0,Z.shape[0]):
-        msk = empty[i,:]
-        ZR[i,msk] = np.interp(x[msk],x[~msk],Z[i,~msk])
-    return ZR
-
-def _interp_matrix(Z,empty):
-    ZR = _interp_rows(Z,empty)
-    ZC = _interp_rows(Z.T,empty.T).T
-    ZRC = 0.5*(ZR+ZC)
-    return ZRC
-
-
-def _get_shift(shape,mu):
-    """
-    shift[i,j,...] = n1[i]*mu[1]+n2[j]*mu[2]+...
-    """
-    shift = np.zeros([],dtype=float)
-    for i,(s,m) in enumerate(zip(shape,mu)):
-        shift = np.add.outer(shift,np.arange(s)*m)
-    return shift
 
 
 class lnPi(np.ma.MaskedArray):
@@ -512,12 +436,7 @@ class lnPi(np.ma.MaskedArray):
         -------
         labels
         """
-
-        
-        
         markers,n = _indices_to_markers(indices,self.shape,structure)
-
-
         if smooth:
             xx = self.Pad().smooth(**smooth_kwargs)
         else:
@@ -682,8 +601,17 @@ class lnPi(np.ma.MaskedArray):
         Z.mu = mu
         dmu = Z.mu - self.mu
         
-        s = _get_shift(self.shape,dmu)*self.beta
-        Z.set_data(Z.data+s)
+        #s = _get_shift(self.shape,dmu)*self.beta
+        #get shift
+        #i.e., N * (mu_1 - mu_0)
+        shift = np.zeros([],dtype=float)
+        for i,(s,m) in enumerate(zip(self.shape,dmu)):
+            shift = np.add.outer(shift,np.arange(s)*m)
+
+        #scale by beta
+        shift *= self.beta
+            
+        Z.set_data(Z.data+shift)
 
         Z.adjust(ZeroMax=ZeroMax,Pad=Pad,inplace=True)
 
@@ -692,6 +620,9 @@ class lnPi(np.ma.MaskedArray):
 
         
     def new_mask(self,mask=None,**kwargs):
+        """
+        create copy with new mask
+        """
         return lnPi(self.data,mask=mask,**dict(self._optinfo,**kwargs))
 
     
@@ -995,12 +926,17 @@ class lnPi_phases(object):
 
 
 
-    def argmax_from_phases(self):
+    def argmax_from_phases(self,inplace=False):
         """
         set argmax from max in each phase
         """
         L = [np.array(np.where(p.filled() == p.max())).T for p in self.phases]
-        return tuple(np.concatenate(L).T)
+        argmax = tuple(np.concatenate(L).T)
+
+        if inplace:
+            self.argmax = argmax
+        else:
+            return argmax
         
         
 
@@ -1061,16 +997,17 @@ class lnPi_phases(object):
     
     @property
     def phaseIDs(self):
-        if not hasattr(self,'_phaseIDs'):
-            self.phaseIDs = self._ftag_phases(self,**self._ftag_phases_kwargs)
-        return self._phaseIDs
+        return self._ftag_phases(self,**self._ftag_phases_kwargs)
+    #     if not hasattr(self,'_phaseIDs'):
+    #         self._phaseIDs = self._ftag_phases(self,**self._ftag_phases_kwargs)
+    #     return self._phaseIDs
 
-    @phaseIDs.setter
-    def phaseIDs(self,val):
-        assert len(val)<= self.base.num_phases_max
-        assert val.min() >=0 and val.max() <= self.base.num_phases_max
+    # @phaseIDs.setter
+    # def phaseIDs(self,val):
+    #     assert len(val)<= self.base.num_phases_max
+    #     assert val.min() >=0 and val.max() <= self.base.num_phases_max
         
-        self._phaseIDs = val
+    #     self._phaseIDs = val
 
     def phaseIDs_to_indicies(self,IDs):
         """
@@ -1404,11 +1341,18 @@ k        """
 
 
 
-    
+    @staticmethod
+    def _get_DE(Etrans,Emin,vmax=1e20):
+        DE = Etrans - Emin[:,None]
+        DE[np.isnan(DE)] = vmax
+        np.fill_diagonal(DE,np.nan)
+        return DE        
 
 
 
-    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
+
+    def merge_phases(self,efac=1.0,vmax=1e20,inplace=False,force=True,
+                     **kwargs):
         """
         merge phases such that DeltabetaE[i,j]>efac-tol for all phases
         
@@ -1420,15 +1364,12 @@ k        """
         vmax : float (1e20)
             vmax parameter in DeltabetaE calculation
 
-        tol : float (1e-4)
-            tolerance parameter
-
         inplace : bool (Default False)
             if True, do inplace modificaiton, else return 
 
         force : bool (Default False)
             if True, iteratively remove minimum energy difference 
-            (even if DeltabetaE>efac) maxima until have 
+            (even if DeltabetaE>efac) until have 
             exactly self.base.num_phases_max
 
 
@@ -1453,6 +1394,11 @@ k        """
         Etrans = self.betaEtransition_matrix()
         Emin = self.betaEmin
 
+        #will iteratively reduce dE=Etrans - Emin
+        #keep placeholder of absolute indices still in dE (number)
+        #as well as list of phases merged together (L)
+        #where L==None, phase has been removed.  removed phases
+        #are appended to L[i] where i is the phase merged into.
         number = np.arange(Emin.shape[0])
         L = [[i] for i in range(len(Emin))]
 
@@ -1461,13 +1407,13 @@ k        """
             nphase = len(Emin)
             if nphase==1:
                 break
-
-
-            DE = _get_DE(Etrans,Emin,vmax=vmax)
+            DE = self._get_DE(Etrans,Emin,vmax=vmax)
 
             min_val = np.nanmin(DE)
 
-            if min_val > efac - tol:
+            
+            
+            if min_val > efac:
                 if not force:
                     break
                 elif nphase <= self.base.num_phases_max:
@@ -1498,7 +1444,6 @@ k        """
         msk = np.array([x is not None for x in L])
         
         argmax_new = tuple(x[msk] for x in self._argmax)
-
         phases_new = []
 
         for x in L:
@@ -1515,17 +1460,75 @@ k        """
             
             
         
-        
+
+
+    def merge_phaseIDs(self,inplace=False,**kwargs):
+        """
+        if phaseIDs are equal, merge them to a single phase
+        """
+
+
+
+        if inplace:
+            new = self
+        else:
+            new = self.copy()
+
+                
+        phaseIDs = self._ftag_phases(self,**self._ftag_phases_kwargs)
+        if len(phaseIDs)>0:
+            #find distance between phaseIDs
+            dist = pdist(phaseIDs.reshape(-1,1)).astype(int)
+            if np.any(dist==0):
+                #have some phases with same phaseIDs.
+
+                #create list of where
+                L=[]
+                for i in range(self.base.num_phases_max):
+                    w = np.where(phaseIDs==i)[0]
+                    if len(w)>0:
+                        L.append(w)
+
+
+                #merge phases
+                phases_new = []
+                for x in L:
+                    if len(x)==1:
+                        #only one phase has this phase
+                        phases_new.append(self.phases[i])
+                    else:
+                        #multiple phases have this phaseID
+                        mask = np.all([self.phases[i].mask for i in x],axis=0)
+                        phases_new.append(self.base.new_mask(mask))
+
+                new.phases = phases_new
+                new.argmax =new.argmax_from_phases()
+                if hasattr(self,'_phaseIDs'):
+                    del self._phaseIDs
+
+        if not inplace:
+            return new
+            
 
         
 
-    def build_phases(self,nmax_start=10,
-                     efac=0.1,vmax=1e20,tol=1e-4,inplace=False,force=True,**kwargs):
+    def build_phases(self,merge='full',
+                     nmax_start=10,
+                     efac=0.1,vmax=1e20,inplace=False,force=True,
+                     merge_phaseIDs=True,
+                     **kwargs):
         """
         iteratively build phases by finding argmax merging phases
 
         Parameters
         ----------
+        merge : str or None (Default 'partial')
+            if None, don't perform merge.
+            if 'full', perform normal merge with passed `force` and `efac`
+            if 'partial' -> only merge if necessary and with force=True, efac=0.0
+            (i.e., will leave phases with dE<`efac`)
+       
+
         nmax_start : int (Default 10)
             max number of phases argmax_local to start with
 
@@ -1537,12 +1540,16 @@ k        """
             value of DeltabetaE if phase transition between i and j does not exist
         
 
-        tol : float (Default 1e-4)
-            fudge factor for cutoff
-
         inplace : bool (Default False)
             if True, do inplace modification
 
+        force : bool (Default True)
+            if True, keep removing the minimum transition phases regardless of dE until 
+            nphase==num_phases_max
+        
+        merge_phaseIDs : bool (Default True)
+            if True, merge phases with same phaseIDs
+        
         **kwargs : extra arguments to self.merge_phases
 
         Returns
@@ -1557,21 +1564,38 @@ k        """
         else:
             t = self.copy()
 
-        #use _argmax to avoid num_phases_max check
-        t._argmax = t._base.argmax_local(num_phases_max=nmax_start,**t._argmax_kwargs)
+        if t._argmax == 'get':
+            #use _argmax to avoid num_phases_max check
+            t._argmax = t._base.argmax_local(num_phases_max=nmax_start,**t._argmax_kwargs)
 
-        t._info = t._argmax
 
-        #use _phases to avoid checks
-        t._phases = self._base.get_list_indices(t._argmax,**t._phases_kwargs)
+        if t._phases == 'get':
+            #use _phases to avoid checks
+            t._phases = self._base.get_list_indices(t._argmax,**t._phases_kwargs)
 
-        if t.nphase>1:
-            t.merge_phases(efac=efac,vmax=vmax,tol=tol,inplace=True,force=force,**kwargs)
+
+        
+        if t.nphase == 1:
+            #nothing to do here
+            pass
+        
+        elif merge is None:
+            pass
+        
+        elif merge=='full':
+            t.merge_phases(efac=efac,vmax=vmax,inplace=True,force=force,**kwargs)
+            
+        elif merge=='partial':
+            t.merge_phases(efac=0.0,vmax=vmax,inplace=True,force=True,**kwargs)
+                        
 
 
         #do a sanity check
         t.argmax = t._argmax
         t.phases = t._phases
+
+        if merge_phaseIDs:
+            t.merge_phaseIDs(inplace=True)
 
         if not inplace:
             return t
@@ -1627,11 +1651,8 @@ k        """
         """
 
         assert type(ref) is lnPi_phases
-        
         new = ref.reweight(mu,**kwargs)
-
         new.phases = new.base.get_list_labels(labels,SegLenOne=SegLenOne,**masks_kwargs)
-
         new.argmax = new.argmax_from_phases()
 
         return new
@@ -1661,15 +1682,17 @@ class lnPi_collection(object):
 
     ##################################################
     #copy
-    def copy(self,**kwargs):
+    def copy(self,lnpis=None):
         """
         create shallow copy of self
         
         **kwargs : named arguments to lnPi_collection.__init__
         if argument is given, it will overide that in self
         """
-
-        return lnPi_collection(self.lnpis[:])
+        if lnpis is None:
+            lnpis = self.lnpis[:]
+        
+        return lnPi_collection(lnpis=lnpis)
         
 
 
@@ -1863,8 +1886,9 @@ class lnPi_collection(object):
         return self.copy(lnpis=L)
 
 
-    def merge_phases(self,efac=1.0,vmax=1e20,tol=1e-4,inplace=False,**kwargs):
-        L = [x.merge_phases(efac,vmax,tol,inplace,**kwargs) for x in self.lnpis]
+    def merge_phases(self,efac=1.0,vmax=1e20,inplace=False,force=True,**kwargs):
+        L = [x.merge_phases(efac=efac,vmax=vmax,inplace=inplace,force=force,
+                            **kwargs) for x in self._lnpis]
         if not inplace:
             return self.copy(lnpis=L)
 
@@ -2031,12 +2055,11 @@ class lnPi_collection(object):
         if inplace:
             self._binodals = L
             self._binodals_info = info
-            self.lnpis.extend(L)
 
         else:
             return L,info
 
-    
+
         
     @property
     def binodals(self):
@@ -2140,290 +2163,5 @@ class lnPi_collection(object):
         return lnPi_collection.from_mu_iter(ref,mus,**kwargs)
     
 
-##################################################
-#calculations
-##################################################
 
-def get_mu_iter(mu,x):
-    """
-    create a mu_iter object for varying a single mu
 
-    Parameters
-    ----------
-    mu : list
-        list with one element equal to None.  This is the component which will be varied
-        For example, mu=[mu0,None,mu2] implies use values of mu0,mu2 for components 0 and 2, and 
-        vary component 1
-
-    x : array
-        values to insert for variable component
-
-    Returns
-    -------
-    ouptut : array of shape (len(x),len(mu))
-       array with rows [mu0,mu1,mu2]
-    """
-
-    z = np.zeros_like(x)
-
-    x = np.asarray(x)
-    
-    L = []
-    for m in mu:
-        if m is None:
-            L.append(x)
-        else:
-            L.append(z+m)
-
-    return np.array(L).T
-
-        
-
-
-
-
-    
-
-##################################################
-#utilities
-##################################################
-
-def sort_lnPis(input,comp=0):
-    """
-    sort list of lnPi  that component `comp` mol fraction increases
-
-    Parameters
-    ----------
-    input : list of lnPi objects
-
-    
-    comp : int (Default 0)
-     component to sort along
-
-    Returns
-    -------
-    output : list of lnPi objects in sorted order
-    """
-
-    molfrac_comp = np.array([x.molfrac[comp] for x in input])
-
-    order = np.argsort(molfrac_comp)
-
-    output = [input[i] for i in order]
-
-    return output
-
-
-
-
-
-##################################################
-#segmentation functions
-##################################################
-def _indices_to_markers(indices,shape,structure='set',**kwargs):
-    """
-    create markers array from feature indices
-
-    Parameters
-    ----------
-    indices : tuple of arrays
-        indices of features
-
-    shape : tuple
-        shape of resulting markers array
-
-    structure : array or str or None
-        structure passed to ndimage.label.
-        if None, use default.
-        if 'set', use np.one((3,)*data.ndim)
-        else, use structure
-    
-    Returns
-    -------
-    markers : array of shape self.shape
-        roughly, np.where(makers==i) = seg_indices[0][i],seg_indices[1][i],....
-    
-    num_feature : int
-        Number of objects found
-    """
-
-    input = np.zeros(shape,dtype=bool)
-    input[indices] = True
-
-    return _mask_to_markers(input,structure,**kwargs)
-
-
-def _mask_to_markers(input,structure='set',**kwargs):
-    """"
-    create markers array from input
-
-    Parameters
-    ----------
-    input : array_like
-        An array-like object to be labeled.  Any non-zero values in `input` are
-        counted as features and zero values are considered the background.
-
-    structure : array or str or None
-        structure passed to ndimage.label.
-        if None, use default.
-        if 'set', use np.one((3,)*data.ndim)
-        else, use structure
-    
-    Returns
-    -------
-    markers : array of shape self.shape
-        roughly, np.where(makers==i) = seg_indices[0][i],seg_indices[1][i],....
-    
-    num_feature : int
-        Number of objects found
-    """
-
-    #make labels
-    if isinstance(structure,(str,unicode)) and structure=='set':
-        structure = np.ones((3,)*input.ndim)
-
-    return ndi.label(input,structure=structure,**kwargs)
-    
-
-
-
-def _labels_watershed(data,markers,mask,size=3,footprint=None,**kwargs):
-    """"
-    perform watershed segmentation on data
-
-    Parameters
-    ----------
-    data : array
-     data to segment
-
-    markers: ndarray of the same shape as `data`
-        An array marking the basins with the values to be assigned in the
-        label matrix. Zero means not a marker. This array should be of an
-        integer type.
-     
-    mask: ndarray of bools or 0s and 1s, optional
-     Array of same shape as `image`. Only points at which mask == True
-     will be labeled.
-
-    size : int (Default 3)
-     set footprint=np.ones((size,)*data.ndim,dtype=bool)
-
-    footprint : array
-     connectivity footprint array
-
-    **kwargs : keyword arguments to watershed
-
-    """
-
-    
-
-    #get labels from watershed
-    connectivity=None
-    if size is not None:
-        connectivity = np.ones((size,)*data.ndim)
-        
-    if footprint is not None:
-        connectivity = footprint
-
-    labels = watershed(data,markers,connectivity=connectivity,mask=mask,**kwargs)
-
-    return labels
-
-
-
-
-##################################################
-#labels/masks utilities
-##################################################
-def labels_to_masks(labels,num_feature=None,include_boundary=False,feature_value=False,**kwargs):
-    """
-    convert labels array to list of masks
-
-    Parameters
-    ----------
-    labels : array of labels to analyze
-
-    num_features : number of features to analyze (Default None)
-        if None, get num_feature from labels
-
-    include_boundary : bool (Default False)
-        if True, include boundary regions in output mask
-
-
-    feature value : bool (Default False)
-        value which indicates feature.
-        False is MaskedArray convension
-        True is image convension
-
-    **kwargs : arguments to find_boundary if include_boundary is True
-    mode='outer', connectivity=labels.ndim
-
-    Returns
-    -------
-    output : list of masks of same shape as labels
-        mask for each feature
-
-    """
-
-
-    if include_boundary:
-        kwargs = dict(dict(mode='outer',connectivity=labels.ndim),**kwargs)
-    
-    if num_feature is None:
-        num_feature = labels.max()
-
-
-    output = []
-
-    for i in range(1,num_feature+1):
-        m = labels==i
-
-        if include_boundary:
-            b = find_boundaries(m.astype(int),**kwargs)
-            m = m+b
-
-        #right now mask is in image convesion
-        #if fature_value is false, convert
-        if not feature_value:
-            m = ~m
-        
-        output.append(m)
-
-    return output
-
-
-
-def masks_to_labels(masks,feature_value=False,**kwargs):
-    """
-    convert list of masks to labels
-
-    Parameters
-    ----------
-    masks : list-like of masks
-
-    feature value : bool (Default False)
-        value which indicates feature.
-        False is MaskedArray convension
-        True is image convension
-
-    Returns
-    -------
-    labels : array of labels
-    """
-
-    labels = np.zeros(masks[0].shape,dtype=int)
-
-    for i,m in enumerate(masks):
-        labels[m==feature_value] = i+1
-
-    return labels
-    
-
-
-
-
-def _get_DE(Etrans,Emin,vmax=1e20):
-    DE = Etrans - Emin[:,None]
-    DE[np.isnan(DE)] = vmax
-    np.fill_diagonal(DE,np.nan)
-    return DE        
