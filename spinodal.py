@@ -177,7 +177,6 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
     left = L
     right = R
 
-    
 
     close_kwargs = dict(dict(atol=1e-5),**close_kwargs)
     
@@ -235,17 +234,18 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
             right = mid
 
 
+    print 'i',i
+    print ID
+    print 'left mu',left.mu
+    print 'right mu',right.mu
+    print 'dmu',left.mu-right.mu
+    
+    print 'left DE',left.DeltabetaE_phaseIDs()
+    print 'right DE',right.DeltabetaE_phaseIDs()
 
-    # print ID
-    # print left.mu
-    # print right.mu
-
-    # print left.DeltabetaE_phaseIDs()
-    # print right.DeltabetaE_phaseIDs()
-
-    # print doneLeft
-    # print doneRight
-    # print np.allclose(left.mu,right.mu)
+    print 'doneleft',doneLeft
+    print 'doneright',doneRight
+    print 'close',np.allclose(left.mu,right.mu,**close_kwargs)
 
     raise RuntimeError('did not finish')
         

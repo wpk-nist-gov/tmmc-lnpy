@@ -24,7 +24,7 @@ from skimage.graph import route_through_array
 
 import spinodal
 import binodal
-
+import h5py
 
 
 
@@ -739,6 +739,84 @@ class lnPi(np.ma.MaskedArray):
         
         return lnPi(Z,mask=empty,mu=mu,num_phases_max=num_phases_max,**kwargs)
 
+    def to_hdf(self,path_or_buff,key,overwrite=False):
+        """
+        push self to h5 file
+
+        Parameters
+        ----------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+        
+        overwrite : bool (Default False)
+            if key path_or_buff[key] exists, if overwrite is True, overwrite existing
+            group, otherwise, create group
+        """
+
+        if isinstance(path_or_buff,(str,unicode)):
+            p = h5py.File(path_or_buff)
+            
+        elif isinstance(path_or_buff,(h5py.File,h5py.Group)):
+            p = path_or_buff
+        else:
+            raise ValueError('bad path_or_buff type %s'%(type(path_or_buff)))
+    
+            
+        if key in p:
+            if overwrite:
+                del p[key]
+            else:
+                raise RuntimeError('key %s already exists'%key)
+        
+        group = p.create_group(key)
+
+        data = group.create_dataset('data',data=self.data)
+        mask = group.create_dataset('mask',data=self.mask)
+    
+        #add attributes to base
+        for k,v in self._optinfo.iteritems():
+            group.attrs[k] = v
+
+    @staticmethod
+    def from_hdf(path_or_buff,key=None):
+        """
+        read in lnPi from file
+
+        Parameters
+        ----------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+
+        Notes
+        -----
+        if key is None, assume path_or_buff is the group 
+        containing data/maks/attributes
+        """
+
+        if isinstance(path_or_buff,(str,unicode)):
+            group = h5py.File(path_or_buff)[key]
+
+        elif type(path_or_buff) is h5py.File:
+            group = path_or_buff[key]
+
+        elif type(path_or_buff) is h5py.Group:
+            if key is None:
+                group = path_or_buff
+            else:
+                group = path_or_buff[key]
+
+        data = group['data'].value
+        mask = group['mask'].value
+        kwargs = dict(group.attrs)
+        return lnPi(data,mask=mask,**kwargs)
+        
+    
 
 
 ################################################################################
@@ -1601,6 +1679,12 @@ k        """
             return t
 
 
+
+            
+    
+        
+
+
     @staticmethod
     def from_file(filename,mu=None,num_phases_max=None,volume=None,beta=None,
                   ZeroMax=True,Pad=False,
@@ -1657,10 +1741,134 @@ k        """
 
         return new
 
+
+    def to_hdf(self,path_or_buff,key,overwrite=False,base=True,phases=True,dicts=True):
+        """
+        push to h5 file
+        
+        Parameters
+        ----------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+        
+        overwrite : bool (Default False)
+            if key path_or_buff[key] exists, if overwrite is True, overwrite existing
+            group, otherwise, create group
+
+        base,phases,dicts : bool (default True)
+            if True write self.base, self.phases, self._argmax_kwargs,...
+        """ 
+        if isinstance(path_or_buff,(str,unicode)):
+            p = h5py.File(path_or_buff)
+            
+        elif isinstance(path_or_buff,(h5py.File,h5py.Group)):
+            p = path_or_buff
+        else:
+            raise ValueError('bad path_or_buff type %s'%(type(path_or_buff)))
+            
+        if key in p:
+            if overwrite:
+                del p[key]
+            else:
+                raise RuntimeError('key %s already exists'%key)
+        group = p.create_group(key)
+        
+        
+        if base:
+            self.base.to_hdf(group,'base',overwrite)
+
+        if phases:
+            if 'phases' in group:
+                if overwrite:
+                    del group['phases']
+            group.create_dataset('phases',data=self.labels.astype(np.uint8))
+            
+        if dicts:
+            for x in ['argmax','phases','build','ftag_phases']:
+                kL = x + '_kwargs'
+                kR = '_' + kL 
+                group.attrs[kL] = repr(getattr(self,kR))
+
+            group.attrs['ftag_phases'] = getattr(self._ftag_phases,'__name__',None)
+            
+    @staticmethod
+    def from_hdf(path_or_buff,key=None,base=None,phases=None,**kwargs):
+        """
+        read in lnpi_phases from h5py file
+
+        Paremters
+        ---------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+
+        base : Default None
+            if not None, use this as base
+
+        phases : Default NOne
+            if not None, use this as phases
+
+        **kwargs : extra argunets to lnPi_phases
+            overides parameters read from file
+
+        Returns
+        -------
+        out : lnPi_phases
+
+        Notes
+        -----
+        if key is None, assume path_or_buff is the group 
+        containing data
+        """
+        
+
+
+        if isinstance(path_or_buff,(str,unicode)):
+            group = h5py.File(path_or_buff)[key]
+
+        elif type(path_or_buff) is h5py.File:
+            group = path_or_buff[key]
+
+        elif type(path_or_buff) is h5py.Group:
+            if key is None:
+                group = path_or_buff
+            else:
+                group = path_or_buff[key]
+
+
+        if base is None:
+            base = lnPi.from_hdf(group,'base')
+
+        if phases is None:
+            phases = group['phases'].value
+
+        ev = lambda x: eval(x) if '{' in x else x
+        file_kwargs = {k:ev(v) for k,v in group.attrs.iteritems()}
+
+
+        #passed kwargs overide read kwargs
+        kwargs = dict(file_kwargs,**kwargs)
+
+        if kwargs['ftag_phases'] is None:
+            raise ValueError('must specify ftag_phases. None found in file')
+        
+        
+        new = lnPi_phases(base=base,phases=phases,**kwargs)
+        if phases is not 'get':
+            new.argmax_from_phases(inplace=True)
+
+        return new
+        
         
 
         
-        
+                
+    
 
 
 ################################################################################
@@ -1951,7 +2159,7 @@ class lnPi_collection(object):
         """
 
         s,r = spinodal.get_spinodal(self,ID,efac=efac,dmu=dmu,vmin=vmin,vmax=vmax,
-                                    ntry=ntry,step=step,nmax=20,
+                                    ntry=ntry,step=step,nmax=nmax,
                                     reweight_kwargs=reweight_kwargs,
                                     DeltabetaE_kwargs=DeltabetaE_kwargs,
                                     close_kwargs=close_kwargs,
@@ -1973,7 +2181,7 @@ class lnPi_collection(object):
         info = []
         for ID in range(self[0].base.num_phases_max):
             s,r = self.get_spinodal_phaseID(ID,efac=efac,dmu=dmu,vmin=vmin,vmax=vmax,
-                                            ntry=ntry,step=step,nmax=20,
+                                            ntry=ntry,step=step,nmax=nmax,
                                             reweight_kwargs=reweight_kwargs,
                                             DeltabetaE_kwargs=DeltabetE_kwargs,
                                             close_kwargs=close_kwargs,
@@ -2165,3 +2373,138 @@ class lnPi_collection(object):
 
 
 
+    def to_hdf(self,path_or_buff,key,ref=None,overwrite=False):
+        """
+        push self to h5py file
+
+        Parameters
+        ----------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+        
+        overwrite : bool (Default False)
+            if key path_or_buff[key] exists, if overwrite is True, overwrite existing
+            group, otherwise, create group
+        
+        ref : lnpi_phases object or None
+            if not None, push ref to lnpi_ref
+        """
+        if isinstance(path_or_buff,(str,unicode)):
+            p = h5py.File(path_or_buff)
+            
+        elif isinstance(path_or_buff,(h5py.File,h5py.Group)):
+            p = path_or_buff
+        else:
+            raise ValueError('bad path_or_buff type %s'%(type(path_or_buff)))
+            
+        if key in p:
+            if overwrite:
+                del p[key]
+            else:
+                raise RuntimeError('key %s already exists'%key)
+        group = p.create_group(key)
+
+
+        if ref is not None:
+            ref.to_hdf(group,'lnpi_ref',overwrite=overwrite)
+
+        #push mus
+        group.create_dataset('mus',data=self.mus)
+
+        #push labels
+        group.create_dataset('phases',data=np.array([x.labels for x in self]).astype(np.uint8))
+
+
+        #push indices of binodal
+
+        if hasattr(self,'_spinodals'):
+            L = []            
+            for s in self._spinodals:
+                if s is None:
+                    idx = -1
+                else:
+                    idx = np.where(np.all(self.mus == s.mu,axis=-1))[0][0]
+                L.append(idx)
+            group.create_dataset('spinodals',data=np.array(L))
+
+        if hasattr(self,'_binodals'):
+            L = []
+            for b in self._binodals:
+                if b is None:
+                    idx = -1
+                else:
+                    idx = np.where(np.all(self.mus == b.mu,axis=-1))[0][0]
+                L.append(idx)
+            group.create_dataset('binodals',data=np.array(L))
+
+
+    @staticmethod
+    def from_hdf(path_or_buff,key=None,ref=None):
+        """
+        read in lnpi_phases from h5py file
+
+        Paremters
+        ---------
+        path_or_buff : string, h5py.File, or h5py.Group
+            if string, use as path. otherwise, write to file or group
+
+        key : string
+            group to write to (relative to wherever path_or_buff points to)
+
+        ref : lnpi_phases or None
+            if None, read reference from file, else use lnpi_phases as reference.
+
+        Returns
+        -------
+        out : lnPi_collection
+
+        Notes
+        -----
+        if key is None, assume path_or_buff is the group 
+        containing data
+        """
+
+        if isinstance(path_or_buff,(str,unicode)):
+            group = h5py.File(path_or_buff)[key]
+
+        elif type(path_or_buff) is h5py.File:
+            group = path_or_buff[key]
+
+        elif type(path_or_buff) is h5py.Group:
+            if key is None:
+                group = path_or_buff
+            else:
+                group = path_or_buff[key]
+
+        if ref is None:
+            ref = lnPi_phases.from_hdf(group,'lnpi_ref')
+
+        mus = group['mus'].value
+        phases = group['phases'].value
+
+        new = lnPi_collection.from_mu_iter(ref,mus)
+
+        for i,p in enumerate(new):
+            p.phases = phases[i]
+            p.argmax_from_phases(inplace=True)
+
+        #spinodals?
+        if 'spinodals' in group:
+            new._spinodals = [new[i] if i>=0 else None for i in group['spinodals']]
+
+        if 'binodals' in group:
+            new._binodals = [new[i] if i>=0 else None for i in group['binodals']]
+
+        return new
+                
+            
+            
+            
+            
+        
+        
+
+    
