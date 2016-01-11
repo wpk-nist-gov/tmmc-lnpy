@@ -1,0 +1,17 @@
+fileprefix_inh:
+ljcut.t065.finiteslit.L_20nm.W_4nm.r2.
+
+T* 0.65000E0
+
+MU* -0.500000E+01
+
+
+fileprefix_bulk:
+ljcut.t065.bulk.v1000.r1.lnpi.dat
+
+T* 0.65000E0
+
+MU* -4.453015418106743E+00
+
+V* 1000.0E0
+L*  10.0E0
