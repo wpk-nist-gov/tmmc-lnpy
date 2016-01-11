@@ -24,6 +24,7 @@ from skimage.graph import route_through_array
 
 import spinodal
 import binodal
+import molfrac
 import h5py
 
 

@@ -6,17 +6,54 @@ routines to find constant molfracs
 import numpy as np
 from scipy import optimize
 
-def find_mu_molfrac(ref,phaseID,molfrac,muA,muB,
+def find_mu_molfrac(ref,phaseID,target,muA,muB,
                     comp=0,
                     reweight_kwargs={},
-                    argmax_kwargs={},
-                    phases_kwargs={},
-                    ftag_phases=None,
                     full_output=False,
                     tol=1e-4,
                     **kwargs):
     """
-    calculate mu which provides lnpi.molfracs_phaseIDs[phaseID]==molfrac
+    calculate mu which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
+
+    Parameters
+    ----------
+    ref : lnPi_phases object
+        object to reweight
+
+    phaseID : int 
+        phaseID of the target
+
+    target : float 
+        target molfraction
+
+    muA,muB : mu arrays bracketing solution
+        only one index can vary between muA and muB
+
+    comp : int (Default 0)
+        the component ID of target molfraction
+
+    reweight_kwargs : dict
+        extra arguments to ref.reweight
+
+    full_output : bool (Default False)
+        if True, return solve stats
+
+    tol : float (default 1e-4)
+        solver tolerance
+
+    **kwargs : extra arguments to scipy.optimize.brentq
+
+    
+    Returns
+    --------
+    output : lnPi_phases object
+        object with desired molfraction
+
+    info : solver info (optional, returned if full_output is `True`)
+
+
+    
+
     """
 
 
@@ -42,8 +79,7 @@ def find_mu_molfrac(ref,phaseID,molfrac,muA,muB,
         mu = mu_in[:]
         mu[mu_idx] = x
 
-        lnpi = ref.reweight(mu,**reweight_kwargs).to_phases(
-            argmax_kwargs,phases_kwargs,ftag_phases)
+        lnpi = ref.reweight(mu,**reweight_kwargs)
 
         if lnpi.nphase==1:
             mf=lnpi.molfracs[0,comp]
@@ -52,7 +88,7 @@ def find_mu_molfrac(ref,phaseID,molfrac,muA,muB,
 
         f.lnpi = lnpi
 
-        return mf - molfrac
+        return mf - target
 
 
 
