@@ -650,7 +650,6 @@ class lnPi(np.ma.MaskedArray):
          arguments to filters.gaussian_filter
         """
 
-        kwargs = dict(dict(sigma=4,mode='nearest',truncate=4),**kwargs)
         
         if inplace:
             Z = self
@@ -659,7 +658,7 @@ class lnPi(np.ma.MaskedArray):
 
         Z._clear_cache()
         Z.adjust(ZeroMax=ZeroMax,Pad=Pad,inplace=True)
-        filters.gaussian_filter(Z.data,output=Z.data,**kwargs)
+        filters.gaussian_filter(Z.data,output=Z.data,mode=mode,truncate=truncate,sigma=sigma,**kwargs)
 
         if not inplace:
             return Z
