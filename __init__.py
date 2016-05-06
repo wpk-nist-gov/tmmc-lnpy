@@ -739,6 +739,32 @@ class lnPi(np.ma.MaskedArray):
         
         return lnPi(Z,mask=empty,mu=mu,num_phases_max=num_phases_max,**kwargs)
 
+
+    @staticmethod
+    def from_matrix(Z,mask=False,mu=None,num_phases_max=None,**kwargs):
+        """
+        parse data into lnpi masked array
+        
+        Parameters
+        ----------
+        matrix : lnPi data
+        
+        mask : bool or bool array
+            mask for matrix (True where data is masked)
+        
+        mu : array-like (d,)
+            chem. pot. for each component
+
+        num_phases_max : int or None (default None)
+            max number of phases
+            
+        **kwargs : arguments to lnPi constructor
+        """
+        
+        
+        return lnPi(Z,mask=mask,mu=mu,num_phases_max=num_phases_max,**kwargs)
+    
+
     def to_hdf(self,path_or_buff,key,overwrite=False):
         """
         push self to h5 file
@@ -1715,7 +1741,7 @@ k        """
                   ftag_phases=None,ftag_phases_kwargs=None,
                   **kwargs):
         """
-        create lnPi_phases from data
+        create lnPi_phases from data.  see documentation of lnPi.from_data
         """
         return lnPi.from_data(data,mu=mu,num_phases_max=num_phases_max,
                               volume=volume,beta=beta,
@@ -1726,6 +1752,24 @@ k        """
                                                   ftag_phases=ftag_phases,
                                                   ftag_phases_kwargs=ftag_phases_kwargs)
 
+
+    @staticmethod
+    def from_matrix(Z,mask=False,mu=None,num_phases_max=None,volume=None,beta=None,
+                  ZeroMax=True,Pad=False,
+                  argmax_kwargs=None,phases_kwargs=None,build_kwargs=None,
+                  ftag_phases=None,ftag_phases_kwargs=None,
+                  **kwargs):
+        """
+        create lnPi_phases from matrix.  see documentation of lnPi.from_matrix
+        """
+        return lnPi.from_matrix(Z,mask=mask,mu=mu,num_phases_max=num_phases_max,
+                              volume=volume,beta=beta,
+                              ZeroMax=ZeroMax,Pad=Pad,
+                              **kwargs).to_phases(argmax_kwargs=argmax_kwargs,
+                                                  phases_kwargs=phases_kwargs,
+                                                  build_kwargs=build_kwargs,
+                                                  ftag_phases=ftag_phases,
+                                                  ftag_phases_kwargs=ftag_phases_kwargs)
 
 
     @staticmethod
