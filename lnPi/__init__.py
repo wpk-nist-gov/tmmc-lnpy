@@ -812,41 +812,41 @@ class lnPi(np.ma.MaskedArray):
         for k, v in self._optinfo.items():
             group.attrs[k] = v
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None):
-        """
-        read in lnPi from file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None):
+    #     """
+    #     read in lnPi from file
 
-        Parameters
-        ----------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Parameters
+    #     ----------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group
-        containing data/maks/attributes
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data/maks/attributes
+    #     """
 
-        if isinstance(path_or_buff, (bytes, str)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        data = group['data'].value
-        mask = group['mask'].value
-        kwargs = dict(group.attrs)
-        return lnPi(data, mask=mask, **kwargs)
+    #     data = group['data'].value
+    #     mask = group['mask'].value
+    #     kwargs = dict(group.attrs)
+    #     return lnPi(data, mask=mask, **kwargs)
 
 
 ################################################################################
@@ -1847,70 +1847,70 @@ k        """
             group.attrs['ftag_phases'] = getattr(self._ftag_phases, '__name__',
                                                  None)
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None, base=None, phases=None, **kwargs):
-        """
-        read in lnpi_phases from h5py file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None, base=None, phases=None, **kwargs):
+    #     """
+    #     read in lnpi_phases from h5py file
 
-        Paremters
-        ---------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Paremters
+    #     ---------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        base : Default None
-            if not None, use this as base
+    #     base : Default None
+    #         if not None, use this as base
 
-        phases : Default NOne
-            if not None, use this as phases
+    #     phases : Default NOne
+    #         if not None, use this as phases
 
-        **kwargs : extra argunets to lnPi_phases
-            overides parameters read from file
+    #     **kwargs : extra argunets to lnPi_phases
+    #         overides parameters read from file
 
-        Returns
-        -------
-        out : lnPi_phases
+    #     Returns
+    #     -------
+    #     out : lnPi_phases
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group
-        containing data
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data
+    #     """
 
-        if isinstance(path_or_buff, (bytes, str)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        if base is None:
-            base = lnPi.from_hdf(group, 'base')
+    #     if base is None:
+    #         base = lnPi.from_hdf(group, 'base')
 
-        if phases is None:
-            phases = group['phases'].value
+    #     if phases is None:
+    #         phases = group['phases'].value
 
-        ev = lambda x: eval(x) if '{' in x else x
-        file_kwargs = {k: ev(v) for k, v in group.attrs.items()}
+    #     ev = lambda x: eval(x) if '{' in x else x
+    #     file_kwargs = {k: ev(v) for k, v in group.attrs.items()}
 
-        #passed kwargs overide read kwargs
-        kwargs = dict(file_kwargs, **kwargs)
+    #     #passed kwargs overide read kwargs
+    #     kwargs = dict(file_kwargs, **kwargs)
 
-        if kwargs['ftag_phases'] is None:
-            raise ValueError('must specify ftag_phases. None found in file')
+    #     if kwargs['ftag_phases'] is None:
+    #         raise ValueError('must specify ftag_phases. None found in file')
 
-        new = lnPi_phases(base=base, phases=phases, **kwargs)
-        if phases is not 'get':
-            new.argmax_from_phases(inplace=True)
+    #     new = lnPi_phases(base=base, phases=phases, **kwargs)
+    #     if phases is not 'get':
+    #         new.argmax_from_phases(inplace=True)
 
-        return new
+    #     return new
 
 
 ################################################################################
@@ -2496,65 +2496,65 @@ class lnPi_collection(object):
                 L.append(idx)
             group.create_dataset('binodals', data=np.array(L))
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None, ref=None):
-        """
-        read in lnpi_phases from h5py file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None, ref=None):
+    #     """
+    #     read in lnpi_phases from h5py file
 
-        Paremters
-        ---------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Paremters
+    #     ---------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        ref : lnpi_phases or None
-            if None, read reference from file, else use lnpi_phases as reference.
+    #     ref : lnpi_phases or None
+    #         if None, read reference from file, else use lnpi_phases as reference.
 
-        Returns
-        -------
-        out : lnPi_collection
+    #     Returns
+    #     -------
+    #     out : lnPi_collection
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group
-        containing data
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data
+    #     """
 
-        if isinstance(path_or_buff, (bytes, str)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        if ref is None:
-            ref = lnPi_phases.from_hdf(group, 'lnpi_ref')
+    #     if ref is None:
+    #         ref = lnPi_phases.from_hdf(group, 'lnpi_ref')
 
-        mus = group['mus'].value
-        phases = group['phases'].value
+    #     mus = group['mus'].value
+    #     phases = group['phases'].value
 
-        new = lnPi_collection.from_mu_iter(ref, mus)
+    #     new = lnPi_collection.from_mu_iter(ref, mus)
 
-        for i, p in enumerate(new):
-            p.phases = phases[i]
-            p.argmax_from_phases(inplace=True)
+    #     for i, p in enumerate(new):
+    #         p.phases = phases[i]
+    #         p.argmax_from_phases(inplace=True)
 
-        #spinodals?
-        if 'spinodals' in group:
-            new._spinodals = [
-                new[i] if i >= 0 else None for i in group['spinodals']
-            ]
+    #     #spinodals?
+    #     if 'spinodals' in group:
+    #         new._spinodals = [
+    #             new[i] if i >= 0 else None for i in group['spinodals']
+    #         ]
 
-        if 'binodals' in group:
-            new._binodals = [
-                new[i] if i >= 0 else None for i in group['binodals']
-            ]
+    #     if 'binodals' in group:
+    #         new._binodals = [
+    #             new[i] if i >= 0 else None for i in group['binodals']
+    #         ]
 
-        return new
+    #     return new
