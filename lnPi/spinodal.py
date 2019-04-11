@@ -223,7 +223,7 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
                 return None,None,r
 
         mu_mid = 0.5*(left.mu+right.mu)
-        #print mu_mid
+        #print(mu_mid)
         mid = ref.reweight(mu_mid,**reweight_kwargs)
         
         v = mid.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
@@ -234,18 +234,18 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
             right = mid
 
 
-    print 'i',i
-    print ID
-    print 'left mu',left.mu
-    print 'right mu',right.mu
-    print 'dmu',left.mu-right.mu
+    print('i',i)
+    print(ID)
+    print('left mu',left.mu)
+    print('right mu',right.mu)
+    print('dmu',left.mu-right.mu)
     
-    print 'left DE',left.DeltabetaE_phaseIDs()
-    print 'right DE',right.DeltabetaE_phaseIDs()
+    print('left DE',left.DeltabetaE_phaseIDs())
+    print('right DE',right.DeltabetaE_phaseIDs())
 
-    print 'doneleft',doneLeft
-    print 'doneright',doneRight
-    print 'close',np.allclose(left.mu,right.mu,**close_kwargs)
+    print('doneleft',doneLeft)
+    print('doneright',doneRight)
+    print('close',np.allclose(left.mu,right.mu,**close_kwargs))
 
     raise RuntimeError('did not finish')
         

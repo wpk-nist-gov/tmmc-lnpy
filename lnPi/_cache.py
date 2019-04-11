@@ -15,7 +15,7 @@ def cache_prop(fn):
     @property
     def wrapper(self):
         if self._cached[key] is None:
-            #print 'generating',key
+            #print('generating',key)
             self._cached[key] = fn(self)
         return self._cached[key]
     return wrapper
@@ -29,7 +29,7 @@ def cache_func(fn):
         self = args[0]
         key = (key0,) + args[1:]
         if self._cached[key] is None:
-            #print 'generating',key
+            #print('generating',key)
             self._cached[key] = fn(*args)
         return self._cached[key]
     return wrapper
