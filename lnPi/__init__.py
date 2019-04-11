@@ -492,24 +492,6 @@ class lnPi(np.ma.MaskedArray):
                 **labels_kwargs)
             return self.get_list_labels(labels, SegLenOne, **masks_kwargs)
 
-    def to_phases(self,
-                  argmax_kwargs=None,
-                  phases_kwargs=None,
-                  build_kwargs=None,
-                  ftag_phases=None,
-                  ftag_phases_kwargs=None):
-        """
-        return lnPi_phases object with placeholders for phases/argmax
-        """
-
-        return lnPi_phases(
-            self,
-            argmax_kwargs=argmax_kwargs,
-            phases_kwargs=phases_kwargs,
-            build_kwargs=build_kwargs,
-            ftag_phases=ftag_phases,
-            ftag_phases_kwargs=ftag_phases_kwargs)
-
     ##################################################
     #adjusters
     def ZeroMax(self, inplace=False):
@@ -594,9 +576,6 @@ class lnPi(np.ma.MaskedArray):
 
         Pad : bool (Default False)
         
-        phases : bool (Default False)
-            if True, return lnPi_phases(base=self.reweight())
-
         phases : dict
         
             
