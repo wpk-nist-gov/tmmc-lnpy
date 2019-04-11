@@ -10,18 +10,18 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import itertools
 from collections import defaultdict, Iterable
 
-from _cache import *
-from _utils import _interp_matrix, get_mu_iter
+from ._cache import *
+from ._utils import _interp_matrix, get_mu_iter
 
-from _segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
+from ._segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
 from skimage.feature import peak_local_max
 from skimage.segmentation import find_boundaries
 from skimage import draw
 from skimage.graph import route_through_array
 
-import spinodal
-import binodal
-import molfrac
+from .spinodal import *
+from .binodal import *
+from .molfrac import *
 import h5py
 
 
@@ -789,7 +789,7 @@ class lnPi(np.ma.MaskedArray):
             group, otherwise, create group
         """
 
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -831,7 +831,7 @@ class lnPi(np.ma.MaskedArray):
         containing data/maks/attributes
         """
 
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             group = h5py.File(path_or_buff)[key]
 
         elif type(path_or_buff) is h5py.File:
@@ -941,7 +941,7 @@ class lnPi_phases(object):
         if ftag_phases is None:
             raise ValueError('must specify ftag_phases')
 
-        if isinstance(ftag_phases, (str, unicode)):
+        if isinstance(ftag_phases, (bytes, str)):
             if ftag_phases == 'tag_phases_binary':
                 ftag_phases = tag_phases_binary
             elif ftag_phases == 'tag_phases_single':
@@ -1814,7 +1814,7 @@ k        """
         base,phases,dicts : bool (default True)
             if True write self.base, self.phases, self._argmax_kwargs,...
         """
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -1879,7 +1879,7 @@ k        """
         containing data
         """
 
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             group = h5py.File(path_or_buff)[key]
 
         elif type(path_or_buff) is h5py.File:
@@ -2446,7 +2446,7 @@ class lnPi_collection(object):
         ref : lnpi_phases object or None
             if not None, push ref to lnpi_ref
         """
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -2519,7 +2519,7 @@ class lnPi_collection(object):
         containing data
         """
 
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             group = h5py.File(path_or_buff)[key]
 
         elif type(path_or_buff) is h5py.File:
