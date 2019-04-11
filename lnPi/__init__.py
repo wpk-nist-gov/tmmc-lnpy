@@ -2097,7 +2097,7 @@ class lnPi_collection(object):
         self._lnpis = [x for x, m in zip(self._lnpis, keep) if m]
 
     def __getitem__(self, i):
-        if isinstance(i, np.int):
+        if isinstance(i, (np.int,np.integer)):
             return self.lnpis[i]
 
         elif type(i) is slice:
