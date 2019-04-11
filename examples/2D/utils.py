@@ -45,7 +45,7 @@ def lnPi_collections_list_to_hdf(ref,lst,path_or_buff,key=None,overwrite=True):
     """
     write list of lnPi_collection(s) to h5py file
     """
-    if isinstance(path_or_buff,(str,unicode)):
+    if isinstance(path_or_buff,(bytes,str)):
         p = h5py.File(path_or_buff)
 
     elif isinstance(path_or_buff,(h5py.File,h5py.Group)):
@@ -82,7 +82,7 @@ def lnPi_collections_list_from_hdf(path_or_buff,key=None,ref=None,collection_key
     read list of lnPi_collection(s) from h5py file
     """
 
-    if isinstance(path_or_buff,(str,unicode)):
+    if isinstance(path_or_buff,(bytes,str)):
         group = h5py.File(path_or_buff)
 
     elif isinstance(path_or_buff,(h5py.File,h5py.Group)):
