@@ -2166,6 +2166,9 @@ class lnPi_collection(object):
     def densities_phaseIDs(self):
         return np.array([x.densities_phaseIDs for x in self.lnpis])
 
+    def Omegas(self, zval=None):
+	return np.array([x.Omegas(zval) for x in self.lnpis])
+    
     def Omegas_phaseIDs(self, zval=None):
         return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
 
