@@ -492,6 +492,24 @@ class lnPi(np.ma.MaskedArray):
                 **labels_kwargs)
             return self.get_list_labels(labels, SegLenOne, **masks_kwargs)
 
+    def to_phases(self,
+                  argmax_kwargs=None,
+                  phases_kwargs=None,
+                  build_kwargs=None,
+                  ftag_phases=None,
+                  ftag_phases_kwargs=None):
+        """
+        return lnPi_phases object with placeholders for phases/argmax
+        """
+        
+        return lnPi_phases(
+            self,
+            argmax_kwargs=argmax_kwargs,
+            phases_kwargs=phases_kwargs,
+            build_kwargs=build_kwargs,
+            ftag_phases=ftag_phases,
+            ftag_phases_kwargs=ftag_phases_kwargs)
+    
     ##################################################
     #adjusters
     def ZeroMax(self, inplace=False):
@@ -1649,8 +1667,9 @@ k        """
         if not inplace:
             return t
 
-    @staticmethod
-    def from_file(filename,
+    @classmethod
+    def from_file(cls,
+                  filename,
                   mu=None,
                   num_phases_max=None,
                   volume=None,
@@ -1665,26 +1684,31 @@ k        """
                   ftag_phases_kwargs=None,
                   **kwargs):
         """
-        create lnPi_phases from file
+        1. create lnPi object from file.  see documentation of lnPi.from_file
+        2. return lnPi_phases object from lnPi object
         """
-        return lnPi.from_file(
-            filename=filename,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            loadtxt_kwargs=loadtxt_kwargs,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
 
-    @staticmethod
-    def from_data(data,
+        base = lnPi.from_file(filename=filename,
+                              mu=mu,
+                              num_phases_max=num_phases_max,
+                              volume=volume,
+                              beta=beta,
+                              loadtxt_kwargs=loadtxt_kwargs,
+                              ZeroMax=ZeroMax,
+                              Pad=Pad,
+                              **kwargs)
+
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
+
+    @classmethod
+    def from_data(cls,data,
                   mu=None,
                   num_phases_max=None,
                   volume=None,
@@ -1698,25 +1722,30 @@ k        """
                   ftag_phases_kwargs=None,
                   **kwargs):
         """
-        create lnPi_phases from data.  see documentation of lnPi.from_data
+        1. create lnPi object from data.  see documentation of lnPi.from_data
+        2. return lnPi_phases object from lnPi object
         """
-        return lnPi.from_data(
-            data,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
 
-    @staticmethod
-    def from_matrix(Z,
+        base = lnPi.from_data(data,
+                              mu=mu,
+                              num_phases_max=num_phases_max,
+                              volume=volume,
+                              beta=beta,
+                              ZeroMax=ZeroMax,
+                              Pad=Pad,
+                              **kwargs)
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
+
+    @classmethod
+    def from_matrix(cls,
+                    Z,
                     mask=False,
                     mu=None,
                     num_phases_max=None,
@@ -1731,23 +1760,28 @@ k        """
                     ftag_phases_kwargs=None,
                     **kwargs):
         """
-        create lnPi_phases from matrix.  see documentation of lnPi.from_matrix
+        1. create lnPi object from matrix.  see documentation of lnPi.from_matrix
+        2. create lnPi_phases object from lnPi object
         """
-        return lnPi.from_matrix(
-            Z,
-            mask=mask,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
+
+        base = lnPi.from_matrix(Z,
+                                mask=mask,
+                                mu=mu,
+                                num_phases_max=num_phases_max,
+                                volume=volume,
+                                beta=beta,
+                                ZeroMax=ZeroMax,
+                                Pad=Pad,
+                                **kwargs)
+
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
 
     @staticmethod
     def from_labels(ref,
