@@ -809,7 +809,7 @@ class lnPi(np.ma.MaskedArray):
         mask = group.create_dataset('mask', data=self.mask)
 
         #add attributes to base
-        for k, v in self._optinfo.iteritems():
+        for k, v in self._optinfo.items():
             group.attrs[k] = v
 
     @staticmethod
@@ -1898,7 +1898,7 @@ k        """
             phases = group['phases'].value
 
         ev = lambda x: eval(x) if '{' in x else x
-        file_kwargs = {k: ev(v) for k, v in group.attrs.iteritems()}
+        file_kwargs = {k: ev(v) for k, v in group.attrs.items()}
 
         #passed kwargs overide read kwargs
         kwargs = dict(file_kwargs, **kwargs)
