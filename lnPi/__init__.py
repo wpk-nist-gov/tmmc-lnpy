@@ -983,7 +983,7 @@ class lnPi_phases(object):
                 _k = '_' + k
                 d[k] = getattr(self, _k)
 
-        return lnPi_phases(**d)
+        return self.__class__(**d)
 
     ##################################################
     #reweight
