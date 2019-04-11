@@ -827,7 +827,7 @@ class lnPi(np.ma.MaskedArray):
 
         Notes
         -----
-        if key is None, assume path_or_buff is the group 
+        if key is None, assume path_or_buff is the group
         containing data/maks/attributes
         """
 
@@ -1875,7 +1875,7 @@ k        """
 
         Notes
         -----
-        if key is None, assume path_or_buff is the group 
+        if key is None, assume path_or_buff is the group
         containing data
         """
 
@@ -2518,7 +2518,7 @@ class lnPi_collection(object):
 
         Notes
         -----
-        if key is None, assume path_or_buff is the group 
+        if key is None, assume path_or_buff is the group
         containing data
         """
 
