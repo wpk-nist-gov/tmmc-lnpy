@@ -48,19 +48,19 @@ def build_phases(lnpi,num_phases_max=2,efac_cut=0.5,npmax_start=50,vmax=1e20,
 
     #     idx_kill,idx_keep = [x[0] for x in idx]
 
-    #     # print 'mat'
-    #     # print mat
-    #     # print 'min'
-    #     # print min_val
-    #     # print 'idx'
-    #     # print idx
-    #     # print 'idx'
-    #     # print idx_keep,idx_kill
-    #     # print 'argmax'
-    #     # print t.argmax
-    #     # print 'val'
-    #     # print t.base[t.argmax]
-    #     # print '\n'*2
+    #     # print('mat')
+    #     # print(mat)
+    #     # print('min')
+    #     # print(min_val)
+    #     # print('idx')
+    #     # print(idx)
+    #     # print('idx')
+    #     # print(idx_keep,idx_kill)
+    #     # print('argmax')
+    #     # print(t.argmax)
+    #     # print('val')
+    #     # print(t.base[t.argmax])
+    #     # print('\n'*2)
         
     #     #get new phases
     #     new_mask = t[idx_keep].mask & t[idx_kill].mask
@@ -79,7 +79,7 @@ def build_phases(lnpi,num_phases_max=2,efac_cut=0.5,npmax_start=50,vmax=1e20,
 
 
     # if t.nphase > num_phases_max:
-    #     print 'bad nphases'
+    #     print('bad nphases')
 
     # t.base.num_phases_max = num_phases_max
 

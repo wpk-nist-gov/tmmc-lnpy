@@ -10,18 +10,18 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import itertools
 from collections import defaultdict, Iterable
 
-from _cache import *
-from _utils import _interp_matrix, get_mu_iter
+from ._cache import *
+from ._utils import _interp_matrix, get_mu_iter
 
-from _segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
+from ._segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
 from skimage.feature import peak_local_max
 from skimage.segmentation import find_boundaries
 from skimage import draw
 from skimage.graph import route_through_array
 
-import spinodal
-import binodal
-import molfrac
+from .spinodal import *
+from .binodal import *
+from .molfrac import *
 import h5py
 
 
@@ -501,7 +501,7 @@ class lnPi(np.ma.MaskedArray):
         """
         return lnPi_phases object with placeholders for phases/argmax
         """
-
+        
         return lnPi_phases(
             self,
             argmax_kwargs=argmax_kwargs,
@@ -509,7 +509,7 @@ class lnPi(np.ma.MaskedArray):
             build_kwargs=build_kwargs,
             ftag_phases=ftag_phases,
             ftag_phases_kwargs=ftag_phases_kwargs)
-
+    
     ##################################################
     #adjusters
     def ZeroMax(self, inplace=False):
@@ -594,9 +594,6 @@ class lnPi(np.ma.MaskedArray):
 
         Pad : bool (Default False)
         
-        phases : bool (Default False)
-            if True, return lnPi_phases(base=self.reweight())
-
         phases : dict
         
             
@@ -789,7 +786,7 @@ class lnPi(np.ma.MaskedArray):
             group, otherwise, create group
         """
 
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -809,44 +806,44 @@ class lnPi(np.ma.MaskedArray):
         mask = group.create_dataset('mask', data=self.mask)
 
         #add attributes to base
-        for k, v in self._optinfo.iteritems():
+        for k, v in self._optinfo.items():
             group.attrs[k] = v
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None):
-        """
-        read in lnPi from file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None):
+    #     """
+    #     read in lnPi from file
 
-        Parameters
-        ----------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Parameters
+    #     ----------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group 
-        containing data/maks/attributes
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data/maks/attributes
+    #     """
 
-        if isinstance(path_or_buff, (str, unicode)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        data = group['data'].value
-        mask = group['mask'].value
-        kwargs = dict(group.attrs)
-        return lnPi(data, mask=mask, **kwargs)
+    #     data = group['data'].value
+    #     mask = group['mask'].value
+    #     kwargs = dict(group.attrs)
+    #     return lnPi(data, mask=mask, **kwargs)
 
 
 ################################################################################
@@ -941,7 +938,7 @@ class lnPi_phases(object):
         if ftag_phases is None:
             raise ValueError('must specify ftag_phases')
 
-        if isinstance(ftag_phases, (str, unicode)):
+        if isinstance(ftag_phases, (bytes, str)):
             if ftag_phases == 'tag_phases_binary':
                 ftag_phases = tag_phases_binary
             elif ftag_phases == 'tag_phases_single':
@@ -986,7 +983,7 @@ class lnPi_phases(object):
                 _k = '_' + k
                 d[k] = getattr(self, _k)
 
-        return lnPi_phases(**d)
+        return self.__class__(**d)
 
     ##################################################
     #reweight
@@ -1670,8 +1667,9 @@ k        """
         if not inplace:
             return t
 
-    @staticmethod
-    def from_file(filename,
+    @classmethod
+    def from_file(cls,
+                  filename,
                   mu=None,
                   num_phases_max=None,
                   volume=None,
@@ -1686,26 +1684,31 @@ k        """
                   ftag_phases_kwargs=None,
                   **kwargs):
         """
-        create lnPi_phases from file
+        1. create lnPi object from file.  see documentation of lnPi.from_file
+        2. return lnPi_phases object from lnPi object
         """
-        return lnPi.from_file(
-            filename=filename,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            loadtxt_kwargs=loadtxt_kwargs,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
 
-    @staticmethod
-    def from_data(data,
+        base = lnPi.from_file(filename=filename,
+                              mu=mu,
+                              num_phases_max=num_phases_max,
+                              volume=volume,
+                              beta=beta,
+                              loadtxt_kwargs=loadtxt_kwargs,
+                              ZeroMax=ZeroMax,
+                              Pad=Pad,
+                              **kwargs)
+
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
+
+    @classmethod
+    def from_data(cls,data,
                   mu=None,
                   num_phases_max=None,
                   volume=None,
@@ -1719,25 +1722,30 @@ k        """
                   ftag_phases_kwargs=None,
                   **kwargs):
         """
-        create lnPi_phases from data.  see documentation of lnPi.from_data
+        1. create lnPi object from data.  see documentation of lnPi.from_data
+        2. return lnPi_phases object from lnPi object
         """
-        return lnPi.from_data(
-            data,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
 
-    @staticmethod
-    def from_matrix(Z,
+        base = lnPi.from_data(data,
+                              mu=mu,
+                              num_phases_max=num_phases_max,
+                              volume=volume,
+                              beta=beta,
+                              ZeroMax=ZeroMax,
+                              Pad=Pad,
+                              **kwargs)
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
+
+    @classmethod
+    def from_matrix(cls,
+                    Z,
                     mask=False,
                     mu=None,
                     num_phases_max=None,
@@ -1752,23 +1760,28 @@ k        """
                     ftag_phases_kwargs=None,
                     **kwargs):
         """
-        create lnPi_phases from matrix.  see documentation of lnPi.from_matrix
+        1. create lnPi object from matrix.  see documentation of lnPi.from_matrix
+        2. create lnPi_phases object from lnPi object
         """
-        return lnPi.from_matrix(
-            Z,
-            mask=mask,
-            mu=mu,
-            num_phases_max=num_phases_max,
-            volume=volume,
-            beta=beta,
-            ZeroMax=ZeroMax,
-            Pad=Pad,
-            **kwargs).to_phases(
-                argmax_kwargs=argmax_kwargs,
-                phases_kwargs=phases_kwargs,
-                build_kwargs=build_kwargs,
-                ftag_phases=ftag_phases,
-                ftag_phases_kwargs=ftag_phases_kwargs)
+
+        base = lnPi.from_matrix(Z,
+                                mask=mask,
+                                mu=mu,
+                                num_phases_max=num_phases_max,
+                                volume=volume,
+                                beta=beta,
+                                ZeroMax=ZeroMax,
+                                Pad=Pad,
+                                **kwargs)
+
+        return cls(base,
+                   phases='get',
+                   argmax='get',
+                   argmax_kwargs=argmax_kwargs,
+                   phases_kwargs=phases_kwargs,
+                   build_kwargs=build_kwargs,
+                   ftag_phases=ftag_phases,
+                   ftag_phases_kwargs=ftag_phases_kwargs)
 
     @staticmethod
     def from_labels(ref,
@@ -1814,7 +1827,7 @@ k        """
         base,phases,dicts : bool (default True)
             if True write self.base, self.phases, self._argmax_kwargs,...
         """
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -1847,70 +1860,70 @@ k        """
             group.attrs['ftag_phases'] = getattr(self._ftag_phases, '__name__',
                                                  None)
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None, base=None, phases=None, **kwargs):
-        """
-        read in lnpi_phases from h5py file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None, base=None, phases=None, **kwargs):
+    #     """
+    #     read in lnpi_phases from h5py file
 
-        Paremters
-        ---------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Paremters
+    #     ---------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        base : Default None
-            if not None, use this as base
+    #     base : Default None
+    #         if not None, use this as base
 
-        phases : Default NOne
-            if not None, use this as phases
+    #     phases : Default NOne
+    #         if not None, use this as phases
 
-        **kwargs : extra argunets to lnPi_phases
-            overides parameters read from file
+    #     **kwargs : extra argunets to lnPi_phases
+    #         overides parameters read from file
 
-        Returns
-        -------
-        out : lnPi_phases
+    #     Returns
+    #     -------
+    #     out : lnPi_phases
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group 
-        containing data
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data
+    #     """
 
-        if isinstance(path_or_buff, (str, unicode)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        if base is None:
-            base = lnPi.from_hdf(group, 'base')
+    #     if base is None:
+    #         base = lnPi.from_hdf(group, 'base')
 
-        if phases is None:
-            phases = group['phases'].value
+    #     if phases is None:
+    #         phases = group['phases'].value
 
-        ev = lambda x: eval(x) if '{' in x else x
-        file_kwargs = {k: ev(v) for k, v in group.attrs.iteritems()}
+    #     ev = lambda x: eval(x) if '{' in x else x
+    #     file_kwargs = {k: ev(v) for k, v in group.attrs.items()}
 
-        #passed kwargs overide read kwargs
-        kwargs = dict(file_kwargs, **kwargs)
+    #     #passed kwargs overide read kwargs
+    #     kwargs = dict(file_kwargs, **kwargs)
 
-        if kwargs['ftag_phases'] is None:
-            raise ValueError('must specify ftag_phases. None found in file')
+    #     if kwargs['ftag_phases'] is None:
+    #         raise ValueError('must specify ftag_phases. None found in file')
 
-        new = lnPi_phases(base=base, phases=phases, **kwargs)
-        if phases is not 'get':
-            new.argmax_from_phases(inplace=True)
+    #     new = lnPi_phases(base=base, phases=phases, **kwargs)
+    #     if phases is not 'get':
+    #         new.argmax_from_phases(inplace=True)
 
-        return new
+    #     return new
 
 
 ################################################################################
@@ -2097,7 +2110,7 @@ class lnPi_collection(object):
         self._lnpis = [x for x, m in zip(self._lnpis, keep) if m]
 
     def __getitem__(self, i):
-        if isinstance(i, np.int):
+        if isinstance(i, (np.int,np.integer)):
             return self.lnpis[i]
 
         elif type(i) is slice:
@@ -2166,6 +2179,9 @@ class lnPi_collection(object):
     def densities_phaseIDs(self):
         return np.array([x.densities_phaseIDs for x in self.lnpis])
 
+    def Omegas(self, zval=None):
+        return np.array([x.Omegas(zval) for x in self.lnpis])
+    
     def Omegas_phaseIDs(self, zval=None):
         return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
 
@@ -2446,7 +2462,7 @@ class lnPi_collection(object):
         ref : lnpi_phases object or None
             if not None, push ref to lnpi_ref
         """
-        if isinstance(path_or_buff, (str, unicode)):
+        if isinstance(path_or_buff, (bytes, str)):
             p = h5py.File(path_or_buff)
 
         elif isinstance(path_or_buff, (h5py.File, h5py.Group)):
@@ -2493,65 +2509,65 @@ class lnPi_collection(object):
                 L.append(idx)
             group.create_dataset('binodals', data=np.array(L))
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None, ref=None):
-        """
-        read in lnpi_phases from h5py file
+    # @staticmethod
+    # def from_hdf(path_or_buff, key=None, ref=None):
+    #     """
+    #     read in lnpi_phases from h5py file
 
-        Paremters
-        ---------
-        path_or_buff : string, h5py.File, or h5py.Group
-            if string, use as path. otherwise, write to file or group
+    #     Paremters
+    #     ---------
+    #     path_or_buff : string, h5py.File, or h5py.Group
+    #         if string, use as path. otherwise, write to file or group
 
-        key : string
-            group to write to (relative to wherever path_or_buff points to)
+    #     key : string
+    #         group to write to (relative to wherever path_or_buff points to)
 
-        ref : lnpi_phases or None
-            if None, read reference from file, else use lnpi_phases as reference.
+    #     ref : lnpi_phases or None
+    #         if None, read reference from file, else use lnpi_phases as reference.
 
-        Returns
-        -------
-        out : lnPi_collection
+    #     Returns
+    #     -------
+    #     out : lnPi_collection
 
-        Notes
-        -----
-        if key is None, assume path_or_buff is the group 
-        containing data
-        """
+    #     Notes
+    #     -----
+    #     if key is None, assume path_or_buff is the group
+    #     containing data
+    #     """
 
-        if isinstance(path_or_buff, (str, unicode)):
-            group = h5py.File(path_or_buff)[key]
+    #     if isinstance(path_or_buff, (bytes, str)):
+    #         group = h5py.File(path_or_buff)[key]
 
-        elif type(path_or_buff) is h5py.File:
-            group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.File:
+    #         group = path_or_buff[key]
 
-        elif type(path_or_buff) is h5py.Group:
-            if key is None:
-                group = path_or_buff
-            else:
-                group = path_or_buff[key]
+    #     elif type(path_or_buff) is h5py.Group:
+    #         if key is None:
+    #             group = path_or_buff
+    #         else:
+    #             group = path_or_buff[key]
 
-        if ref is None:
-            ref = lnPi_phases.from_hdf(group, 'lnpi_ref')
+    #     if ref is None:
+    #         ref = lnPi_phases.from_hdf(group, 'lnpi_ref')
 
-        mus = group['mus'].value
-        phases = group['phases'].value
+    #     mus = group['mus'].value
+    #     phases = group['phases'].value
 
-        new = lnPi_collection.from_mu_iter(ref, mus)
+    #     new = lnPi_collection.from_mu_iter(ref, mus)
 
-        for i, p in enumerate(new):
-            p.phases = phases[i]
-            p.argmax_from_phases(inplace=True)
+    #     for i, p in enumerate(new):
+    #         p.phases = phases[i]
+    #         p.argmax_from_phases(inplace=True)
 
-        #spinodals?
-        if 'spinodals' in group:
-            new._spinodals = [
-                new[i] if i >= 0 else None for i in group['spinodals']
-            ]
+    #     #spinodals?
+    #     if 'spinodals' in group:
+    #         new._spinodals = [
+    #             new[i] if i >= 0 else None for i in group['spinodals']
+    #         ]
 
-        if 'binodals' in group:
-            new._binodals = [
-                new[i] if i >= 0 else None for i in group['binodals']
-            ]
+    #     if 'binodals' in group:
+    #         new._binodals = [
+    #             new[i] if i >= 0 else None for i in group['binodals']
+    #         ]
 
-        return new
+    #     return new

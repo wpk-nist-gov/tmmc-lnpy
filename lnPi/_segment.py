@@ -71,7 +71,7 @@ def _mask_to_markers(input,structure='set',**kwargs):
     """
 
     #make labels
-    if isinstance(structure,(str,unicode)) and structure=='set':
+    if isinstance(structure,(bytes,str)) and structure=='set':
         structure = np.ones((3,)*input.ndim)
 
     return ndi.label(input,structure=structure,**kwargs)
