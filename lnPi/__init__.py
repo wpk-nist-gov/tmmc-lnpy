@@ -1203,6 +1203,14 @@ class lnPi_phases(object):
     def mu(self):
         return self.base.mu
 
+    @property
+    def beta(self):
+        return self.base.beta
+
+    @property
+    def coords(self):
+        return self.base.coords
+
     ##################################################
     #query
     def _get_boundaries(self, IDs, mode='thick', connectivity=None, **kwargs):
@@ -2161,7 +2169,7 @@ class lnPi_collection(object):
 
     @property
     def molfracs(self):
-        return [x.molfracs for x in self.lnpis]
+        return np.array([x.molfracs for x in self.lnpis])
 
     @property
     def molfracs_phaseIDs(self):
@@ -2169,7 +2177,7 @@ class lnPi_collection(object):
 
     @property
     def Naves(self):
-        return [x.Naves for x in self.lnpis]
+        return np.array([x.Naves for x in self.lnpis])
 
     @property
     def Naves_phaseIDs(self):
