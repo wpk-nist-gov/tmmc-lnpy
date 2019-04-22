@@ -2,27 +2,27 @@
 utilities to work with lnPi(N)
 """
 
-import numpy as np
-from scipy.ndimage import filters
-
-from scipy.spatial.distance import cdist, pdist, squareform
-
 import itertools
 from collections import defaultdict, Iterable
 
-from ._cache import *
-from ._utils import _interp_matrix, get_mu_iter
+import numpy as np
+from scipy.ndimage import filters
+from scipy.spatial.distance import cdist, pdist, squareform
 
-from ._segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
 from skimage.feature import peak_local_max
 from skimage.segmentation import find_boundaries
 from skimage import draw
 from skimage.graph import route_through_array
 
-from .spinodal import *
-from .binodal import *
-from .molfrac import *
 import h5py
+import xarray as xr
+
+from lnPi.cached_decorators import cached_clear, cached, cached_func
+from lnPi._utils import _interp_matrix, get_mu_iter
+from lnPi._segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
+from lnPi.spinodal import *
+from lnPi.binodal import *
+from lnPi.molfrac import *
 
 
 class lnPi(np.ma.MaskedArray):
@@ -43,8 +43,8 @@ class lnPi(np.ma.MaskedArray):
     pi_norm : pi/pi.sum()
 
     Nave : average number of particles of each component    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", 
-                              size="2%", 
+    cax = divider.append_axes("right",
+                              size="2%",
                               pad=cbar_pad)
 
 
@@ -69,7 +69,7 @@ class lnPi(np.ma.MaskedArray):
 
     adjust : ZeroMax and/or Pad
 
-    
+
     reweight : create new lnPi at new mu
 
     new_mask : new object (default share data) with new mask
@@ -77,10 +77,10 @@ class lnPi(np.ma.MaskedArray):
     add_mask : create object with mask = self.mask + mask
 
     smooth : create smoothed object
-    
+
 
     from_file : create lnPi object from file
-    
+
     from_data : create lnPi object from data array
     """
 
@@ -148,7 +148,7 @@ class lnPi(np.ma.MaskedArray):
         self._clear_cache()
 
     def _clear_cache(self):
-        self._cached = defaultdict(lambda: None)
+        self._cache = {}
 
     ##################################################
     #properties
@@ -200,7 +200,8 @@ class lnPi(np.ma.MaskedArray):
         return np.indices(self.shape)
 
     #calculated properties
-    @cache_prop
+    @property
+    @cached()
     def pi(self):
         """
         basic pi = exp(lnpi)
@@ -214,7 +215,8 @@ class lnPi(np.ma.MaskedArray):
         p = self.pi
         return p / p.sum()
 
-    @cache_prop
+    @property
+    @cached()
     def Nave(self):
         #<N_i>=sum(N_i*exp(lnPi))/sum(exp(lnPi))
         N = (self.pi_norm * self.coords).reshape(self.ndim,
@@ -225,7 +227,8 @@ class lnPi(np.ma.MaskedArray):
     def density(self):
         return self.Nave / self.volume
 
-    @cache_prop
+    @property
+    @cached()
     def Nvar(self):
         x = (self.coords - self.Nave.reshape((-1, ) + (1, ) * self.ndim))**2
         return (self.pi_norm * x).reshape(self.ndim, -1).sum(axis=-1).data
@@ -258,11 +261,11 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #setters
-    @cache_clear
+    @cached_clear()
     def set_data(self, val):
         self.data[:] = val
 
-    @cache_clear
+    @cached_clear()
     def set_mask(self, val):
         self.mask[:] = val
 
@@ -283,7 +286,7 @@ class lnPi(np.ma.MaskedArray):
 
         **kwargs : arguments to peak_local_max (see docs)
          Defaults to min_distance=1,exclude_border=False
-        
+
         Returns
         -------
         out : tupe of ndarrays
@@ -328,9 +331,9 @@ class lnPi(np.ma.MaskedArray):
         Parameters
         ----------
         min_distance : int or iterable (Default 15)
-            min_distance parameter to self.peak_local_max. 
+            min_distance parameter to self.peak_local_max.
             if min_distance is iterable, if num_phase>num_phase_max, try next
-       
+
 
         smooth : bool or str (Default 'fail')
             if True, use smooth only
@@ -501,7 +504,7 @@ class lnPi(np.ma.MaskedArray):
         """
         return lnPi_phases object with placeholders for phases/argmax
         """
-        
+
         return lnPi_phases(
             self,
             argmax_kwargs=argmax_kwargs,
@@ -509,7 +512,7 @@ class lnPi(np.ma.MaskedArray):
             build_kwargs=build_kwargs,
             ftag_phases=ftag_phases,
             ftag_phases_kwargs=ftag_phases_kwargs)
-    
+
     ##################################################
     #adjusters
     def ZeroMax(self, inplace=False):
@@ -581,22 +584,22 @@ class lnPi(np.ma.MaskedArray):
     def reweight(self, mu, ZeroMax=False, Pad=False):
         """
         get lnpi at new mu
-        
+
         Parameters
         ----------
-        mu : array-like 
+        mu : array-like
             chem. pot. for new state point
-            
+
         beta : float
             inverse temperature
 
         ZeroMax : bool (Default False)
 
         Pad : bool (Default False)
-        
+
         phases : dict
-        
-            
+
+
         Returns
         -------
         lnPi(mu)
@@ -677,25 +680,25 @@ class lnPi(np.ma.MaskedArray):
 
     ##################################################
     #create from file/etc
-    @staticmethod
-    def from_file(filename, mu=None, loadtxt_kwargs=None, **kwargs):
+    @classmethod
+    def from_file(cls, filename, mu=None, loadtxt_kwargs=None, **kwargs):
         """
         load filename into lnPi object
-        
+
         Parameters
         ----------
         filename : str
             name of file to read
-            
+
         mu : array-like or None
             chemical potential.  If None, default to Zero for each
             component
-            
+
         loadtxt_kwargs : dict
             keyword arguments for numpy.loadtxt
-            
+
         **kwargs : kwargs to lnPi constructor
-        
+
         Returns
         -------
         lnPi object
@@ -706,23 +709,23 @@ class lnPi(np.ma.MaskedArray):
 
         data = np.loadtxt(filename, **loadtxt_kwargs)
 
-        return lnPi.from_data(data, mu, **kwargs)
+        return cls.from_data(data, mu, **kwargs)
 
-    @staticmethod
-    def from_data(data, mu=None, num_phases_max=None, **kwargs):
+    @classmethod
+    def from_data(cls, data, mu=None, num_phases_max=None, **kwargs):
         """
         parse data into lnpi masked array
-        
+
         Parameters
         ----------
         data : array of form (n0,n1,...,nd,lnPi)
-        
+
         mu : array-like (d,)
             chem. pot. for each component
 
         num_phases_max : int or None (default None)
             max number of phases
-            
+
         **kwargs : arguments to lnPi constructor
         """
 
@@ -742,32 +745,93 @@ class lnPi(np.ma.MaskedArray):
         empty = np.ones(shape, dtype=bool)
         empty[xx] = False
 
-        return lnPi(
+        return cls(
             Z, mask=empty, mu=mu, num_phases_max=num_phases_max, **kwargs)
 
-    @staticmethod
-    def from_matrix(Z, mask=False, mu=None, num_phases_max=None, **kwargs):
+    @classmethod
+    def from_matrix(cls, Z, mask=False, mu=None, num_phases_max=None, **kwargs):
         """
         parse data into lnpi masked array
-        
+
         Parameters
         ----------
         matrix : lnPi data
-        
+
         mask : bool or bool array
             mask for matrix (True where data is masked)
-        
+
         mu : array-like (d,)
             chem. pot. for each component
 
         num_phases_max : int or None (default None)
             max number of phases
-            
+
         **kwargs : arguments to lnPi constructor
         """
 
-        return lnPi(
+        return cls(
             Z, mask=mask, mu=mu, num_phases_max=num_phases_max, **kwargs)
+
+
+    def to_DataArray(self, rec_dim='rec', rec=None, *kwargs):
+        """
+        create a xarray.DataArray from self.
+
+        Parameters
+        ----------
+        kwargs : extra arguments to xarray.DataArray
+
+        if rec is not None, insert a record dimension in front
+        """
+
+        dims = tuple(['N_{}'.format(i) for i in range(self.ndim)])
+        data = self.data
+        mask = self.mask
+        coords = {}
+
+        if rec is None:
+            attrs = self._optinfo
+        else:
+            dims = (rec_dim,) + dims
+            data = data[None, ...]
+            mask = mask[None, ...]
+
+            # other coords
+            coords['rec'] = [rec]
+            for k, v in self._optinfo.items():
+                coords[k] = (rec_dim,np.atleast_1d(v))
+            attrs = {}
+
+        coords['mask'] = (dims, mask)
+
+        d = xr.DataArray(data, dims=dims, coords=coords, **kwargs)
+        d.attrs.update(**self._optinfo)
+
+        return d
+
+
+
+
+    @classmethod
+    def from_DataArray(cls, da, rec_dim='rec',rec=None, **kwargs):
+        """
+        create a lnPi object from xarray.DataArray
+        """
+
+        if rec is not None:
+            da = da.sel(rec=rec)
+            attrs = {k:v.values for k,v in da.coords.items() if k not in [rec_dim,'mask']}
+        else:
+            attrs = da.attrs
+
+
+        data = da.values
+        mask = da['mask'].values
+        kwargs = dict(attrs, **kwargs)
+
+        return cls(data, mask=mask, **kwargs)
+
+
 
     def to_hdf(self, path_or_buff, key, overwrite=False):
         """
@@ -780,7 +844,7 @@ class lnPi(np.ma.MaskedArray):
 
         key : string
             group to write to (relative to wherever path_or_buff points to)
-        
+
         overwrite : bool (Default False)
             if key path_or_buff[key] exists, if overwrite is True, overwrite existing
             group, otherwise, create group
@@ -809,8 +873,8 @@ class lnPi(np.ma.MaskedArray):
         for k, v in self._optinfo.items():
             group.attrs[k] = v
 
-    @staticmethod
-    def from_hdf(path_or_buff, key=None):
+    @classmethod
+    def from_hdf(cls, path_or_buff, key=None):
         """
         read in lnPi from file
 
@@ -913,8 +977,8 @@ class lnPi_phases(object):
         argmax : tuple of arrays (indicies) or str
             indices of local max locations.
             if str and 'get', get argmax on demand
-        
-        argmax_kwargs : dict 
+
+        argmax_kwargs : dict
             if argmax=='get', use self.build_phases
 
         phases_kwargs : dict
@@ -1128,7 +1192,7 @@ class lnPi_phases(object):
 
     @property
     def labels(self):
-        return masks_to_labels(self.masks, feature_value=False)
+        return masks_to_labels(self.masks, feature_value=False, values=self.phaseIDs)
 
     @property
     def molfracs(self):
@@ -1225,7 +1289,7 @@ class lnPi_phases(object):
          mode passed to find_boundaries
 
         connectivity : int (Default None)
-         if None, use self.ndim 
+         if None, use self.ndim
 
         **kwargs : extra arguments to find_boundaries
 
@@ -1446,7 +1510,7 @@ k        """
                      **kwargs):
         """
         merge phases such that DeltabetaE[i,j]>efac-tol for all phases
-        
+
         Parameters
         ----------
         efac : float (Default 1.0)
@@ -1456,11 +1520,11 @@ k        """
             vmax parameter in DeltabetaE calculation
 
         inplace : bool (Default False)
-            if True, do inplace modificaiton, else return 
+            if True, do inplace modificaiton, else return
 
         force : bool (Default False)
-            if True, iteratively remove minimum energy difference 
-            (even if DeltabetaE>efac) until have 
+            if True, iteratively remove minimum energy difference
+            (even if DeltabetaE>efac) until have
             exactly self.base.num_phases_max
 
 
@@ -1603,7 +1667,7 @@ k        """
             if 'full', perform normal merge with passed `force` and `efac`
             if 'partial' -> only merge if necessary and with force=True, efac=0.0
             (i.e., will leave phases with dE<`efac`)
-       
+
 
         nmax_start : int (Default 10)
             max number of phases argmax_local to start with
@@ -1614,18 +1678,18 @@ k        """
 
         vmax : float (Default 1e20)
             value of DeltabetaE if phase transition between i and j does not exist
-        
+
 
         inplace : bool (Default False)
             if True, do inplace modification
 
         force : bool (Default True)
-            if True, keep removing the minimum transition phases regardless of dE until 
+            if True, keep removing the minimum transition phases regardless of dE until
             nphase==num_phases_max
-        
+
         merge_phaseIDs : bool (Default True)
             if True, merge phases with same phaseIDs
-        
+
         **kwargs : extra arguments to self.merge_phases
 
         Returns
@@ -1696,27 +1760,30 @@ k        """
         2. return lnPi_phases object from lnPi object
         """
 
-        base = lnPi.from_file(filename=filename,
-                              mu=mu,
-                              num_phases_max=num_phases_max,
-                              volume=volume,
-                              beta=beta,
-                              loadtxt_kwargs=loadtxt_kwargs,
-                              ZeroMax=ZeroMax,
-                              Pad=Pad,
-                              **kwargs)
+        base = lnPi.from_file(
+            filename=filename,
+            mu=mu,
+            num_phases_max=num_phases_max,
+            volume=volume,
+            beta=beta,
+            loadtxt_kwargs=loadtxt_kwargs,
+            ZeroMax=ZeroMax,
+            Pad=Pad,
+            **kwargs)
 
-        return cls(base,
-                   phases='get',
-                   argmax='get',
-                   argmax_kwargs=argmax_kwargs,
-                   phases_kwargs=phases_kwargs,
-                   build_kwargs=build_kwargs,
-                   ftag_phases=ftag_phases,
-                   ftag_phases_kwargs=ftag_phases_kwargs)
+        return cls(
+            base,
+            phases='get',
+            argmax='get',
+            argmax_kwargs=argmax_kwargs,
+            phases_kwargs=phases_kwargs,
+            build_kwargs=build_kwargs,
+            ftag_phases=ftag_phases,
+            ftag_phases_kwargs=ftag_phases_kwargs)
 
     @classmethod
-    def from_data(cls,data,
+    def from_data(cls,
+                  data,
                   mu=None,
                   num_phases_max=None,
                   volume=None,
@@ -1734,22 +1801,24 @@ k        """
         2. return lnPi_phases object from lnPi object
         """
 
-        base = lnPi.from_data(data,
-                              mu=mu,
-                              num_phases_max=num_phases_max,
-                              volume=volume,
-                              beta=beta,
-                              ZeroMax=ZeroMax,
-                              Pad=Pad,
-                              **kwargs)
-        return cls(base,
-                   phases='get',
-                   argmax='get',
-                   argmax_kwargs=argmax_kwargs,
-                   phases_kwargs=phases_kwargs,
-                   build_kwargs=build_kwargs,
-                   ftag_phases=ftag_phases,
-                   ftag_phases_kwargs=ftag_phases_kwargs)
+        base = lnPi.from_data(
+            data,
+            mu=mu,
+            num_phases_max=num_phases_max,
+            volume=volume,
+            beta=beta,
+            ZeroMax=ZeroMax,
+            Pad=Pad,
+            **kwargs)
+        return cls(
+            base,
+            phases='get',
+            argmax='get',
+            argmax_kwargs=argmax_kwargs,
+            phases_kwargs=phases_kwargs,
+            build_kwargs=build_kwargs,
+            ftag_phases=ftag_phases,
+            ftag_phases_kwargs=ftag_phases_kwargs)
 
     @classmethod
     def from_matrix(cls,
@@ -1772,43 +1841,51 @@ k        """
         2. create lnPi_phases object from lnPi object
         """
 
-        base = lnPi.from_matrix(Z,
-                                mask=mask,
-                                mu=mu,
-                                num_phases_max=num_phases_max,
-                                volume=volume,
-                                beta=beta,
-                                ZeroMax=ZeroMax,
-                                Pad=Pad,
-                                **kwargs)
+        base = lnPi.from_matrix(
+            Z,
+            mask=mask,
+            mu=mu,
+            num_phases_max=num_phases_max,
+            volume=volume,
+            beta=beta,
+            ZeroMax=ZeroMax,
+            Pad=Pad,
+            **kwargs)
 
-        return cls(base,
-                   phases='get',
-                   argmax='get',
-                   argmax_kwargs=argmax_kwargs,
-                   phases_kwargs=phases_kwargs,
-                   build_kwargs=build_kwargs,
-                   ftag_phases=ftag_phases,
-                   ftag_phases_kwargs=ftag_phases_kwargs)
+        return cls(
+            base,
+            phases='get',
+            argmax='get',
+            argmax_kwargs=argmax_kwargs,
+            phases_kwargs=phases_kwargs,
+            build_kwargs=build_kwargs,
+            ftag_phases=ftag_phases,
+            ftag_phases_kwargs=ftag_phases_kwargs)
 
-    @staticmethod
-    def from_labels(ref,
-                    labels,
-                    mu,
-                    SegLenOne=False,
-                    masks_kwargs={},
-                    **kwargs):
+    @classmethod
+    def from_labels(cls, base, labels,  argmax='get', SegLenOne=False,  masks_kwargs={},  **kwargs):
         """
         create lnPi_phases from labels
         """
+        # TODO
 
-        assert type(ref) is lnPi_phases
-        new = ref.reweight(mu, **kwargs)
-        new.phases = new.base.get_list_labels(
-            labels, SegLenOne=SegLenOne, **masks_kwargs)
-        new.argmax = new.argmax_from_phases()
+        phases = base.get_list_labels(labels, SegLenOne=SegLenOne, **mask_kwargs)
+        new = cls(base=base, phases=phases, argmax=argmax)
+
+        if argmax == 'get':
+            new.argmax = new.argmax_from_phases()
+
+        # assert type(ref) is lnPi_phases
+        # new = ref.reweight(mu, **kwargs)
+        # new.phases = new.base.get_list_labels(
+        #     labels, SegLenOne=SegLenOne, **masks_kwargs)
+        # new.argmax = new.argmax_from_phases()
 
         return new
+
+
+#    def to_DataSet()
+
 
     def to_hdf(self,
                path_or_buff,
@@ -1819,7 +1896,7 @@ k        """
                dicts=True):
         """
         push to h5 file
-        
+
         Parameters
         ----------
         path_or_buff : string, h5py.File, or h5py.Group
@@ -1827,7 +1904,7 @@ k        """
 
         key : string
             group to write to (relative to wherever path_or_buff points to)
-        
+
         overwrite : bool (Default False)
             if key path_or_buff[key] exists, if overwrite is True, overwrite existing
             group, otherwise, create group
@@ -1955,7 +2032,7 @@ class lnPi_collection(object):
     def copy(self, lnpis=None):
         """
         create shallow copy of self
-        
+
         **kwargs : named arguments to lnPi_collection.__init__
         if argument is given, it will overide that in self
         """
@@ -2078,14 +2155,14 @@ class lnPi_collection(object):
     def _unique_mus(self, mus, decimals=5):
         """
         return only those mus not already in self
-        
+
         Parameters
         ----------
-        mus : arrray of new mus 
+        mus : arrray of new mus
             shape is (ncomp,) or (m,ncomp). make 2d if not already
 
         decimals : int (Default 5)
-            consider mu replicated if dist between any mu already in 
+            consider mu replicated if dist between any mu already in
             self and mus[i] <0.5*10**(-decimals)
 
         Returns
@@ -2118,7 +2195,7 @@ class lnPi_collection(object):
         self._lnpis = [x for x, m in zip(self._lnpis, keep) if m]
 
     def __getitem__(self, i):
-        if isinstance(i, (np.int,np.integer)):
+        if isinstance(i, (np.int, np.integer)):
             return self.lnpis[i]
 
         elif type(i) is slice:
@@ -2189,7 +2266,7 @@ class lnPi_collection(object):
 
     def Omegas(self, zval=None):
         return np.array([x.Omegas(zval) for x in self.lnpis])
-    
+
     def Omegas_phaseIDs(self, zval=None):
         return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
 
@@ -2394,8 +2471,8 @@ class lnPi_collection(object):
     ##################################################
     #builders
     ##################################################
-    @staticmethod
-    def from_mu_iter(ref, mus, **kwargs):
+    @classmethod
+    def from_mu_iter(cls, ref, mus, **kwargs):
         """
         build lnPi_collection from mus
 
@@ -2408,22 +2485,22 @@ class lnPi_collection(object):
             chem. pots. to get lnpi
 
         **kwargs : arguments to ref.reweight
-        
+
         Returns
         -------
         out : lnPi_collection object
         """
 
-        assert type(ref) is lnPi_phases
+        assert isinstance(ref, lnPi_phases)
 
         kwargs = dict(dict(ZeroMax=True), **kwargs)
 
         L = [ref.reweight(mu, **kwargs) for mu in mus]
 
-        return lnPi_collection(L)
+        return cls(L)
 
-    @staticmethod
-    def from_mu(ref, mu, x, **kwargs):
+    @classmethod
+    def from_mu(cls, ref, mu, x, **kwargs):
         """
         build lnPi_collection from mu builder
 
@@ -2433,9 +2510,9 @@ class lnPi_collection(object):
             lnpi to reweight to get list of lnpi's
 
         mu : list
-            list with one element equal to None.  
+            list with one element equal to None.
             This is the component which will be varied
-            For example, mu=[mu0,None,mu2] implies use values 
+            For example, mu=[mu0,None,mu2] implies use values
             of mu0,mu2 for components 0 and 2, and vary component 1
 
         x : array
@@ -2449,7 +2526,7 @@ class lnPi_collection(object):
         """
 
         mus = get_mu_iter(mu, x)
-        return lnPi_collection.from_mu_iter(ref, mus, **kwargs)
+        return cls.from_mu_iter(ref, mus, **kwargs)
 
     def to_hdf(self, path_or_buff, key, ref=None, overwrite=False):
         """
@@ -2462,11 +2539,11 @@ class lnPi_collection(object):
 
         key : string
             group to write to (relative to wherever path_or_buff points to)
-        
+
         overwrite : bool (Default False)
             if key path_or_buff[key] exists, if overwrite is True, overwrite existing
             group, otherwise, create group
-        
+
         ref : lnpi_phases object or None
             if not None, push ref to lnpi_ref
         """

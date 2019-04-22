@@ -8,11 +8,10 @@ from scipy import ndimage as ndi
 from skimage.segmentation import find_boundaries
 
 
-
 ##################################################
 #segmentation functions
 ##################################################
-def _indices_to_markers(indices,shape,structure='set',**kwargs):
+def _indices_to_markers(indices, shape, structure='set', **kwargs):
     """
     create markers array from feature indices
 
@@ -39,13 +38,13 @@ def _indices_to_markers(indices,shape,structure='set',**kwargs):
         Number of objects found
     """
 
-    input = np.zeros(shape,dtype=bool)
+    input = np.zeros(shape, dtype=bool)
     input[indices] = True
 
-    return _mask_to_markers(input,structure,**kwargs)
+    return _mask_to_markers(input, structure, **kwargs)
 
 
-def _mask_to_markers(input,structure='set',**kwargs):
+def _mask_to_markers(input, structure='set', **kwargs):
     """"
     create markers array from input
 
@@ -71,14 +70,13 @@ def _mask_to_markers(input,structure='set',**kwargs):
     """
 
     #make labels
-    if isinstance(structure,(bytes,str)) and structure=='set':
-        structure = np.ones((3,)*input.ndim)
+    if isinstance(structure, (bytes, str)) and structure == 'set':
+        structure = np.ones((3, ) * input.ndim)
 
-    return ndi.label(input,structure=structure,**kwargs)
-    
+    return ndi.label(input, structure=structure, **kwargs)
 
 
-def _labels_watershed(data,markers,mask,size=3,footprint=None,**kwargs):
+def _labels_watershed(data, markers, mask, size=3, footprint=None, **kwargs):
     """"
     perform watershed segmentation on data
 
@@ -106,26 +104,28 @@ def _labels_watershed(data,markers,mask,size=3,footprint=None,**kwargs):
 
     """
 
-    
-
     #get labels from watershed
-    connectivity=None
+    connectivity = None
     if size is not None:
-        connectivity = np.ones((size,)*data.ndim)
-        
+        connectivity = np.ones((size, ) * data.ndim)
+
     if footprint is not None:
         connectivity = footprint
 
-    labels = watershed(data,markers,connectivity=connectivity,mask=mask,**kwargs)
+    labels = watershed(
+        data, markers, connectivity=connectivity, mask=mask, **kwargs)
 
     return labels
 
 
-
 ##################################################
-#labels/masks utilities
+# labels/masks utilities
 ##################################################
-def labels_to_masks(labels,num_feature=None,include_boundary=False,feature_value=False,**kwargs):
+def labels_to_masks(labels,
+                    num_feature=None,
+                    include_boundary=False,
+                    feature_value=False,
+                    **kwargs):
     """
     convert labels array to list of masks
 
@@ -155,35 +155,32 @@ def labels_to_masks(labels,num_feature=None,include_boundary=False,feature_value
 
     """
 
-
     if include_boundary:
-        kwargs = dict(dict(mode='outer',connectivity=labels.ndim),**kwargs)
-    
+        kwargs = dict(dict(mode='outer', connectivity=labels.ndim), **kwargs)
+
     if num_feature is None:
         num_feature = labels.max()
 
-
     output = []
 
-    for i in range(1,num_feature+1):
-        m = labels==i
+    for i in range(1, num_feature + 1):
+        m = labels == i
 
         if include_boundary:
-            b = find_boundaries(m.astype(int),**kwargs)
-            m = m+b
+            b = find_boundaries(m.astype(int), **kwargs)
+            m = m + b
 
-        #right now mask is in image convesion
-        #if fature_value is false, convert
+        # right now mask is in image convesion
+        # if fature_value is false, convert
         if not feature_value:
             m = ~m
-        
+
         output.append(m)
 
     return output
 
 
-
-def masks_to_labels(masks,feature_value=False,**kwargs):
+def masks_to_labels(masks, feature_value=False, values=None, **kwargs):
     """
     convert list of masks to labels
 
@@ -201,9 +198,14 @@ def masks_to_labels(masks,feature_value=False,**kwargs):
     labels : array of labels
     """
 
-    labels = np.zeros(masks[0].shape,dtype=int)
+    if values is None:
+        values = range(len(masks))
+    else:
+        assert len(values) == len(masks)
 
-    for i,m in enumerate(masks):
-        labels[m==feature_value] = i+1
+    labels = np.zeros(masks[0].shape, dtype=int)
+
+    for i, m in zip(values, masks):
+        labels[m == feature_value] = i + 1
 
     return labels
