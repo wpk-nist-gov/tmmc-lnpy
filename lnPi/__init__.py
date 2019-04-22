@@ -1274,7 +1274,7 @@ class lnPi_phases(object):
     @property
     def volume(self):
         return self.base.volume
-    
+
     @property
     def coords(self):
         return self.base.coords
