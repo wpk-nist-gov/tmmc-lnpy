@@ -3,9 +3,10 @@ utilities to work with lnPi(N)
 """
 
 import itertools
-from collections import defaultdict, Iterable
+from collections import Iterable
 
 import numpy as np
+import pandas as pd
 from scipy.ndimage import filters
 from scipy.spatial.distance import cdist, pdist, squareform
 
@@ -17,12 +18,40 @@ from skimage.graph import route_through_array
 import h5py
 import xarray as xr
 
-from lnPi.cached_decorators import cached_clear, cached, cached_func
+from lnPi.cached_decorators import cached_clear, cached
 from lnPi._utils import _interp_matrix, get_mu_iter
-from lnPi._segment import _indices_to_markers, _labels_watershed, labels_to_masks, masks_to_labels
+from lnPi._segment import (_indices_to_markers, _labels_watershed,
+                           labels_to_masks, masks_to_labels)
 from lnPi.spinodal import *
 from lnPi.binodal import *
 from lnPi.molfrac import *
+
+
+
+
+def seriesify(key=None, total=False):
+    def wrapper(func):
+        if key is None:
+            _key = func.__name__
+        else:
+            _key = key
+        if total:
+            def wrapped(self, *args, **kwargs):
+                return pd.Series(func(self, *args, **kwargs), index=self._index_total, name=_key)
+        else:
+            def wrapped(self, *args, **kwargs):
+                return pd.Series(func(self, *args, **kwargs), index=self._index_ncomp, name=_key)
+
+        return wrapped
+    return wrapper
+
+
+def concatify(key='phase'):
+    def wrapper(func):
+        def wrapped(self, *args, **kwargs):
+            return pd.concat(func(self, *args, **kwargs), keys=self.phaseIDs, names=[key])
+        return wrapped
+    return wrapper
 
 
 class lnPi(np.ma.MaskedArray):
@@ -199,6 +228,28 @@ class lnPi(np.ma.MaskedArray):
     def coords(self):
         return np.indices(self.shape)
 
+    @property
+    @cached()
+    def _index_total(self):
+        idx = [[self.beta]] + [[x] for x in self.mu]
+        names = ['beta'] + ['mu_{}'.format(i) for i in range(self.ncomp)]
+        return pd.MultiIndex.from_product(idx, names=names)
+
+
+    @property
+    @cached()
+    def _index_ncomp(self):
+        idx_base = self._index_total
+        idx = [x + (y,) for x in idx_base.to_list() for y in range(self.ncomp)]
+        names = list(idx_base.names) + ['component']
+        return pd.MultiIndex.from_tuples(idx, names=names)
+
+
+    @property
+    @seriesify()
+    def chempot(self):
+        return self.mu
+
     #calculated properties
     @property
     @cached()
@@ -217,27 +268,33 @@ class lnPi(np.ma.MaskedArray):
 
     @property
     @cached()
+    @seriesify()
     def Nave(self):
         #<N_i>=sum(N_i*exp(lnPi))/sum(exp(lnPi))
         N = (self.pi_norm * self.coords).reshape(self.ndim,
                                                  -1).sum(axis=-1).data
-        return N
+        return N#self._as_series_ncomp(N, name='Nave')
+
 
     @property
+#    @seriesify()
     def density(self):
         return self.Nave / self.volume
 
     @property
     @cached()
+    @seriesify()
     def Nvar(self):
         x = (self.coords - self.Nave.reshape((-1, ) + (1, ) * self.ndim))**2
         return (self.pi_norm * x).reshape(self.ndim, -1).sum(axis=-1).data
 
     @property
+ #   @seriesify()
     def molfrac(self):
         n = self.Nave
         return n / n.sum()
 
+    @seriesify(total=True)
     def Omega(self, zval=None):
         """
         get omega = zval - ln(sum(pi))
@@ -252,7 +309,6 @@ class lnPi(np.ma.MaskedArray):
             zval = self.data.ravel()[0] - self.max()
 
         omega = (zval - np.log(self.pi.sum())) / self.beta
-
         return omega
 
     @property
@@ -749,7 +805,8 @@ class lnPi(np.ma.MaskedArray):
             Z, mask=empty, mu=mu, num_phases_max=num_phases_max, **kwargs)
 
     @classmethod
-    def from_matrix(cls, Z, mask=False, mu=None, num_phases_max=None, **kwargs):
+    def from_matrix(cls, Z, mask=False, mu=None, num_phases_max=None,
+                    **kwargs):
         """
         parse data into lnpi masked array
 
@@ -772,7 +829,6 @@ class lnPi(np.ma.MaskedArray):
         return cls(
             Z, mask=mask, mu=mu, num_phases_max=num_phases_max, **kwargs)
 
-
     def to_DataArray(self, rec_dim='rec', rec=None, *kwargs):
         """
         create a xarray.DataArray from self.
@@ -792,14 +848,14 @@ class lnPi(np.ma.MaskedArray):
         if rec is None:
             attrs = self._optinfo
         else:
-            dims = (rec_dim,) + dims
+            dims = (rec_dim, ) + dims
             data = data[None, ...]
             mask = mask[None, ...]
 
             # other coords
             coords['rec'] = [rec]
             for k, v in self._optinfo.items():
-                coords[k] = (rec_dim,np.atleast_1d(v))
+                coords[k] = (rec_dim, np.atleast_1d(v))
             attrs = {}
 
         coords['mask'] = (dims, mask)
@@ -809,29 +865,26 @@ class lnPi(np.ma.MaskedArray):
 
         return d
 
-
-
-
     @classmethod
-    def from_DataArray(cls, da, rec_dim='rec',rec=None, **kwargs):
+    def from_DataArray(cls, da, rec_dim='rec', rec=None, **kwargs):
         """
         create a lnPi object from xarray.DataArray
         """
 
         if rec is not None:
             da = da.sel(rec=rec)
-            attrs = {k:v.values for k,v in da.coords.items() if k not in [rec_dim,'mask']}
+            attrs = {
+                k: v.values
+                for k, v in da.coords.items() if k not in [rec_dim, 'mask']
+            }
         else:
             attrs = da.attrs
-
 
         data = da.values
         mask = da['mask'].values
         kwargs = dict(attrs, **kwargs)
 
         return cls(data, mask=mask, **kwargs)
-
-
 
     def to_hdf(self, path_or_buff, key, overwrite=False):
         """
@@ -1151,6 +1204,23 @@ class lnPi_phases(object):
     def __getitem__(self, i):
         return self.phases[i]
 
+
+    @property
+    @cached()
+    def _reindex_total(self):
+        idx_base = self.base._index_total
+        idx = [(y,) + x for y in range(self.base.num_phases_max) for x in idx_base.to_list()]
+        names = ['phase'] + list(idx_base.names)
+        return pd.MultiIndex.from_tuples(idx, names=names)
+
+    @property
+    @cached()
+    def _reindex_ncomp(self):
+        idx_base = self.base._index_ncomp
+        idx = [(y,) + x for y in range(self.base.num_phases_max) for x in idx_base.to_list()]
+        names = ['phase'] + list(idx_base.names)
+        return pd.MultiIndex.from_tuples(idx, names=names)
+
     @property
     def nphase(self):
         return len(self)
@@ -1192,76 +1262,59 @@ class lnPi_phases(object):
 
     @property
     def labels(self):
-        return masks_to_labels(self.masks, feature_value=False, values=self.phaseIDs)
+        return masks_to_labels(
+            self.masks, feature_value=False, values=self.phaseIDs)
 
     @property
+    @concatify()
     def molfracs(self):
-        return np.array([x.molfrac for x in self])
+        return [x.molfrac for x in self]
 
     @property
     def molfracs_phaseIDs(self):
-        molfrac = np.zeros(
-            (self.base.num_phases_max, self.base.ndim), dtype=float) * np.nan
-
-        for i, mf in zip(self.phaseIDs, self.molfracs):
-            molfrac[i, :] = mf
-        return molfrac
+        return self.molfracs.reindex(self._reindex_ncomp)
 
     @property
+    @concatify()
     def Naves(self):
-        return np.array([x.Nave for x in self])
+        return [x.Nave for x in self]
 
     @property
     def Naves_phaseIDs(self):
-        out = np.zeros(
-            (self.base.num_phases_max, self.base.ndim), dtype=float) * np.nan
-
-        for i, x in zip(self.phaseIDs, self.Naves):
-            out[i, :] = x
-        return out
+        return self.Naves.reindex(self._reindex_ncomp)
 
     @property
+    @concatify()
     def densities(self):
-        return np.array([x.density for x in self])
+        return [x.density for x in self]
 
     @property
     def densities_phaseIDs(self):
-        out = np.empty(
-            (self.base.num_phases_max, self.base.ndim), dtype=float) * np.nan
+        return self.densities.reindex(self._reindex_ncomp)
 
-        for i, x in zip(self.phaseIDs, self.densities):
-            out[i, :] = x
-        return out
-
+    @concatify()
     def Omegas(self, zval=None):
-        return np.array([x.Omega(zval) for x in self])
+        return [x.Omega(zval) for x in self]
 
     def Omegas_phaseIDs(self, zval=None):
-        Omegas = np.zeros((self.base.num_phases_max, ), dtype=float) * np.nan
-
-        for i, x in zip(self.phaseIDs, self.Omegas(zval)):
-            Omegas[i] = x
-        return Omegas
+        return self.Omegas(zval).reindex(self._reindex_total)
 
     @property
+    @concatify
     def Nvars(self):
-        return np.array([x.Nvar for x in self.phases])
+        return [x.Nvar for x in self.phases]
 
     @property
     def Nvars_phaseIDs(self):
-        ret = np.empty(
-            (self.base.num_phases_max, self.base.ndim), dtype=float) * np.nan
-
-        ret[self.phaseIDs, :] = self.Nvars
-        return ret
+        return self.Nvar.reindex(self._reindex_ncomp)
 
     @property
     def pis(self):
-        return np.array([x.pi for x in self])
+        return [x.pi for x in self]
 
     @property
     def pi_norms(self):
-        return np.array([x.pi_norm for x in self])
+        return [x.pi_norm for x in self]
 
     @property
     def mu(self):
@@ -1867,13 +1920,20 @@ k        """
             ftag_phases_kwargs=ftag_phases_kwargs)
 
     @classmethod
-    def from_labels(cls, base, labels,  argmax='get', SegLenOne=False,  masks_kwargs={},  **kwargs):
+    def from_labels(cls,
+                    base,
+                    labels,
+                    argmax='get',
+                    SegLenOne=False,
+                    masks_kwargs={},
+                    **kwargs):
         """
         create lnPi_phases from labels
         """
         # TODO
 
-        phases = base.get_list_labels(labels, SegLenOne=SegLenOne, **mask_kwargs)
+        phases = base.get_list_labels(
+            labels, SegLenOne=SegLenOne, **mask_kwargs)
         new = cls(base=base, phases=phases, argmax=argmax)
 
         if argmax == 'get':
@@ -1887,9 +1947,7 @@ k        """
 
         return new
 
-
 #    def to_DataSet()
-
 
     def to_hdf(self,
                path_or_buff,
@@ -2250,29 +2308,29 @@ class lnPi_collection(object):
 
     @property
     def molfracs(self):
-        return np.array([x.molfracs for x in self.lnpis])
+        return pd.concat([x.molfracs for x in self.lnpis])
 
     @property
     def molfracs_phaseIDs(self):
-        return np.array([x.molfracs_phaseIDs for x in self.lnpis])
+        return pd.concat([x.molfracs_phaseIDs for x in self.lnpis])
 
     @property
     def Naves(self):
-        return np.array([x.Naves for x in self.lnpis])
+        return pd.concat([x.Naves for x in self.lnpis])
 
     @property
     def Naves_phaseIDs(self):
-        return np.array([x.Naves_phaseIDs for x in self.lnpis])
+        return pd.concat([x.Naves_phaseIDs for x in self.lnpis])
 
     @property
     def densities_phaseIDs(self):
-        return np.array([x.densities_phaseIDs for x in self.lnpis])
+        return pd.concat([x.densities_phaseIDs for x in self.lnpis])
 
     def Omegas(self, zval=None):
-        return np.array([x.Omegas(zval) for x in self.lnpis])
+        return pd.concat([x.Omegas(zval) for x in self.lnpis])
 
     def Omegas_phaseIDs(self, zval=None):
-        return np.array([x.Omegas_phaseIDs(zval) for x in self.lnpis])
+        return pd.concat([x.Omegas_phaseIDs(zval) for x in self.lnpis])
 
     def DeltabetaE_phaseIDs(self, vmin=0.0, vmax=1e20, **kwargs):
         return np.array(

@@ -3,9 +3,15 @@ import numpy as np
 from scipy import optimize
 
 
-
-def _initial_bracket_spinodal_right(C,ID,mu_in,efac=1.0,
-                                    dmu=0.5,vmax=1e20,ntry=20,step=+1,reweight_kwargs={},
+def _initial_bracket_spinodal_right(C,
+                                    ID,
+                                    mu_in,
+                                    efac=1.0,
+                                    dmu=0.5,
+                                    vmax=1e20,
+                                    ntry=20,
+                                    step=+1,
+                                    reweight_kwargs={},
                                     DeltabetaE_kwargs={}):
     """
     find initial bracketing lnpi_phases of phaseID==ID bracketing point where DeltabetaE_phaseIDS()[ID]==efac
@@ -53,84 +59,88 @@ def _initial_bracket_spinodal_right(C,ID,mu_in,efac=1.0,
 
     #use lnpi_phase reference
     ref = C[0]
-    
-    reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
+
+    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
 
     #mu which varies
     mu_idx = mu_in.index(None)
-    
-    
+
     #delta E
-    dE = C.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[:,ID]
-    Omegas = C.Omegas_phaseIDs()[:,ID]
-    
+    dE = C.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[:, ID]
+    Omegas = C.Omegas_phaseIDs().xs(ID, level='phase').values
+
     #find locations where have 'ID'
-    msk = C.has_phaseIDs[:,ID]
-    if msk.sum()==0:
-        raise ValueError('no phaseID %i'%ID)
-    
+    msk = C.has_phaseIDs[:, ID]
+    if msk.sum() == 0:
+        raise ValueError('no phaseID %i' % ID)
+
     w = np.where(msk)[0]
-    
+
     #left
     left = None
     for i in w[-1::-1]:
-        if dE[i]>efac and np.isfinite(Omegas[i]):
+        if dE[i] > efac and np.isfinite(Omegas[i]):
             left = C[i]
             break
-    
+
     if left is None:
         #need to find a new value mu bounding thing
         new_mu = mu_in[:]
         new_mu[mu_idx] = C[w[0]].mu[mu_idx]
         new_mu = np.asarray(new_mu)
-        
-        for i in range(ntry):
-            new_mu[mu_idx] -= step*dmu
 
-            t = ref.reweight(new_mu,**reweight_kwargs)
-            
+        for i in range(ntry):
+            new_mu[mu_idx] -= step * dmu
+
+            t = ref.reweight(new_mu, **reweight_kwargs)
+
             if t.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]>efac and \
-               np.isfinite(t.Omegas_phaseIDs()[ID]):
+               np.isfinite(t.Omegas_phaseIDs().xs(ID, level='phase').values[0]):
                 left = t
                 break
         if left is None:
             raise RuntimeError('could not find left')
 
-        
-           
     #right
     #first, is there a value in C where has_phase and dE<efac?
     right = None
     for i in w[-1::-1]:
-        if dE[i]<efac:
+        if dE[i] < efac:
             right = C[i]
             break
-    
-    
+
     if right is None:
-        if w[-1]+1<len(C):
-            right = C[w[-1]+1]
+        if w[-1] + 1 < len(C):
+            right = C[w[-1] + 1]
         else:
             new_mu = mu_in[:]
             new_mu[mu_idx] = C[w[-1]].mu[mu_idx]
             new_mu = np.asarray(new_mu)
 
             for i in range(ntry):
-                new_mu[mu_idx] += step*dmu
+                new_mu[mu_idx] += step * dmu
 
-                t = ref.reweight(new_mu,**reweight_kwargs)
+                t = ref.reweight(new_mu, **reweight_kwargs)
 
                 if not t.has_phaseIDs[ID]:
                     right = t
                     break
             if right is None:
                 raise RuntimeError('could not find right')
-    
-    
-    return left,right
-    
-def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
-                                   reweight_kwargs={},DeltabetaE_kwargs={},close_kwargs={}):
+
+    return left, right
+
+
+def _refine_bracket_spinodal_right(L,
+                                   R,
+                                   ID,
+                                   efac=1.0,
+                                   nmax=30,
+                                   vmax=1e20,
+                                   vmin=0.0,
+                                   reweight_kwargs={},
+                                   DeltabetaE_kwargs={},
+                                   close_kwargs={}):
     """
     find refined bracket with efac<DeltabetaE_left<vmax and vmin<DeltabetaE_right<efac
 
@@ -167,120 +177,121 @@ def _refine_bracket_spinodal_right(L,R,ID,efac=1.0,nmax=30,vmax=1e20,vmin=0.0,
     r : scipy.optimize.zeros.RootResults object
     """
 
-    
     ref = L
-    reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)    
-    
-    doneLeft=False
-    doneRight=False
-    
+    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+
+    doneLeft = False
+    doneRight = False
+
     left = L
     right = R
 
+    close_kwargs = dict(dict(atol=1e-5), **close_kwargs)
 
-    close_kwargs = dict(dict(atol=1e-5),**close_kwargs)
-    
     for i in range(nmax):
         v = left.DeltabetaE_phaseIDs()[ID]
-        if v<vmax and v>efac:
-            doneLeft=True
-            
-        v = right.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
-        if v>vmin and v<efac:
-            doneRight=True
-            
+        if v < vmax and v > efac:
+            doneLeft = True
 
+        v = right.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
+        if v > vmin and v < efac:
+            doneRight = True
 
         #########
         #checks
         if doneLeft and doneRight:
             #find bracket
-            r = optimize.zeros.RootResults(root=None,iterations=i,function_calls=i,flag=1)
-            return left,right,r
-
+            r = optimize.zeros.RootResults(
+                root=None, iterations=i, function_calls=i, flag=1)
+            return left, right, r
 
         ########
         #converged?
-        if np.allclose(left.mu,right.mu,**close_kwargs):
+        if np.allclose(left.mu, right.mu, **close_kwargs):
             #we've reached a breaking point
             if doneLeft:
                 #can't find a lower bound to efac, just return where we're at
-                r = optimize.zeros.RootResults(root=left.mu,iterations=i+1,function_calls=i,flag=0)
-                setattr(r,'left',left)
-                setattr(r,'right',right)
-                setattr(r,'info','all close and doneLeft')
-                return left,right,r
+                r = optimize.zeros.RootResults(
+                    root=left.mu, iterations=i + 1, function_calls=i, flag=0)
+                setattr(r, 'left', left)
+                setattr(r, 'right', right)
+                setattr(r, 'info', 'all close and doneLeft')
+                return left, right, r
 
             #elif not doneLeft and not doneRight:
             else:
                 #all close, and no good on either end -> no spinodal
-                r = optimize.zeros.RootResults(root=None,iterations=i+1,function_calls=i,flag=1)
-                setattr(r,'left',left)
-                setattr(r,'right',right)
-                setattr(r,'doneLeft',doneLeft)
-                setattr(r,'doneRight',doneRight)
-                setattr(r,'info','all close and not done Left')
-                return None,None,r
+                r = optimize.zeros.RootResults(
+                    root=None, iterations=i + 1, function_calls=i, flag=1)
+                setattr(r, 'left', left)
+                setattr(r, 'right', right)
+                setattr(r, 'doneLeft', doneLeft)
+                setattr(r, 'doneRight', doneRight)
+                setattr(r, 'info', 'all close and not done Left')
+                return None, None, r
 
-        mu_mid = 0.5*(left.mu+right.mu)
+        mu_mid = 0.5 * (left.mu + right.mu)
         #print(mu_mid)
-        mid = ref.reweight(mu_mid,**reweight_kwargs)
-        
+        mid = ref.reweight(mu_mid, **reweight_kwargs)
+
         v = mid.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
 
-        if v>=efac and np.isfinite(mid.Omegas_phaseIDs()[ID]):
+        if v >= efac and np.isfinite(mid.Omegas_phaseIDs().xs(
+                ID, level='phase').values[0]):
             left = mid
         else:
             right = mid
 
-
-    print('i',i)
+    print('i', i)
     print(ID)
-    print('left mu',left.mu)
-    print('right mu',right.mu)
-    print('dmu',left.mu-right.mu)
-    
-    print('left DE',left.DeltabetaE_phaseIDs())
-    print('right DE',right.DeltabetaE_phaseIDs())
+    print('left mu', left.mu)
+    print('right mu', right.mu)
+    print('dmu', left.mu - right.mu)
 
-    print('doneleft',doneLeft)
-    print('doneright',doneRight)
-    print('close',np.allclose(left.mu,right.mu,**close_kwargs))
+    print('left DE', left.DeltabetaE_phaseIDs())
+    print('right DE', right.DeltabetaE_phaseIDs())
+
+    print('doneleft', doneLeft)
+    print('doneright', doneRight)
+    print('close', np.allclose(left.mu, right.mu, **close_kwargs))
 
     raise RuntimeError('did not finish')
-        
 
 
-
-def _solve_spinodal(ref,ID,mu_in,a,b,efac=1.0,
-                reweight_kwargs={},
-                argmax_kwargs={},
-                phases_kwargs={},
-                ftag_phases = None,
-                DeltabetaE_kwargs={},
-                **kwargs):
+def _solve_spinodal(ref,
+                    ID,
+                    mu_in,
+                    a,
+                    b,
+                    efac=1.0,
+                    reweight_kwargs={},
+                    argmax_kwargs={},
+                    phases_kwargs={},
+                    ftag_phases=None,
+                    DeltabetaE_kwargs={},
+                    **kwargs):
 
     idx = mu_in.index(None)
-    reweight_kwargs = dict(dict(ZeroMax=True),**reweight_kwargs)
-        
+    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+
     def f(x):
         mu = mu_in[:]
         mu[idx] = x
-        c = ref.reweight(mu,**reweight_kwargs)
+        c = ref.reweight(mu, **reweight_kwargs)
 
         f.lnpi = c
-        
+
         return c.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID] - efac
 
-    xx,r = optimize.brentq(f,a,b,full_output=True,**kwargs)
+    xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
 
     r.residual = f(xx)
     mu = f.lnpi.mu
-    
-    return mu,r,f.lnpi
+
+    return mu, r, f.lnpi
 
 
-def _get_step(C,ID,**kwargs):
+def _get_step(C, ID, **kwargs):
     """
     find step value on 
 
@@ -302,16 +313,22 @@ def _get_step(C,ID,**kwargs):
     else:
         #go left
         return -1
-    
 
 
-
-def get_spinodal(C,ID,efac=1.0,
-                 dmu=0.5,vmin=0.0,vmax=1e20,ntry=20,step=None,
-                 nmax=20,                 
-                 reweight_kwargs={},DeltabetaE_kwargs={},
+def get_spinodal(C,
+                 ID,
+                 efac=1.0,
+                 dmu=0.5,
+                 vmin=0.0,
+                 vmax=1e20,
+                 ntry=20,
+                 step=None,
+                 nmax=20,
+                 reweight_kwargs={},
+                 DeltabetaE_kwargs={},
                  close_kwargs={},
-                 solve_kwargs={},full_output=False):
+                 solve_kwargs={},
+                 full_output=False):
     """
     locate spinodal point for a given phaseID
 
@@ -375,13 +392,11 @@ def get_spinodal(C,ID,efac=1.0,
     r : output info object (optional, returned if full_output is True)
 
     """
-    assert(len(C)>1)
-    
+    assert (len(C) > 1)
 
     if step is None:
-        step = _get_step(C,ID,**DeltabetaE_kwargs)
+        step = _get_step(C, ID, **DeltabetaE_kwargs)
 
-    
     if step == +1:
         CC = C
     elif step == -1:
@@ -389,76 +404,76 @@ def get_spinodal(C,ID,efac=1.0,
     else:
         raise ValueError('bad step')
 
-
     msk = C[0].mu != C[1].mu
     assert msk.sum() == 1
-    
+
     mu_idx = np.where(msk)[0][0]
     mu_in = list(C[0].mu[:])
     mu_in[mu_idx] = None
 
-
-
-
     #get initial bracket
-    L,R = _initial_bracket_spinodal_right(CC,ID,mu_in,efac=efac,
-                                          dmu=dmu,vmax=vmax,ntry=ntry,step=step,
-                                          reweight_kwargs=reweight_kwargs,
-                                          DeltabetaE_kwargs=DeltabetaE_kwargs)
-    
+    L, R = _initial_bracket_spinodal_right(
+        CC,
+        ID,
+        mu_in,
+        efac=efac,
+        dmu=dmu,
+        vmax=vmax,
+        ntry=ntry,
+        step=step,
+        reweight_kwargs=reweight_kwargs,
+        DeltabetaE_kwargs=DeltabetaE_kwargs)
 
-    left,right,rr = _refine_bracket_spinodal_right(L,R,ID,efac=efac,nmax=nmax,
-                                                  vmin=vmin,vmax=vmax,
-                                                  reweight_kwargs=reweight_kwargs,
-                                                  DeltabetaE_kwargs=DeltabetaE_kwargs)
+    left, right, rr = _refine_bracket_spinodal_right(
+        L,
+        R,
+        ID,
+        efac=efac,
+        nmax=nmax,
+        vmin=vmin,
+        vmax=vmax,
+        reweight_kwargs=reweight_kwargs,
+        DeltabetaE_kwargs=DeltabetaE_kwargs)
 
-    
     if left is None and right is None:
         #no spinodal found and left and right are close
         spin = None
         r = rr
 
-
     elif rr.converged:
         #converged to a solution
 
         spin = left
-                
+
         r = rr
-        setattr(r,'bracket_iteration',rr.iterations)
-        setattr(r,'from_solve',False)
+        setattr(r, 'bracket_iteration', rr.iterations)
+        setattr(r, 'from_solve', False)
 
-
-    
     else:
-        #solve 
+        #solve
         if step == -1:
-            left,right = right,left
+            left, right = right, left
 
-        a,b = left.mu[mu_idx],right.mu[mu_idx]
+        a, b = left.mu[mu_idx], right.mu[mu_idx]
 
+        mu, r, spin = _solve_spinodal(
+            C[0],
+            ID,
+            mu_in,
+            a,
+            b,
+            efac=efac,
+            reweight_kwargs=reweight_kwargs,
+            argmax_kwargs=C[0]._argmax_kwargs,
+            phases_kwargs=C[0]._phases_kwargs,
+            ftag_phases=C[0]._ftag_phases,
+            DeltabetaE_kwargs=DeltabetaE_kwargs,
+            **solve_kwargs)
 
-        mu,r,spin = _solve_spinodal(C[0],ID,mu_in,a,b,
-                                    efac=efac,
-                                    reweight_kwargs=reweight_kwargs,
-                                    argmax_kwargs=C[0]._argmax_kwargs,
-                                    phases_kwargs=C[0]._phases_kwargs,
-                                    ftag_phases=C[0]._ftag_phases,
-                                    DeltabetaE_kwargs=DeltabetaE_kwargs,
-                                    **solve_kwargs)
-
-        setattr(r,'bracket_iterations',rr.iterations)
-        setattr(r,'from_solve',True)
+        setattr(r, 'bracket_iterations', rr.iterations)
+        setattr(r, 'from_solve', True)
 
     if full_output:
-        return spin,r
+        return spin, r
     else:
         return spin
-    
-
-    
-        
-    
-
-
-
