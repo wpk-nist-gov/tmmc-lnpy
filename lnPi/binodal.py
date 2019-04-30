@@ -63,7 +63,7 @@ def get_binodal_point(ref,
         c = ref.reweight(mu, **reweight_kwargs)
         f.lnpi = c
 
-        Omegas = c.Omegas_phaseIDs()
+        Omegas = c.Omega_phase()
 
         return Omegas[IDs[0]] - Omegas[IDs[1]]
 

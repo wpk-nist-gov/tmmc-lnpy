@@ -67,7 +67,7 @@ def _initial_bracket_spinodal_right(C,
 
     #delta E
     dE = C.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[:, ID]
-    Omegas = C.Omegas_phaseIDs().xs(ID, level='phase').values
+    Omegas = C.Omega_phase().sel(phase=ID).values
 
     #find locations where have 'ID'
     msk = C.has_phaseIDs[:, ID]
@@ -95,7 +95,7 @@ def _initial_bracket_spinodal_right(C,
             t = ref.reweight(new_mu, **reweight_kwargs)
 
             if t.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]>efac and \
-               np.isfinite(t.Omegas_phaseIDs().xs(ID, level='phase').values[0]):
+               np.isfinite(t.Omega_phase().sel(phase=ID).values):
                 left = t
                 break
         if left is None:
@@ -236,8 +236,7 @@ def _refine_bracket_spinodal_right(L,
 
         v = mid.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
 
-        if v >= efac and np.isfinite(mid.Omegas_phaseIDs().xs(
-                ID, level='phase').values[0]):
+        if v >= efac and np.isfinite(mid.Omega_phase().sel(phase=ID).values):
             left = mid
         else:
             right = mid

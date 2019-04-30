@@ -8,6 +8,7 @@ from functools import wraps
 
 __all__ = ['cached', 'cached_func', 'cached_clear']
 
+
 def cached(key=None):
     """Decorator to cache a property within a class
 
