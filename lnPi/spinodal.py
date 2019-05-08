@@ -42,8 +42,8 @@ def _initial_bracket_spinodal_right(C,
 
     step : int (Default +1)
         if +1, step forward
-        if -1, step backward 
-    
+        if -1, step backward
+
     reweight_kwargs : dict
         extra arguments to reweight
 
@@ -54,20 +54,20 @@ def _initial_bracket_spinodal_right(C,
     -------
     left,right: lnpi_phases
         left and right bracketing lnPi_phases objects
-    
+
     """
 
     #use lnpi_phase reference
     ref = C[0]
 
-    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+    reweight_kwargs = dict(dict(zeromax=True), **reweight_kwargs)
 
     #mu which varies
     mu_idx = mu_in.index(None)
 
     #delta E
     dE = C.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[:, ID]
-    Omegas = C.Omega_phase().sel(phase=ID).values
+    Omegas = C.omega_phase().sel(phase=ID).values
 
     #find locations where have 'ID'
     msk = C.has_phaseIDs[:, ID]
@@ -95,7 +95,7 @@ def _initial_bracket_spinodal_right(C,
             t = ref.reweight(new_mu, **reweight_kwargs)
 
             if t.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]>efac and \
-               np.isfinite(t.Omega_phase().sel(phase=ID).values):
+               np.isfinite(t.omega_phase().sel(phase=ID).values):
                 left = t
                 break
         if left is None:
@@ -173,12 +173,12 @@ def _refine_bracket_spinodal_right(L,
     -------
     left,right : lnpi_phases objects
         left and right phases bracketing spinodal
-    
+
     r : scipy.optimize.zeros.RootResults object
     """
 
     ref = L
-    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+    reweight_kwargs = dict(dict(zeromax=True), **reweight_kwargs)
 
     doneLeft = False
     doneRight = False
@@ -236,7 +236,7 @@ def _refine_bracket_spinodal_right(L,
 
         v = mid.DeltabetaE_phaseIDs(**DeltabetaE_kwargs)[ID]
 
-        if v >= efac and np.isfinite(mid.Omega_phase().sel(phase=ID).values):
+        if v >= efac and np.isfinite(mid.omega_phase().sel(phase=ID).values):
             left = mid
         else:
             right = mid
@@ -271,7 +271,7 @@ def _solve_spinodal(ref,
                     **kwargs):
 
     idx = mu_in.index(None)
-    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+    reweight_kwargs = dict(dict(zeromax=True), **reweight_kwargs)
 
     def f(x):
         mu = mu_in[:]
@@ -292,10 +292,10 @@ def _solve_spinodal(ref,
 
 def _get_step(C, ID, **kwargs):
     """
-    find step value on 
+    find step value on
 
     if DeltabetaE[-1,ID] - DeltabetaE[0,ID]<0 -> step=+1 (go right)
-    
+
     else step = -1
     """
 
@@ -349,7 +349,7 @@ def get_spinodal(C,
 
     dmu : float (Default 0.5)
         factor to kick back if C doesn't already have left and right bounds
-    
+
     vmin : float (default 0.0)
         value denoting vmin, i.e., value of DeltabetaE if phaseID does not exist
 
@@ -361,12 +361,12 @@ def get_spinodal(C,
 
     step : int or None (Default None)
         if +1, step forward
-        if -1, step backward 
+        if -1, step backward
         if None, try to determine step
 
     nmax : int (Default 20)
         max number of steps to refine bracket
-    
+
     reweight_kwargs : dict
         extra arguments to reweight
 

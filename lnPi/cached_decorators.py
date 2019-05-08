@@ -6,7 +6,16 @@ from builtins import object
 from functools import wraps
 
 
-__all__ = ['cached', 'cached_func', 'cached_clear']
+__all__ = ['cached', 'cached_func', 'cached_clear', 'gcached']
+
+def gcached(key=None, prop=True):
+    def wrapper(func):
+        if prop:
+            wrapped = property(cached(key)(func))
+        else:
+            wrapped = cached_func(key)(func)
+        return wrapped
+    return wrapper
 
 
 def cached(key=None):
@@ -115,7 +124,7 @@ def cached_func(key=None):
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            key_func = (_key,) + args
+            key_func = (_key, args, frozenset(kwargs.items()))
             try:
                 return self._cache[key_func]
             except AttributeError:

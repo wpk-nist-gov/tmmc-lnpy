@@ -55,7 +55,7 @@ def get_binodal_point(ref,
 
     a, b = sorted([x[mu_idx] for x in [muA, muB]])
 
-    reweight_kwargs = dict(dict(ZeroMax=True), **reweight_kwargs)
+    reweight_kwargs = dict(dict(zeromax=True), **reweight_kwargs)
 
     def f(x):
         mu = mu_in[:]
@@ -63,7 +63,7 @@ def get_binodal_point(ref,
         c = ref.reweight(mu, **reweight_kwargs)
         f.lnpi = c
 
-        Omegas = c.Omega_phase()
+        Omegas = c.omega_phase()
 
         return Omegas[IDs[0]] - Omegas[IDs[1]]
 

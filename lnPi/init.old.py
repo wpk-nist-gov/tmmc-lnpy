@@ -7,6 +7,7 @@ from collections import Iterable
 
 import numpy as np
 # import pandas as pd
+
 from scipy.ndimage import filters
 from scipy.spatial.distance import cdist, pdist, squareform
 
@@ -144,7 +145,6 @@ class lnPi(np.ma.MaskedArray):
     smooth : create smoothed object
 
 
-
     from_file : create lnPi object from file
 
     from_data : create lnPi object from data array
@@ -179,7 +179,7 @@ class lnPi(np.ma.MaskedArray):
 
 
         **kwargs : arguments to np.ma.array
-         e.g., mask=...
+         e.g., mask
 
         """
 
@@ -301,7 +301,7 @@ class lnPi(np.ma.MaskedArray):
 
     @xrify_comp(cache=True)
     def Nvar(self):
-        x = (self.coords - self.Nave.reshape((-1, ) + (1, ) * self.ndim))**2
+        x = (self.coords - self.Nave.values.reshape((-1, ) + (1, ) * self.ndim))**2
         return (self.pi_norm * x).reshape(self.ndim, -1).sum(axis=-1).data
 
     @property
@@ -602,7 +602,7 @@ class lnPi(np.ma.MaskedArray):
             y = self.copy()
 
         shift = self.max()
-
+        
         y.set_data(y.data - shift)
 
         if not inplace:

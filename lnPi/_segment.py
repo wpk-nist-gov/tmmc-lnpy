@@ -122,7 +122,7 @@ def _labels_watershed(data, markers, mask, size=3, footprint=None, **kwargs):
 # labels/masks utilities
 ##################################################
 def labels_to_masks(labels,
-                    num_feature=None,
+                    features=None,
                     include_boundary=False,
                     feature_value=False,
                     **kwargs):
@@ -133,8 +133,8 @@ def labels_to_masks(labels,
     ----------
     labels : array of labels to analyze
 
-    num_features : number of features to analyze (Default None)
-        if None, get num_feature from labels
+    features : array-like, optional
+        list of features to extract from labels.
 
     include_boundary : bool (Default False)
         if True, include boundary regions in output mask
@@ -158,12 +158,12 @@ def labels_to_masks(labels,
     if include_boundary:
         kwargs = dict(dict(mode='outer', connectivity=labels.ndim), **kwargs)
 
-    if num_feature is None:
-        num_feature = labels.max()
+    if features is None:
+        features = [i for i in np.unique(labels) if i > 0]
 
     output = []
 
-    for i in range(1, num_feature + 1):
+    for i in features:
         m = labels == i
 
         if include_boundary:
