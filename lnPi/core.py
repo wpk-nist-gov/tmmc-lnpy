@@ -211,16 +211,24 @@ class Base(np.ma.MaskedArray):
     def chempot(self):
         return xr.DataArray(self.mu, dims=self.dims_comp, coords=self.coords_state, name='chempot')
 
+    @gcached()
+    def lnpi_max(self):
+        return self.lnpi.max(self.dims_n).rename('lnpi_max')
+
+    @gcached()
+    def lnpi_zero(self):
+        # kws = {k:0 for k in self.dims_n}
+        # return self.lnpi.sel(**kws)
+        # this was a nice idea, but then if masked out 0 point, then nan
+        return self.data.reshape(-1)[0]
+
     #calculated properties
     @gcached()
     def pi(self):
         """
         basic pi = exp(lnpi)
         """
-        return np.exp(self.lnpi - self.max()).rename('pi')
-        # shift = self.max()
-        # pi = np.exp(self.filled(np.nan) - shift)
-        # return xr.DataArray(pi, dims=self.dims_N, coords=self._xr_coords)
+        return np.exp(self.lnpi - self.lnpi_max).rename('pi')
 
     @gcached()
     def pi_sum(self):
@@ -228,7 +236,7 @@ class Base(np.ma.MaskedArray):
 
     @gcached()
     def pi_norm(self):
-        return self.pi / self.pi_sum
+        return ( self.pi / self.pi_sum ).rename('pi_norm')
 
     @gcached()
     def nave(self):
@@ -249,6 +257,7 @@ class Base(np.ma.MaskedArray):
         n = self.nave
         return (n / n.sum()).rename('molfrac')
 
+
     @gcached(prop=False)
     def omega(self, zval=None):
         """
@@ -261,8 +270,18 @@ class Base(np.ma.MaskedArray):
         """
 
         if zval is None:
-            zval = self.data.reshape(-1)[0] - self.max()
+            zval = self.lnpi_zero - self.lnpi_max
         return ((zval - np.log(self.pi_sum)) / self.beta).rename('omega')
+
+    @gcached()
+    def helmholtz_nvt(self):
+        """
+        Helmholtz free energy in canonical ensemble
+        """
+        return (
+            -(self.lnpi - self.lnpi_zero) / self.beta + (self.ncoords * self.chempot).sum(self.dims_comp)
+        )
+
 
     @property
     def ncomp(self):
@@ -983,15 +1002,15 @@ class Phases(object):
 
     ##################################################
     #reweight
-    def reweight(self, mu, zeromax=True, pad=False, **kwargs):
+    def reweight(self, mu, zeromax=True, pad=False, phases='get', argmax='get', **kwargs):
         """
         create a new lnpi_phases reweighted to new mu
         """
 
         return self.copy(
             base=self.base.reweight(mu, zeromax=zeromax, pad=pad, **kwargs),
-            phases='get',
-            argmax='get')
+            phases=phases,
+            argmax=argmax)
 
     ##################################################
     #properties
@@ -1007,14 +1026,7 @@ class Phases(object):
 
     @property
     def argmax(self):
-        #set on access
         return self._argmax
-        # if self._argmax == 'get' and self._phases == 'get':
-        #     #self.argmax = self.base.argmax_local(**self._argmax_kwargs)
-        #     self.build_phases(inplace=True, **self._build_kwargs)
-        # else:
-        #     self._argmax = self.argmax_from_phases()
-        # return self._argmax
 
     @argmax.setter
     def argmax(self, val):
@@ -1033,22 +1045,9 @@ class Phases(object):
     @property
     def phases(self):
         return self._phases
-        # if self._phases == 'get':
-        #     #self.phases = self.base.get_list_indices(self.argmax,**self._phases_kwargs)
-        #     if self._argmax == 'get':
-        #         self.build_phases(inplace=True, **self._build_kwargs)
-        #     else:
-        #         self._phases = self.base.get_list_indices(
-        #             self.argmax, **self._phases_kwargs)
-
-        # if self._phases is None:
-        #     return [self.base]
-        # else:
-        #     return self._phases
 
     @phases.setter
     def phases(self, phases):
-
         if isinstance(phases, (tuple, list)):
             #assume that have list/tuple of lnPi phases
             for i, p in enumerate(phases):
@@ -1064,10 +1063,6 @@ class Phases(object):
             phases = self.base.get_list_labels(phases)
         elif phases is None:
             phases = [self.base]
-        # elif phases is None or phases == 'get':
-        #     #passing get to later
-        #     pass
-
         else:
             raise ValueError(
                 'phases must be a list of lnPi, label array, None, or "get"')
@@ -1969,7 +1964,13 @@ class Collection(object):
                       close_kwargs={},
                       solve_kwargs={},
                       inplace=True,
-                      append=True):
+                      append=True,
+                      force=False,
+    ):
+
+
+        if inplace and hasattr(self, '_spinodals') and not force:
+            raise ValueError('already set spinodals')
 
         L = []
         info = []
@@ -2046,7 +2047,12 @@ class Collection(object):
                      reweight_kwargs={},
                      inplace=True,
                      append=True,
+                     force=False,
                      **kwargs):
+
+
+        if inplace and hasattr(self, '_binodals') and not force:
+            raise ValueError('already set spinodals')
 
         if spinodals is None:
             spinodals = self.spinodals
@@ -2180,21 +2186,18 @@ class Collection(object):
         da = xr.concat([x.to_dataarray(dtype=dtype, **phase_kws) for x in self], dim=dim, coords=coords, **kwargs)
 
         # add in spinodal/binodal
-        if hasattr(self, '_spinodals'):
-            rec_list = []
-            for target in self._spinodals:
-                for rec, x in enumerate(self):
-                    if x is target:
-                        rec_list.append(rec)
-            da.attrs['rec_spinodals'] = rec_list
-
-        if hasattr(self, '_binodals'):
-            rec_list = []
-            for target in self._binodals:
-                for rec, x in enumerate(self):
-                    if x is target:
-                        rec_list.append(rec)
-            da.attrs['rec_binodals'] = rec_list
+        for k in ['spinodals', 'binodals']:
+            _k = '_' + k
+            label = np.zeros(len(self), dtype=dtype)
+            if hasattr(self, _k):
+                for i, target in enumerate(getattr(self, _k)):
+                    if target is None:
+                        break
+                    for rec, x in enumerate(self):
+                        if x is target:
+                            label[rec] = i + 1
+            # else no mark
+            da.coords[k] = (dim, label)
         return da
 
 
@@ -2206,15 +2209,34 @@ class Collection(object):
         lnpis = child.from_dataarray_groupby(base=base, da=da, dim=dim, **child_kws)
         new = cls(lnpis)
 
-        if 'rec_spinodals' in da.attrs:
-            new._spinodals = []
-            for i in np.atleast_1d(da.attrs['rec_spinodals']):
-                new._spinodals.append(lnpis[i])
-
-        if 'rec_binodals' in da.attrs:
-            new._binodals = []
-            for i in np.atleast_1d(da.attrs['rec_binodals']):
-                new._binodals.append(lnpis[i])
+        d = {}
+        for k in ['spinodals', 'binodals']:
+            _k = '_' + k
+            label = da.coords[k]
+            features = np.unique(label[label > 0])
+            for feature in features:
+                idx = np.where(label == feature)[0][0]
+                if _k not in d:
+                    d[_k] = [lnpis[idx]]
+                else:
+                    d[_k].append(lnpis[idx])
+        for _k, v in d.items():
+            if len(v) > 0:
+                setattr(new, _k, v)
         return new
+
+
+
+
+        # if 'rec_spinodals' in da.attrs:
+        #     new._spinodals = []
+        #     for i in np.atleast_1d(da.attrs['rec_spinodals']):
+        #         new._spinodals.append(lnpis[i])
+
+        # if 'rec_binodals' in da.attrs:
+        #     new._binodals = []
+        #     for i in np.atleast_1d(da.attrs['rec_binodals']):
+        #         new._binodals.append(lnpis[i])
+        # return new
 
 
