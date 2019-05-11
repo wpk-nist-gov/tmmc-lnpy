@@ -1,2 +1,13 @@
-from lnPi.core import Base, Phases, Collection
-from lnPi import molfrac
+from .core import lnPi, Phases, Collection
+from . import molfrac
+
+
+
+
+
+
+
+
+
+
+

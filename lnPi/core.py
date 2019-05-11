@@ -25,7 +25,16 @@ from functools import wraps, partial
 
 
 
-class Base(np.ma.MaskedArray):
+# cached indices
+_INDICES = {}
+def _get_indices(shape):
+    if shape not in _INDICES:
+        _INDICES[shape] = np.indices(shape)
+    return _INDICES[shape]
+
+
+
+class lnPi(np.ma.MaskedArray):
     """
     class to store masked ln[Pi(n0,n1,...)].
     shape is (N0,N1,...) where Ni is the span of each dimension)
@@ -42,7 +51,7 @@ class Base(np.ma.MaskedArray):
 
     pi_norm : pi/pi.sum()
 
-    Nave : average number of particles of each component    divider = make_axes_locatable(ax)
+    nave : average number of particles of each component
     cax = divider.append_axes("right",
                               size="2%",
                               pad=cbar_pad)
@@ -119,11 +128,13 @@ class Base(np.ma.MaskedArray):
 
         obj = np.ma.array(data, **kwargs).view(cls)
 
-        fv = kwargs.get('fill_value', None) or getattr(data, 'fill_value', None)
+        fv = kwargs.get('fill_value', None) or getattr(data, 'fill_value',
+                                                       None)
         if fv is not None:
             obj.set_fill_value(fv)
 
-        obj._optinfo.update(mu=mu, num_phases_max=num_phases_max, volume=volume, beta=beta)
+        obj._optinfo.update(
+            mu=mu, num_phases_max=num_phases_max, volume=volume, beta=beta)
         obj.adjust(zeromax=zeromax, pad=pad, inplace=True)
 
         return obj
@@ -191,25 +202,39 @@ class Base(np.ma.MaskedArray):
     @gcached()
     def attrs(self):
         return {
-            'dims_n' :self.dims_n,
-            'dims_mu' : self.dims_mu,
+            'dims_n': self.dims_n,
+            'dims_mu': self.dims_mu,
             'dims_comp': self.dims_comp,
             'dims_state': list(self.coords_state.keys()),
+            'lnpi_zero': self.lnpi_zero,
+            'state_as_attrs': 0,
             'num_phases_max': self.num_phases_max
         }
 
     @gcached()
     def lnpi(self):
-        return xr.DataArray(self.filled(np.nan), dims=self.dims_n, coords=self.coords_state, name='lnpi', attrs=self.attrs)
+        return xr.DataArray(
+            self.filled(np.nan),
+            dims=self.dims_n,
+            coords=self.coords_state,
+            name='lnpi',
+            attrs=self.attrs)
 
     @gcached()
     def ncoords(self):
         """particle number for each particle dimension"""
-        return xr.DataArray(np.indices(self.shape), dims=self.dims_comp + self.dims_n, coords=self.coords_state)
+        return xr.DataArray(
+            _get_indices(self.shape),
+            dims=self.dims_comp + self.dims_n,
+            coords=self.coords_state)
 
     @gcached()
     def chempot(self):
-        return xr.DataArray(self.mu, dims=self.dims_comp, coords=self.coords_state, name='chempot')
+        return xr.DataArray(
+            self.mu,
+            dims=self.dims_comp,
+            coords=self.coords_state,
+            name='chempot')
 
     @gcached()
     def lnpi_max(self):
@@ -236,7 +261,7 @@ class Base(np.ma.MaskedArray):
 
     @gcached()
     def pi_norm(self):
-        return ( self.pi / self.pi_sum ).rename('pi_norm')
+        return (self.pi / self.pi_sum).rename('pi_norm')
 
     @gcached()
     def nave(self):
@@ -250,13 +275,13 @@ class Base(np.ma.MaskedArray):
 
     @gcached()
     def nvar(self):
-        return (self.pi_norm * (self.ncoords - self.nave)**2).sum(self.dims_n).rename('nvar')
+        return (self.pi_norm * (self.ncoords - self.nave)**2).sum(
+            self.dims_n).rename('nvar')
 
     @property
     def molfrac(self):
         n = self.nave
         return (n / n.sum()).rename('molfrac')
-
 
     @gcached(prop=False)
     def omega(self, zval=None):
@@ -278,10 +303,8 @@ class Base(np.ma.MaskedArray):
         """
         Helmholtz free energy in canonical ensemble
         """
-        return (
-            -(self.lnpi - self.lnpi_zero) / self.beta + (self.ncoords * self.chempot).sum(self.dims_comp)
-        )
-
+        return (-(self.lnpi - self.lnpi_zero) / self.beta +
+                (self.ncoords * self.chempot).sum(self.dims_comp))
 
     @property
     def ncomp(self):
@@ -296,7 +319,6 @@ class Base(np.ma.MaskedArray):
     @cached_clear()
     def set_mask(self, val):
         self.mask[:] = val
-
 
     ##################################################
     #adjusters
@@ -388,6 +410,15 @@ class Base(np.ma.MaskedArray):
         #s = _get_shift(self.shape,dmu)*self.beta
         #get shift
         #i.e., N * (mu_1 - mu_0)
+        # note that this is (for some reason)
+        # faster than doing the (more natural) options:
+        # N = self.ncoords.values
+        # shift = 0
+        # for i, m in enumerate(dmu):
+        #     shift += N[i,...] * m
+        # or
+        # shift = (self.ncoords.values.T * dmu).sum(-1).T
+
         shift = np.zeros([], dtype=float)
         for i, (s, m) in enumerate(zip(self.shape, dmu)):
             shift = np.add.outer(shift, np.arange(s) * m)
@@ -401,11 +432,13 @@ class Base(np.ma.MaskedArray):
 
         return Z
 
+
     def new_mask(self, mask=None, **kwargs):
         """
         create copy with new mask
         """
-        return self.__class__(self.data, mask=mask, **dict(self._optinfo, **kwargs))
+        return self.__class__(
+            self.data, mask=mask, **dict(self._optinfo, **kwargs))
 
     def add_mask(self, mask, **kwargs):
         """
@@ -453,7 +486,6 @@ class Base(np.ma.MaskedArray):
         if not inplace:
             return Z
 
-
     def to_dataarray(self, mask=False, state_as_attrs=False, **kwargs):
         """
         create a xarray.DataArray from self.
@@ -477,7 +509,13 @@ class Base(np.ma.MaskedArray):
 
         if mask:
             coords['mask'] = (self.dims_n, self.mask)
-        return xr.DataArray(self.data, dims=self.dims_n, coords=coords, attrs=attrs, name='lnpi', **kwargs)
+        return xr.DataArray(
+            self.data,
+            dims=self.dims_n,
+            coords=coords,
+            attrs=attrs,
+            name='lnpi',
+            **kwargs)
 
     @classmethod
     def from_dataarray(cls, da, state_as_attrs=None, **kwargs):
@@ -516,7 +554,6 @@ class Base(np.ma.MaskedArray):
         kwargs = dict(kws, **kwargs)
 
         return cls(**kwargs)
-
 
     ##################################################
     #maxima
@@ -742,14 +779,22 @@ class Base(np.ma.MaskedArray):
                 smooth=smooth,
                 smooth_kwargs=smooth_kwargs,
                 **labels_kwargs)
-            return self.get_list_labels(labels, SegLenOne=SegLenOne, **masks_kwargs)
-
+            return self.get_list_labels(
+                labels, SegLenOne=SegLenOne, **masks_kwargs)
 
     @classmethod
-    def from_table(cls, path, mu, volume, beta, num_phases_max,
-                        sep='\s+', names=None, csv_kws=None, **kwargs):
+    def from_table(cls,
+                   path,
+                   mu,
+                   volume,
+                   beta,
+                   num_phases_max,
+                   sep='\s+',
+                   names=None,
+                   csv_kws=None,
+                   **kwargs):
         """
-        Create Base object from text file table with columns [n_0,...,n_ndim, lnpi]
+        Create lnPi object from text file table with columns [n_0,...,n_ndim, lnpi]
 
         Parameters
         ----------
@@ -768,7 +813,7 @@ class Base(np.ma.MaskedArray):
         csv_kws : dict, optional
             optional arguments to `pandas.read_csv`
         kwargs  : extra arguments
-            Passed to Base constructor
+            Passed to lnPi constructor
         """
 
         mu = np.atleast_1d(mu)
@@ -780,16 +825,16 @@ class Base(np.ma.MaskedArray):
         if csv_kws is None:
             csv_kws = {}
 
-        da = (
-            pd.read_csv(path, sep=sep, names=names, **csv_kws)
-            .set_index(names[:-1])
-            ['lnpi']
-            .to_xarray()
-        )
-        return Base(data=da.values, mask=da.isnull().values, mu=mu, volume=volume, beta=beta, num_phases_max=num_phases_max, **kwargs)
-
-
-
+        da = (pd.read_csv(path, sep=sep, names=names,
+                          **csv_kws).set_index(names[:-1])['lnpi'].to_xarray())
+        return cls(
+            data=da.values,
+            mask=da.isnull().values,
+            mu=mu,
+            volume=volume,
+            beta=beta,
+            num_phases_max=num_phases_max,
+            **kwargs)
 
     # def split_phases(self,
     #                   argmax_kwargs=None,
@@ -801,7 +846,6 @@ class Base(np.ma.MaskedArray):
     #     return lnPi_phases object with placeholders for phases/argmax
     #     """
     #     raise ValueError
-
 
 
 ###################################################
@@ -829,18 +873,24 @@ def concatify(key=None, prop=True, cache=False, **kws):
             wrapped = property(wrapped)
 
         return wrapped
+
     return wrapper
+
+
 concatify_phase = partial(concatify, dim='phase', coords='different')
 concatify_rec = partial(concatify, dim='rec', coords='all')
 
 
 def wrap(name, cache=True, prop=True, **kws):
     if prop:
+
         def _get_prop(self):
-            return xr.concat([getattr(x,name) for x in self], **kws)
+            return xr.concat([getattr(x, name) for x in self], **kws)
     else:
+
         def _get_prop(self, *args, **kwargs):
-            return xr.concat([getattr(x,name)(*args, **kwargs) for x in self], **kws)
+            return xr.concat([getattr(x, name)(*args, **kwargs) for x in self],
+                             **kws)
 
     if cache:
         _get_prop = gcached(key=name, prop=prop)(_get_prop)
@@ -849,13 +899,17 @@ def wrap(name, cache=True, prop=True, **kws):
 
     return _get_prop
 
+
 def wrap_reindex(name, cache=True, prop=True, **kws):
     if prop:
+
         def _get_prop(self):
             return self._reindex(getattr(self, name))
     else:
+
         def _get_prop(self, *args, **kwargs):
             return self._reindex(getattr(self, name)(*args, **kwargs))
+
     if cache:
         _get_prop = gcached(key=name + "_phase", prop=prop)(_get_prop)
     elif prop:
@@ -863,32 +917,46 @@ def wrap_reindex(name, cache=True, prop=True, **kws):
 
     return _get_prop
 
+
 def wrap_methods(methods, cache=True, prop=True, index=True, **kws):
     def wrap_methods_inner(cls):
         for name in methods:
             setattr(cls, name, wrap(name, cache, prop, **kws))
             if index:
-                setattr(cls, name + '_phase', wrap_reindex(name, cache, prop, **kws))
+                setattr(cls, name + '_phase',
+                        wrap_reindex(name, cache, prop, **kws))
         return cls
+
     return wrap_methods_inner
 
-@wrap_methods(['nave', 'molfrac', 'nvar', 'density','lnpi','chempot', 'pi_norm'], prop=True, cache=True, dim='phase', coords='different')
-@wrap_methods(['omega'], prop=False, cache=True, dim='phase', coords='different')
+
+@wrap_methods(
+    ['nave', 'molfrac', 'nvar', 'density', 'lnpi', 'chempot', 'pi_norm'],
+    prop=True,
+    cache=True,
+    dim='phase',
+    coords='different')
+@wrap_methods(['omega'],
+              prop=False,
+              cache=True,
+              dim='phase',
+              coords='different')
 class Phases(object):
     """
     object containing lnpi base and phases
     """
 
-    def __init__(self,
-                 base,
-                 phases='get',
-                 argmax='get',
-                 argmax_kwargs=None,
-                 phases_kwargs=None,
-                 build_kwargs=None,
-                 ftag_phases=None,
-                 ftag_phases_kwargs=None,
-                 phaseIDs=None,
+    def __init__(
+            self,
+            base,
+            phases='get',
+            argmax='get',
+            argmax_kwargs=None,
+            phases_kwargs=None,
+            build_kwargs=None,
+            ftag_phases=None,
+            ftag_phases_kwargs=None,
+            phaseIDs=None,
     ):
         """
         object to store base and phases
@@ -937,8 +1005,9 @@ class Phases(object):
             elif ftag_phases == 'tag_phases_single':
                 ftag_phases = tag_phases_single
             else:
-                raise ValueError('if specify with string, but be in ["tag_phases_binary", "tag_phases_single"]')
-
+                raise ValueError(
+                    'if specify with string, but be in ["tag_phases_binary", "tag_phases_single"]'
+                )
 
         self._ftag_phases = ftag_phases
 
@@ -956,9 +1025,6 @@ class Phases(object):
         self._build_kwargs = build_kwargs
         self._ftag_phases_kwargs = ftag_phases_kwargs
 
-
-
-
         if phases == 'get':
             self._phases = phases
             # if have argmax, use it
@@ -974,8 +1040,6 @@ class Phases(object):
             if argmax == 'get':
                 # set argmax from phases
                 self.argmax = self.argmax_from_phases()
-
-
 
     ##################################################
     #copy
@@ -1002,7 +1066,13 @@ class Phases(object):
 
     ##################################################
     #reweight
-    def reweight(self, mu, zeromax=True, pad=False, phases='get', argmax='get', **kwargs):
+    def reweight(self,
+                 mu,
+                 zeromax=True,
+                 pad=False,
+                 phases='get',
+                 argmax='get',
+                 **kwargs):
         """
         create a new lnpi_phases reweighted to new mu
         """
@@ -1020,7 +1090,7 @@ class Phases(object):
 
     @base.setter
     def base(self, val):
-        if type(val) is not Base:
+        if type(val) is not lnPi:
             raise ValueError('base must be type lnPi %s' % (type(val)))
         self._base = val
 
@@ -1051,7 +1121,7 @@ class Phases(object):
         if isinstance(phases, (tuple, list)):
             #assume that have list/tuple of lnPi phases
             for i, p in enumerate(phases):
-                if type(p) is not Base:
+                if type(p) is not lnPi:
                     raise ValueError('element %i of phases must be lnPi' % (i))
 
                 if np.any(self.base.mu != p.mu):
@@ -1088,7 +1158,6 @@ class Phases(object):
         else:
             return self._ftag_phases(self, **self._ftag_phases_kwargs)
 
-
     @property
     def phaseIDs(self):
         return self._tag_phases()
@@ -1119,7 +1188,8 @@ class Phases(object):
             self.masks, feature_value=False, values=self.phaseIDs)
 
     def _reindex(self, x):
-        return x.assign_coords(phase=self.phaseIDs).reindex(phase=range(self.base.num_phases_max))
+        return x.assign_coords(phase=self.phaseIDs).reindex(
+            phase=range(self.base.num_phases_max))
 
     @property
     def mu(self):
@@ -1413,7 +1483,6 @@ class Phases(object):
             DE = self._get_DE(Etrans, Emin, vmax=vmax)
 
             min_val = np.nanmin(DE)
-
             if min_val > efac:
                 if not force:
                     break
@@ -1434,8 +1503,6 @@ class Phases(object):
             #delete idx_kill
             Etrans = np.delete(np.delete(Etrans, idx_kill, 0), idx_kill, 1)
             Emin = np.delete(Emin, idx_kill)
-
-
 
             #update L
             L[number[idx_keep]] += L[number[idx_kill]]
@@ -1595,7 +1662,6 @@ class Phases(object):
         if not inplace:
             return t
 
-
     def to_dataarray(self, dtype=np.uint8, **kwargs):
         """
         create dataarray object from labels
@@ -1604,8 +1670,11 @@ class Phases(object):
         data = self.labels
         if dtype is not None:
             data = data.astype(dtype)
-        return xr.DataArray(data, dims=self.base.dims_n, name='labels', coords=self.base.coords_state)
-
+        return xr.DataArray(
+            data,
+            dims=self.base.dims_n,
+            name='labels',
+            coords=self.base.coords_state)
 
     @classmethod
     def from_dataarray(cls, base, da, **kwargs):
@@ -1623,7 +1692,6 @@ class Phases(object):
 
         return cls.from_labels(base=base, labels=labels, mu=mu, **kwargs)
 
-
     @classmethod
     def from_dataarray_groupby(cls, base, da, dim='rec', **kwargs):
 
@@ -1631,7 +1699,6 @@ class Phases(object):
         for i, g in da.groupby(dim):
             lnpis.append(cls.from_dataarray(base=base, da=g, **kwargs))
         return lnpis
-
 
     @classmethod
     def from_labels(cls,
@@ -1658,19 +1725,34 @@ class Phases(object):
 
         phases = base.get_list_labels(
             labels, features=features, SegLenOne=SegLenOne, **mask_kwargs)
-        new = cls(base=base, phases=phases, argmax=argmax, phaseIDs=phaseIDs, **kwargs)
+        new = cls(
+            base=base,
+            phases=phases,
+            argmax=argmax,
+            phaseIDs=phaseIDs,
+            **kwargs)
         if argmax == 'get':
             new.argmax = new.argmax_from_phases()
         return new
-
 
 
 ################################################################################
 #collection
 ################################################################################
 #@wrap_methods(['chempot'], cache=True, prop=True, index=False, coords='all', dim='rec')
-@wrap_methods([x + '_phase' for x in ('chempot', 'nave','nvar','molfrac','density')], cache=True, prop=True, index=False, coords='all', dim='rec')
-@wrap_methods(['omega_phase'], cache=True, prop=False, index=False, coords='all', dim='rec')
+@wrap_methods(
+    [x + '_phase' for x in ('chempot', 'nave', 'nvar', 'molfrac', 'density')],
+    cache=True,
+    prop=True,
+    index=False,
+    coords='all',
+    dim='rec')
+@wrap_methods(['omega_phase'],
+              cache=True,
+              prop=False,
+              index=False,
+              coords='all',
+              dim='rec')
 class Collection(object):
     """
     class containing several lnPis
@@ -1903,6 +1985,7 @@ class Collection(object):
     @property
     def nphases(self):
         return np.array([x.nphase for x in self.lnpis])
+
     @property
     def has_phaseIDs(self):
         return np.array([x.has_phaseIDs for x in self.lnpis])
@@ -1951,23 +2034,23 @@ class Collection(object):
         else:
             return s
 
-    def get_spinodals(self,
-                      efac=1.0,
-                      dmu=0.5,
-                      vmin=0.0,
-                      vmax=1e20,
-                      ntry=20,
-                      step=None,
-                      nmax=20,
-                      reweight_kwargs={},
-                      DeltabetE_kwargs={},
-                      close_kwargs={},
-                      solve_kwargs={},
-                      inplace=True,
-                      append=True,
-                      force=False,
+    def get_spinodals(
+            self,
+            efac=1.0,
+            dmu=0.5,
+            vmin=0.0,
+            vmax=1e20,
+            ntry=20,
+            step=None,
+            nmax=20,
+            reweight_kwargs={},
+            DeltabetE_kwargs={},
+            close_kwargs={},
+            solve_kwargs={},
+            inplace=True,
+            append=True,
+            force=False,
     ):
-
 
         if inplace and hasattr(self, '_spinodals') and not force:
             raise ValueError('already set spinodals')
@@ -2049,7 +2132,6 @@ class Collection(object):
                      append=True,
                      force=False,
                      **kwargs):
-
 
         if inplace and hasattr(self, '_binodals') and not force:
             raise ValueError('already set spinodals')
@@ -2175,15 +2257,21 @@ class Collection(object):
         mus = get_mu_iter(mu, x)
         return cls.from_mu_iter(ref, mus, **kwargs)
 
-
-
-
-    def to_dataarray(self, dim='rec', coords='all', dtype=np.uint8, phase_kws=None, **kwargs):
+    def to_dataarray(self,
+                     dim='rec',
+                     coords='all',
+                     dtype=np.uint8,
+                     phase_kws=None,
+                     **kwargs):
 
         if phase_kws is None:
             phase_kws = {}
         # dataarray of labels
-        da = xr.concat([x.to_dataarray(dtype=dtype, **phase_kws) for x in self], dim=dim, coords=coords, **kwargs)
+        da = xr.concat(
+            [x.to_dataarray(dtype=dtype, **phase_kws) for x in self],
+            dim=dim,
+            coords=coords,
+            **kwargs)
 
         # add in spinodal/binodal
         for k in ['spinodals', 'binodals']:
@@ -2200,13 +2288,13 @@ class Collection(object):
             da.coords[k] = (dim, label)
         return da
 
-
     @classmethod
     def from_dataarray(cls, base, da, dim='rec', child=Phases, child_kws=None):
 
         if child_kws is None:
             child_kws = {}
-        lnpis = child.from_dataarray_groupby(base=base, da=da, dim=dim, **child_kws)
+        lnpis = child.from_dataarray_groupby(
+            base=base, da=da, dim=dim, **child_kws)
         new = cls(lnpis)
 
         d = {}
@@ -2225,9 +2313,6 @@ class Collection(object):
                 setattr(new, _k, v)
         return new
 
-
-
-
         # if 'rec_spinodals' in da.attrs:
         #     new._spinodals = []
         #     for i in np.atleast_1d(da.attrs['rec_spinodals']):
@@ -2238,5 +2323,3 @@ class Collection(object):
         #     for i in np.atleast_1d(da.attrs['rec_binodals']):
         #         new._binodals.append(lnpis[i])
         # return new
-
-

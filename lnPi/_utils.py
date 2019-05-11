@@ -12,10 +12,10 @@ def _pad_rows(Z,empty):
         last = Z[i,~msk][-1]
         ZR[i,msk] = last
     return ZR
-    
+
 def _pad_matrix(Z,empty):
     #fill empty parts of Z
-    
+
     ZR = _pad_rows(Z,empty)
     ZC = _pad_rows(Z.T,empty.T).T
     ZRC = (ZR+ZC)*0.5
@@ -25,7 +25,6 @@ def _pad_matrix(Z,empty):
 def _interp_rows(Z,empty):
     ZR = Z.copy()
     x = np.arange(Z.shape[1])
-    
     for i in range(0,Z.shape[0]):
         msk = empty[i,:]
         ZR[i,msk] = np.interp(x[msk],x[~msk],Z[i,~msk])
@@ -36,6 +35,25 @@ def _interp_matrix(Z,empty):
     ZC = _interp_rows(Z.T,empty.T).T
     ZRC = 0.5*(ZR+ZC)
     return ZRC
+
+
+def ffill(arr, axis=-1, limit=None):
+    import bottleneck
+    _limit = limit if limit is not None else arr.shape[axis]
+    return bottleneck.push(arr, n=_limit, axis=axis)
+
+def bfill(arr, axis=-1, limit=None):
+    '''inverse of ffill'''
+    import bottleneck
+    # work around for bottleneck 178
+    _limit = limit if limit is not None else arr.shape[axis]
+
+    arr = np.flip(arr, axis=axis)
+    # fill
+    arr = bottleneck.push(arr, axis=axis, n=_limit)
+    # reverse back to original
+    return np.flip(arr, axis=axis)
+
 
 
 # def _get_shift(shape,mu):
