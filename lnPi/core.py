@@ -12,8 +12,8 @@ from scipy.ndimage import filters
 from .cached_decorators import gcached, cached_clear
 from .utils import labels_to_masks, masks_to_labels, masks_change_convention
 
-from .accessors import AccessorMixin, ListAccessorMixin
-
+from .extensions import AccessorMixin, ListAccessorMixin
+from .extensions import decorate_listproperty, decorate_listaccessor
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
 # [ ] : split splitting into separate classes
@@ -649,6 +649,7 @@ class Phases(BaselnPiCollection):
         pass
 
     # @gcached()
+    # this handled via accessor
     # def wlnPi(self):
     #     base = self.items[0]
     #     background = np.logical_and.reduce([x.mask for x in self])
@@ -723,9 +724,15 @@ class Phases(BaselnPiCollection):
         return cls.from_labels(ref=ref, labels=labels, mu=mu, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
 
 
+    # properties
+    @property
+    def mu(self):
+        return self[0].mu
 
 
 
+
+@decorate_listproperty(['mu'])
 class CollectionPhases(BaselnPiCollection):
     _CONCAT_DIM = 'rec'
     _CONCAT_COORDS = 'all'
