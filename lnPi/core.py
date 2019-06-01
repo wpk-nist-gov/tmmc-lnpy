@@ -27,62 +27,23 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     Attributes
     ----------
     self : masked array containing lnPi
-
     mu : chemical potential for each component
-
     coords : coordinate array (ndim,N0,N1,...)
-
     pi : exp(lnPi)
-
-    pi_norm : pi/pi.sum()
-
-    nave : average number of particles of each component
-    cax = divider.append_axes("right",
-                              size="2%",
-                              pad=cbar_pad)
-
-
-    molfrac : mol fraction of each component
-
-    Omega : Omega system, relative to lnPi[0,0,...,0]
-
-
-    set_data : set data array
-
-    set_mask : set mask array
-
-
+    grand : grand potential (-pV) of system
     argmax_local : local argmax (in np.where output form)
-
-    get_phases : return phases
-
-
     zeromax : set lnPi = lnPi - lnPi.max()
-
     pad : fill in masked points by interpolation
-
     adjust : zeromax and/or pad
-
-
     reweight : create new lnPi at new mu
-
-    new_mask : new object (default share data) with new mask
-
-    add_mask : create object with mask = self.mask + mask
-
     smooth : create smoothed object
-
-
-    from_file : create lnPi object from file
-
-    from_data : create lnPi object from data array
     """
 
     def __new__(cls,
                 data,
                 mu=None,
-                volume=None,
-                beta=None,
+                state_kws=None,
+                extra_kws=None,
                 **kwargs):
         """
         constructor
@@ -93,17 +54,17 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
          data for lnPi
 
         mu : array-like (Default None)
-         if None, set mu=np.zeros(data.ndim)
-
+            if None, set mu=np.zeros(data.ndim)
+        state_kws : dict, optional
+            dictionary of state values.  This needs to define beta and volume, if you want to use those parameters down the road.
+        extra_kws : dict, optional
+            this defines extra parameters to pass along, like internal energy, etc
         zeromax : bool (Default False)
-         if True, shift lnPi = lnPi - lnPi.max()
-
+            if True, shift lnPi = lnPi - lnPi.max()
         pad : bool (Default False)
-         if True, pad masked region by interpolation
-
-
-        **kwargs : arguments to np.ma.array
-         e.g., mask=...
+            if True, pad masked region by interpolation
+        kwargs : arguments to np.ma.array
+            e.g., mask=...
 
         """
 
@@ -113,8 +74,29 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             fv = np.nan
         obj.set_fill_value(fv)
 
+        # make sure to broadcase mask if it is just False
+        if obj.mask is False:
+            obj.mask = False
+
+        # set mu value:
+        if mu is None:
+            mu = np.zeros(obj.ndim)
+        mu = np.atleast_1d(mu).astype(obj.dtype)
+        if len(mu) != obj.ndim:
+            raise ValueError('bad len on mu %s' % mu)
+
+
+
+        if state_kws is None:
+            state_kws = {}
+        if extra_kws is None:
+            extra_kws = {}
+
         obj._optinfo.update(
-            mu=mu, volume=volume, beta=beta)
+            mu=mu,
+            state_kws=state_kws,
+            extra_kws=extra_kws,
+        )
         return obj
 
     ##################################################
@@ -130,37 +112,62 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     #properties
     @property
     def optinfo(self):
+        """all extra properties"""
         return self._optinfo
+    @property
+    def state_kws(self):
+        """state specific parameters"""
+        return self._optinfo['state_kws']
+    @property
+    def extra_kws(self):
+        """all extra parameters"""
+        return self._optinfo['extra_kws']
 
     @property
     def mu(self):
-        mu = self._optinfo.get('mu', None)
-        if mu is None:
-            mu = np.zeros(self.ndim)
-        mu = np.atleast_1d(mu).astype(self.dtype)
-        if len(mu) != self.ndim:
-            raise ValueError('bad len on mu %s' % mu)
-        return mu
-
+        return self._optinfo.get('mu', None)
     @property
     def volume(self):
-        return self._optinfo.get('volume', None)
-
+        return self.state_kws.get('volume', None)
     @property
     def beta(self):
-        return self._optinfo.get('beta', None)
+        return self.state_kws.get('beta', None)
+
+    def __repr__(self):
+        L = []
+        L.append('mu={}'.format(repr(self.mu)))
+        L.append('state_kws={}'.format(repr(self.state_kws)))
+
+        if len(self.extra_kws) > 0:
+            L.append('extra_kws={}'.format(repr(self.extra_kws)))
+
+        L.append('data={}'.format(super(MaskedlnPi,self).__repr__()))
+
+        indent = ' ' * 5
+        p = 'MaskedlnPi(\n' + '\n'.join([indent + x for x in L]) + '\n)'
+
+        return p
+
+    @gcached(prop=False)
+    def local_argmax(self, *args, **kwargs):
+        return np.unravel_index(self.argmax(*args, **kwargs), self.shape)
+    @gcached(prop=False)
+    def local_max(self, *args, **kwargs):
+        return self[self.local_argmax(*args, **kwargs)]
+    @gcached(prop=False)
+    def local_maxmask(self, *args, **kwargs):
+        return self == self.local_max(*args, **kwargs)
+
 
     @gcached()
-    def lnpi_argmax(self):
-        return np.unravel_index(self.argmax(), self.shape)
+    def edge_distance_matrix(self):
+        """matrix of distance from upper bound"""
+        from .utils import distance_matrix
+        return distance_matrix(~self.mask)
+    def edge_distance(self, ref, *args, **kwargs):
+        return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
 
-    @gcached()
-    def lnpi_max(self):
-        return self[self.lnpi_argmax]
 
-    @gcached()
-    def lnpi_max_mask(self):
-        return self == self.lnpi_max
 
     # make these top level
     @gcached()
@@ -168,15 +175,18 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         """
         basic pi = exp(lnpi)
         """
-        pi = np.exp(self - self.lnpi_max)
+        pi = np.exp(self - self.local_max())
         return pi
+
+    @gcached()
+    def pi_sum(self):
+        return pi.sum()
 
     @gcached(prop=False)
     def omega(self, zval=None):
         if zval is None:
-            zval = self.data.ravel()[0] - self.max()
-        return  (zval - np.log(self.pi.sum())) / self.beta
-
+            zval = self.data.ravel()[0] - self.local_max()
+        return  (zval - np.log(self.pi_sum) / self.beta
 
     def __setitem__(self, index, value):
         self._clear_cache()
@@ -285,8 +295,13 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         lnPi(mu)
         """
 
+        mu = np.atleast_1d(mu)
+
+        assert(len(mu) == len(self.mu))
+
         new = self.copy()
         new._optinfo['mu'] = mu
+
 
         dmu = new.mu - self.mu
 
@@ -384,8 +399,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def from_table(cls,
                    path,
                    mu,
-                   volume,
-                   beta,
+                   state_kws=None,
                    sep='\s+',
                    names=None,
                    csv_kws=None,
@@ -399,10 +413,8 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             file object to be read
         mu : array-like
             chemical potential for each component
-        volume : float
-            total volume
-        beta : float
-            inverse temperature
+        state_kws : dict, optional
+            define state variables, like volume, beta
         sep : string, optional
             separator for file read
         names : column names
@@ -411,7 +423,6 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         kwargs  : extra arguments
             Passed to lnPi constructor
         """
-
         mu = np.atleast_1d(mu)
         ndim = len(mu)
 
@@ -427,10 +438,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             data=da.values,
             mask=da.isnull().values,
             mu=mu,
-            volume=volume,
-            beta=beta,
-            **kwargs)
-
+            state_kws=state_kws, **kwargs)
 
 
 
@@ -457,12 +465,15 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             c = da.coords
 
         mu = []
+        state_kws = {}
         for k in da.attrs['dims_state']:
+            val = np.array(c[k])
             if 'mu' in k:
-                mu.append(c[k])
+                mu.append(val)
             else:
-                kws[k] = c[k]
+                state_kws[k] = val * 1
         kws['mu'] = mu
+        kws['state_kws'] = state_kws
 
         # any overrides
         kwargs = dict(kws, **kwargs)
@@ -508,10 +519,17 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
     _CONCAT_DIM = None #'phase'
     _CONCAT_COORDS = 'different'
 
-    def __init__(self, items, index=None, xarray_output=True):
+    def __init__(self, items, index=None, xarray_output=True, concat_dim=None, concat_coords=None):
         self.items = items
         self.index = index
         self.xarray_output = xarray_output
+
+        # maybe reset concat dims/coords
+        if concat_dim is not None:
+            self._CONCAT_DIM = concat_dim
+        if concat_coords is not None:
+            self._CONCAT_COORDS = concat_coords
+
 
     @property
     def items(self):
@@ -554,10 +572,11 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
                 return (
                     xr.concat(items, self.index, coords=self._CONCAT_COORDS)
                 )
-            else:
-                return items
-        else:
-            return items
+        # else try to make array
+        try:
+            return np.array(items)
+        except:
+            return itmes
 
 
     def copy(self):
@@ -593,7 +612,7 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
                 assert(issubclass(type(val), self[0].__class__))
             items = vals
             if index is None:
-                offset = self.index[-1]
+                offset = self.index[-1]+1
                 index = [x+offset for x in range(len(vals))]
         else:
             raise ValueError(
@@ -617,7 +636,7 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
             for val in vals:
                 assert(issubclass(type(val), self[0].__class__))
             items = vals
-            offset = self.index[-1]
+            offset = self.index[-1] + 1
             index = [x+offset for x in range(len(vals))]
         else:
             raise ValueError(
@@ -635,31 +654,32 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
         return self
 
 
+    def __repr__(self):
+        header = f"<{self.__class__.__name__}  ({self._CONCAT_DIM} : {len(self)})>"
+        index = f"index {repr(self.index)}"
+        return '\n'.join([header, index])
+
+
+
 
 class Phases(BaselnPiCollection):
     _CONCAT_DIM = 'phase'
     _CONCAT_COORDS = 'different'
 
-    @property
-    def phases(self):
-        """provide top level access to collections of phases"""
-        return self
+    # @property
+    # def phases(self):
+    #     """provide top level access to collections of phases"""
+    #     return self
+
+    @gcached()
+    def _series(self):
+        """
+        series representation of items
+        """
+        return pd.Series(self.items, index=self.index)
 
     def _check_items(self):
         pass
-
-    # @gcached()
-    # this handled via accessor
-    # def wlnPi(self):
-    #     base = self.items[0]
-    #     background = np.logical_and.reduce([x.mask for x in self])
-
-    #     return segment.FreeEnergylnPi(
-    #         data=base.data,
-    #         masks=[x.mask for x in self],
-    #         convention=False,
-    #         background = background
-    #     )
 
     @classmethod
     def from_masks(cls, ref, masks, convention='image', index=None, **kwargs):
@@ -692,7 +712,6 @@ class Phases(BaselnPiCollection):
         features = np.array(self.index) + 1
         return masks_to_labels([x.mask for x in self], features=features, convention=False, dtype=np.int8)
 
-
     def to_dataarray(self, dtype=np.uint8, **kwargs):
         """
         create dataarray object from labels
@@ -703,24 +722,24 @@ class Phases(BaselnPiCollection):
             data = data.astype(dtype)
         return xr.DataArray(
             data,
-            dims=self[0].xtm.dims_n,
+            dims=self[0].xgce.dims_n,
             name='labels',
-            coords=self[0].xtm.coords_state)
+            coords=self[0].xgce.coords_state,
+            attrs=self[0].xgce.lnpi.attrs
+        )
 
     @classmethod
     def from_dataarray(cls, ref, da, mu=None, include_boundary=False, labels_kws=None, **kwargs):
-
         labels = da.values
         ndim = labels.ndim
 
-        mu = [da.coords[k] * 1.0 for k in base.dims_mu]
+        if mu is None:
+            mu = [da.coords[k] * 1.0 for k in da.attrs['dims_mu']]
 
         beta = da.coords['beta']
         volume = da.coords['volume']
-
         assert beta == ref.beta
         assert volume == ref.volume
-
         return cls.from_labels(ref=ref, labels=labels, mu=mu, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
 
 
@@ -730,18 +749,40 @@ class Phases(BaselnPiCollection):
         return self[0].mu
 
 
-
-
+# add in accessor to property mu
 @decorate_listproperty(['mu'])
 class CollectionPhases(BaselnPiCollection):
     _CONCAT_DIM = 'rec'
     _CONCAT_COORDS = 'all'
 
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return self.__class__(items=self.items[idx], index=self.index[idx], xarray_output=self.xarray_output)
+        else:
+            return self.items[idx]
+
+    @gcached()
+    def _series(self):
+        return pd.concat({rec: x._series for rec, x in zip(self.index, self.items)}, names=self.index.names)
+
+
+
+    def sort_by_mu(self, comp=0, inplace=True, **kwargs):
+        order = np.argsort(self.mu[:, comp])
+        L = [self._items[i] for i in order]
+
+        if inplace:
+            self._items = L
+            self._cache = {}
+        else:
+            return self.__class__(items=L, **kwargs)
+        
+
     ##################################################
     #builders
     ##################################################
     @classmethod
-    def from_mu_iter(cls, ref, mus, build_phases=None, build_phases_kws=None,  nmax=2, xarray_output=True, **kwargs):
+    def from_mu_iter(cls, mus, ref=None, build_phases=None, build_phases_kws=None,  nmax=2, xarray_output=True, **kwargs):
         """
         build Collection from mus
 
@@ -764,14 +805,14 @@ class CollectionPhases(BaselnPiCollection):
         out : Collection object
         """
         if build_phases is None:
-            build_phases = get_default_PhaseCreator(nmax).build_phases
+            raise ValueError('must supply build_phases')
         if build_phases_kws is None:
             build_phases_kws = {}
         L = [build_phases(ref=ref, mu=mu, **build_phases_kws) for mu in mus]
         return cls(items=L, index=None, xarray_output=xarray_output)
 
     @classmethod
-    def from_mu(cls, ref, mu, x, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
+    def from_mu(cls, mu, x, ref=None, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
         """
         build Collection from mu builder
 
@@ -807,10 +848,11 @@ class CollectionPhases(BaselnPiCollection):
     def to_dataarray(self,
                      dtype=np.uint8,
                      **kwargs):
+        da = self.wrap_list_results(
+            [x.to_dataarray(dtype=dtype, **kwargs) for x in self])
 
-        da = self.phases.to_dataarray(dtype=dtype, **kwargs)
-        # da = self.wrap_results(
-        #     [x.to_dataarray(dtype=dtype, **kwargs) for x in self])
+
+
 
         # add in spinodal/binodal
         # for k in ['spinodals', 'binodals']:
@@ -828,32 +870,34 @@ class CollectionPhases(BaselnPiCollection):
         return da
 
 
-
     # binodal/spinodal stuff
-
     @classmethod
-    def from_dataarray(cls, base, da, dim='rec', child=Phases, child_kws=None):
+    def from_dataarray(cls, ref, da, dim='rec', child=Phases, child_kws=None, **kwargs):
 
         if child_kws is None:
             child_kws = {}
-        lnpis = child.from_dataarray_groupby(
-            base=base, da=da, dim=dim, **child_kws)
-        new = cls(lnpis)
 
-        d = {}
-        for k in ['spinodals', 'binodals']:
-            _k = '_' + k
-            label = da.coords[k]
-            features = np.unique(label[label > 0])
-            for feature in features:
-                idx = np.where(label == feature)[0][0]
-                if _k not in d:
-                    d[_k] = [lnpis[idx]]
-                else:
-                    d[_k].append(lnpis[idx])
-        for _k, v in d.items():
-            if len(v) > 0:
-                setattr(new, _k, v)
+        items = []
+        index = []
+        for i, g in da.groupby(dim):
+            index.append(i)
+            items.append(child.from_dataarray(ref=ref, da=g, **child_kws))
+        new = cls(items=items, index=index, **kwargs)
+
+        # d = {}
+        # for k in ['spinodals', 'binodals']:
+        #     _k = '_' + k
+        #     label = da.coords[k]
+        #     features = np.unique(label[label > 0])
+        #     for feature in features:
+        #         idx = np.where(label == feature)[0][0]
+        #         if _k not in d:
+        #             d[_k] = [lnpis[idx]]
+        #         else:
+        #             d[_k].append(lnpis[idx])
+        # for _k, v in d.items():
+        #     if len(v) > 0:
+        #         setattr(new, _k, v)
         return new
 
 

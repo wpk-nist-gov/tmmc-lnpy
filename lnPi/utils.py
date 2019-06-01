@@ -6,6 +6,7 @@ import numpy as np
 from scipy import ndimage as ndi
 from skimage import segmentation
 
+
 def _convention_to_bool(convention):
     if convention == 'image':
         convention = True
@@ -240,3 +241,42 @@ def sort_lnPis(input, comp=0):
     output = [input[i] for i in order]
 
     return output
+
+
+
+
+def distance_matrix(mask, convention='image'):
+    """
+    create matrix of distances from elements of mask
+    to nearest background point
+
+    Parameters
+    ----------
+    mask : array-like
+        image mask
+    conventions : str or bool, default='image'
+        mask convetion
+
+    Returns
+    -------
+    distance : array of same shape as mask
+        distance from possible feature elements to background
+    """
+
+
+    mask = np.asarray(mask, dtype=np.bool)
+    mask = masks_change_convention(mask, convention_in=convention, convention_out=True)
+    
+    # pad mask
+    # add padding to end of matrix in each dimension
+    ndim = mask.ndim
+    pad_width = ((0, 1),)* ndim
+    mask = np.pad(mask, pad_width=pad_width,
+                  mode='constant', constant_values=False)
+
+    # distance filter
+    dist = ndi.distance_transform_edt(mask)
+
+    # remove padding
+    s = (slice(None, -1),) * ndim
+    return dist[s]

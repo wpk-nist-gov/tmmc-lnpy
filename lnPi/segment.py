@@ -1,3 +1,13 @@
+"""
+routines to segment lnPi
+
+ 1. find max/peaks in lnPi
+ 2. segment lnPi about these peaks
+ 3. determine free energy difference between segments
+    a. Merge based on low free energy difference
+ 4. combination of 1-3.  
+"""
+
 import itertools
 from collections import Iterable
 
@@ -9,21 +19,22 @@ import bottleneck
 
 from .cached_decorators import gcached
 from .utils import (
-    mask_change_convention, masks_change_convention, labels_to_masks, masks_to_labels
+    mask_change_convention, masks_change_convention,
+    labels_to_masks, masks_to_labels
 )
 
 import warnings
-
 from .core import Phases
 
 
 def peak_local_max_adaptive(data,
-                            labels=None,
+                            mask=None,
                             min_distance=[5, 10, 15, 20, 25],
                             threshold_rel=0.00,
                             threshold_abs=0.2,
                             num_peaks_max=None,
                             indices=True,
+                            errors='warn',
                             **kwargs):
     """
     find local max with fall backs min_distance and filter
@@ -31,22 +42,32 @@ def peak_local_max_adaptive(data,
     Parameters
     ----------
     data : image to analyze
-    labels : optional mask (True means include, False=exclude)
+    mask : mask array of same shape as data, optional
+        True means include, False=exclude.  Note that this parameter is called `lables` in `peaks_local_max`
     min_distance : int or iterable (Default 15)
         min_distance parameter to self.peak_local_max.
         if min_distance is iterable, if num_phase>num_phase_max, try next
+    threshold_rel, threshold_abs : float
+        thresholds to use in peak_local_max
     num_peaks_max : int (Default None)
         max number of maxima to find.
+    indeces : bool, default=True
+        if True, return indicies of peaks.
+        if False, return array of ints of shape `data.shape` with peaks marked by value > 0.
+    errors : {'ignore','raise','warn'}, default='warn'
+        - If raise, raise exception if npeaks > num_peaks_max
+        - If ignore, return all found maxima
+        - If warn, raise warning if npeaks > num_peaks_max
+
+
     **kwargs : extra arguments to peak_local_max
 
     Returns
     -------
-    out : tuple of ndarrays
-        indices of self where local max
-
-    out_info : tuple (min_distance,smooth)
-        min_distance used and bool indicating if smoothing was used
-    """
+    out :
+    - if indices is True, tuple of ndarrays
+        indices of where local max
+   """
 
     if num_peaks_max is None:
         num_peaks_max = np.inf
@@ -55,14 +76,13 @@ def peak_local_max_adaptive(data,
         min_distance = [min_distance]
 
     data = data - bottleneck.nanmin(data)
-
     kwargs = dict(dict(exclude_border=False), **kwargs)
 
     for md in min_distance:
         idx = feature.peak_local_max(
             data,
             min_distance=md,
-            labels=labels,
+            labels=mask,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
             indices=True,
@@ -70,67 +90,144 @@ def peak_local_max_adaptive(data,
 
         n = len(idx)
         if n <= num_peaks_max:
-            idx = tuple(idx.T)
-            if indices:
-                return idx
-            else:
-                out = np.zeros_like(data, dtype=np.bool)
-                out[idx] = True
-                return out
+            break
 
-    #if got here than error
-    raise RuntimeError('%i maxima found greater than %i' % (n, num_peaks_max))
+    if n > num_peaks_max:
+        if errors == 'ignore':
+            pass
+        elif errors in ('raise', 'ignore'):
+            message = '{} maxima found greater than {}'.format(n, num_peaks_max)
+            if errors == 'raise':
+                raise RuntimeError(message)
+            else:
+                warning.warn(message)
+
+    idx = tuple(idx.T)
+    if indices:
+        return idx
+    else:
+        out = np.zeros_like(data, dtype=np.bool)
+        out[idx] = True
+        return out
 
 
 class Segmenter(object):
     """
-    Segment lnpi
+    Data segmenter:
+
+    Methods
+    -------
+    peaks : find peaks of data
+    watershep : watershed segementation
+    segment_lnpi : helper funciton to segment lnPi
     """
 
-    def __init__(self, min_distance=[1, 5, 10, 15, 20], peak_kws=None,
+    def __init__(self, min_distance=[1, 5, 10, 15, 20],
+                 peak_kws=None,
                  watershed_kws=None):
+        """
+        Parameters
+        ----------
+        peak_kws : dictionary
+            kwargs to `peak_local_max_adaptive`
+        watershed_kws : dictionary
+            kwargs to `skimage.morphology.watershed`
+        """
+
 
         if peak_kws is None:
             peak_kws = {}
-        peak_kws.update(indices=False, min_distance=min_distance)
+        peak_kws.update(indices=False)
+        self.peak_kws = peak_kws
 
         if watershed_kws is None:
             watershed_kws = {}
-        self._peak_kws = peak_kws
-        self._watershed_kws = watershed_kws
+        self.watershed_kws = watershed_kws
 
     def peaks(self,
               data,
-              mask,
+              mask=None,
               num_peaks_max=None,
               as_marker=True,
               connectivity=None,
               **kwargs):
-        kwargs = dict(self._peak_kws, **kwargs)
+        """
+        Parameters
+        ----------
+        data : array
+            image to be analyzed
+        mask : array
+            consider only regions where `mask == True`
+        as_marker : bool, default=True
+            if True, convert peaks location to labels array
+        num_peaks_max : int, optional
+        connectivity : int
+            connetivity metric, used only if `as_marker==True`
+        kwargs : dict
+            extra arguments to `peak_local_max_adaptive`.  These overide self.peaks_kws
+        Returns
+        -------
+        out :
+            - if `as_marker`, then return label ar
+            - else, return indicies of peaks
+        Notes
+        -----
+        All of thes argmuents are in addition to self.peak_kws
+        """
+
+        kwargs = dict(self.peak_kws, **kwargs)
+        if mask is not None:
+            kwargs['mask'] = mask
         if num_peaks_max is not None:
             kwargs['num_peaks_max'] = num_peaks_max
-        out = peak_local_max_adaptive(data, labels=mask, **kwargs)
+        out = peak_local_max_adaptive(data, **kwargs)
+        # combine markers
         if as_marker:
             out = morphology.label(out, connectivity=connectivity)
         return out
 
     def watershed(self, data, markers, mask, connectivity=None, **kwargs):
+        """
+        Parameters
+        ----------
+        data : image array
+        markers : int or array of its with shape data.shape
+        mask : array of bools of shape data.shape, optional
+            if passed, mask==True indicates values to include
+        connectivity : int
+            connectivity to use in watershed
+        kwargs : extra arguments to skimage.morphology.watershed
+        Returns
+        -------
+        labels : array of ints
+            Values > 0 correspond to found regions
+
+        """
+
         if connectivity is None:
             connectivity = data.ndim
-        kwargs = dict(self._watershed_kws, connectivity=connectivity, *kwargs)
+        kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
         return morphology.watershed(
-            -data, markers=markers, mask=mask, **kwargs)
+            data, markers=markers, mask=mask, **kwargs)
 
-    def segment_lnpi(self, lnpi, num_peaks_max=None, connectivity=None):
+    def segment_lnpi(self, lnpi, find_peaks=True, num_peaks_max=None, connectivity=None, peaks_kws=None, watershed_kws=None):
 
-        markers = self.peaks(
-            lnpi.data, mask=~lnpi.mask, num_peaks_max=num_peaks_max, connectivity=connectivity)
+
+        if find_peaks:
+            if peaks_kws is None:
+                peaks_kws = {}
+            markers = self.peaks(
+                lnpi.data, mask=~lnpi.mask, num_peaks_max=num_peaks_max, connectivity=connectivity, **peaks_kws)
+        else:
+            markers = num_peaks_max
+
+        if watershed_kws is None:
+            watershed_kws = {}
         labels = self.watershed(
-            lnpi.data,
+            -lnpi.data,
             markers=markers,
             mask=~lnpi.mask,
             connectivity=connectivity)
-
         return labels
 
 
@@ -139,15 +236,17 @@ class FreeEnergylnPi(object):
     find/merge the transition energy between minima and barriers
     in lnPi
 
+    here we define the free energy w = betaW = -ln(Pi)
+
     NOTE : this class used the image convension that
-    mask == True indicates that the region includes the feature.  This is oposite the masked array convension, where mask==True implies that region is masked out.
+    mask == True indicates that the region includes the feature.
+    This is oposite the masked array convension, where mask==True implies that region is masked out.
     """
 
     def __init__(self,
                  data,
                  masks,
                  convention='image',
-                 background=None,
                  connectivity=None,
                  index=None):
         """
@@ -159,8 +258,6 @@ class FreeEnergylnPi(object):
             masks[i] == True where feature exists
         convention : str or bool
             convention of masks
-        background : bool array, optional
-            background == False where features can exist
         connectivity : int, optional
             connectivity parameter for boundary construction
         """
@@ -174,11 +271,6 @@ class FreeEnergylnPi(object):
             index = np.arange(self._nfeature)
         self._index = index
 
-        if background is None:
-            background = np.zeros_like(self._data, dtype=np.bool)
-        self._background = np.array(background, dtype=np.bool)
-        self._foreground = ~self._background
-
         if connectivity is None:
             connectivity = data.ndim
         self._connectivity = connectivity
@@ -187,7 +279,6 @@ class FreeEnergylnPi(object):
     def from_labels(cls,
                     data,
                     labels,
-                    background,
                     connectivity=None,
                     features=None,
                     include_boundary=False,
@@ -204,7 +295,6 @@ class FreeEnergylnPi(object):
         return cls(
             data=data,
             masks=masks,
-            background=background,
             connectivity=connectivity)
 
     def _find_boundaries(self, idx):
@@ -221,8 +311,16 @@ class FreeEnergylnPi(object):
         """overlap of boundaries"""
         boundaries = {}
         for i, j in itertools.combinations(self._index, 2):
+            # instead of using foreground, maker sure that the boundary
+            # is contained in eigher region[i] or region[j]
             overlap = (
-                self._boundaries[i] & self._boundaries[j] & self._foreground)
+                # overlap of boundary
+                (self._boundaries[i] & self._boundaries[j])
+                # overlap with
+                &
+                # with union of regions
+                (self._masks[i] | self._masks[j])
+            )
 
             if overlap.sum() == 0:
                 overlap = None
@@ -276,7 +374,7 @@ class FreeEnergylnPi(object):
         ----------
         nfeature_max : int
             maximum number of features
-        efac : float, default=1.0
+        efac : float, default=0.5
             energy difference to merge on
         force : bool, default=True
             if True, then keep going until nfeature <= nfeature_max
@@ -308,7 +406,8 @@ class FreeEnergylnPi(object):
         mapping = {i: msk for i, msk in enumerate(self._masks)}
         for cnt in range(self._nfeature):
             # number of finite minima
-            nfeature = np.isfinite(w_min).sum()
+            nfeature = len(mapping)
+            #nfeature = np.isfinite(w_min).sum()
 
             de = w_tran - w_min
             min_val = np.nanmin(de)
@@ -354,8 +453,8 @@ class FreeEnergylnPi(object):
         idx_tran = np.ix_(*(idx_min, ) * 2)
         w_tran = w_tran[idx_tran]
 
-        # add in background
-        masks = [mapping[i] & self._foreground for i in idx_min]
+        # get masks
+        masks = [mapping[i] for i in idx_min]
 
         # optionally convert image
         masks = masks_change_convention(masks, True, convention)
@@ -365,6 +464,7 @@ class FreeEnergylnPi(object):
 
 
 # class to add FreeEnergylnPi to Phases
+import xarray as xr
 from .core import Phases, CollectionPhases
 
 CollectionPhases.register_listaccessor('wlnPi')
@@ -375,9 +475,67 @@ class wlnPi(FreeEnergylnPi):
         self._phases = phases
         base = self._phases[0]
         masks = [x.mask for x in self._phases]
-        background = np.logical_and.reduce(masks)
-        super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False, background=background)
+        super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False)
 
+    @gcached()
+    def delta_w(self):
+        """wrap delta_w in xarray"""
+
+
+        delta_w = self.w_tran - self.w_min
+
+
+
+        xgce = self._phases[0].xgce
+
+        dim_phase = self._phases._CONCAT_DIM
+        dims = [dim_phase, dim_phase + '_nebr']
+
+        coords = dict(zip(dims, [self._phases.index.values]*2))
+        coords = dict(xgce.coords_state, **coords)
+        return xr.DataArray(delta_w, dims=dims, coords=coords)
+
+    def get_delta_w(self, idx, idx_nebr=None):
+        """
+        helper function to get the change in energy from
+        phase idx to idx_nebr.
+
+        Parameters
+        ----------
+        idx : int
+            phase index to consider transitions from
+        idx_nebr : int or list, optional
+            if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
+            Default behavior is to return minimum transition from idx to all other neighboring regions
+
+        Returns
+        -------
+        dw : float
+            - if only phase idx exists, dw = np.inf
+            - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
+            - else min of transition for idx to idx_nebr
+A
+        """
+        p = self._phases
+
+        has_idx = idx in p.index
+        if not has_idx:
+            return 0.0
+        if idx_nebr is None:
+            nebrs = p.index.drop(idx)
+        else:
+            if not isinstance(idx_nebr, list):
+                idx_nebr = [idx_nebr]
+            nebrs = [_x for _x in idx_nebr if _x in p.index]
+
+        if len(nebrs) == 0:
+            return np.inf
+        dw = (
+            p.wlnPi.delta_w.sel(phase=idx, phase_nebr=nebrs)
+            .min('phase_nebr')
+            .values
+        )
+        return dw
 
 
 class PhaseCreator(object):
@@ -385,19 +543,19 @@ class PhaseCreator(object):
     Helper class to create phases
     """
 
-    def __init__(self, nmax, nmax_peak=None,
+    def __init__(self, nmax, nmax_peak=None, ref=None,
                  segmenter=None, segment_kws=None,
                  tag_phases=None, phases_class=Phases,
                  FreeEnergylnPi_kws=None, merge_kws=None):
         """
         Parameters
         ----------
-        ref : MaskedlnPi object
         nmax : int
             number of phases to construct
-       nmax_peak : int, optional
+        nmax_peak : int, optional
             if specified, the allowable number of peaks to locate.
             This can be useful for some cases.  These phases will be merged out at the end.
+        ref : MaskedlnPi object, optional
         segmenter : Segmenter object, optional
             segmenter object to create labels/masks
         Freeenergy_kws : dict, optional
@@ -407,6 +565,7 @@ class PhaseCreator(object):
         if nmax_peak is None:
             nmax_peak = nmax * 2
         self.nmax = nmax
+        self.ref = ref
 
         if segmenter is None:
             segmenter = Segmenter()
@@ -425,7 +584,6 @@ class PhaseCreator(object):
 
         if FreeEnergylnPi_kws is None:
             FreeEnergylnPi_kws = {}
-#        FreeEnergylnPi_kws['background'] = self.ref.mask
         self.FreeEnergylnPi_kws = FreeEnergylnPi_kws
 
         if merge_kws is None:
@@ -433,8 +591,48 @@ class PhaseCreator(object):
         merge_kws = dict(merge_kws, convention=False, nfeature_max=self.nmax)
         self.merge_kws = merge_kws
 
+    def _merge_phase_ids(self, ref, phase_ids, lnpis):
+        """
+        perform merge of phase_ids/index
+        """
+        from scipy.spatial.distance import pdist
 
-    def build_phases(self, ref, mu=None, efac=1.0, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True):
+
+        if len(phase_ids) == 1:
+            # only single phase_id
+            return phase_ids, lnpis
+
+        phase_ids = np.array(phase_ids)
+        dist = pdist(phase_ids.reshape(-1, 1)).astype(np.int)
+        if not np.any(dist == 0):
+            # all different
+            return phase_ids, lnpis
+
+
+        phase_ids_new = []
+        masks_new = []
+        for idx in np.unique(phase_ids):
+            where = np.where(idx == phase_ids)[0]
+            mask = np.all([lnpis[i].mask for i in where], axis=0)
+
+            phase_ids_new.append(idx)
+            masks_new.append(mask)
+        lnpis_new = ref.list_from_masks(masks_new, convention=False)
+
+        return phase_ids_new, lnpis_new
+
+
+
+
+    def build_phases(self, mu=None, ref=None, efac=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
+        """
+        build phases
+        """
+
+        if ref is None:
+            if self.ref is None:
+                raise ValueError('must specify ref or self.ref')
+            ref = self.ref
 
         # reweight
         if mu is not None:
@@ -442,34 +640,44 @@ class PhaseCreator(object):
                 reweight_kws = {}
             ref = ref.reweight(mu, **reweight_kws)
 
-        # labels
-        kws = self.segment_kws.copy()
-        if nmax_peak is not None:
-            kws['num_peaks_max'] = nmax_peak
-        if connectivity is not None:
-            kws['connectivity'] = connectivity
-        labels = self.segmenter.segment_lnpi(lnpi=ref, **kws)
 
-        # wlnpi
-        kws = dict(self.FreeEnergylnPi_kws, background=ref.mask)
-        if connectivity is not None:
-            kws['connectivity'] = connectivity
-        wlnpi = FreeEnergylnPi.from_labels(
-            data=ref.data,
-            labels=labels,
-            **kws)
+        if self.nmax > 1:
+            # labels
+            kws = self.segment_kws.copy()
+            if nmax_peak is not None:
+                kws['num_peaks_max'] = nmax_peak
+            if connectivity is not None:
+                kws['connectivity'] = connectivity
+            labels = self.segmenter.segment_lnpi(lnpi=ref, **kws)
 
-        # merge
-        kws = dict(self.merge_kws, efac=efac)
-        masks, wtran, wmin = wlnpi.merge_regions(**kws)
+            # wlnpi
+            kws = dict(self.FreeEnergylnPi_kws)
+            if connectivity is not None:
+                kws['connectivity'] = connectivity
+            wlnpi = FreeEnergylnPi.from_labels(
+                data=ref.data,
+                labels=labels,
+                **kws)
 
-        # list of lnpi
-        lnpis = ref.list_from_masks(masks, convention=False)
+            # merge
+            kws = dict(self.merge_kws)
+            if efac is not None:
+                kws['efac'] = efac
+            masks, wtran, wmin = wlnpi.merge_regions(**kws)
 
-        # tag phases?
-        if self.tag_phases is not None:
-            index = self.tag_phases(lnpis)
+            # list of lnpi
+            lnpis = ref.list_from_masks(masks, convention=False)
+
+            # tag phases?
+            if self.tag_phases is not None:
+                index = self.tag_phases(lnpis)
+                if merge_phase_ids:
+                    index, lnpis = self._merge_phase_ids(ref, index, lnpis)
+
+            else:
+                index = None
         else:
+            lnpis = [ref]
             index = None
 
         if phases_output:
@@ -477,11 +685,24 @@ class PhaseCreator(object):
         else:
             return lnpis, index
 
-
-
-
 from functools import lru_cache
-
 @lru_cache(maxsize=10)
 def get_default_PhaseCreator(nmax):
     return PhaseCreator(nmax=nmax)
+
+
+#@lru_cache(maxsize=10)
+def distance_matrix(mask):
+    import scipy.ndimage as ndi
+
+    mask = np.asarray(mask)
+
+    # first have to pad mask
+    padded = np.pad(mask, ((0,1),)*mask.ndim, mode='constant', constant_values=0)
+
+    # now calulate distance
+    dist = ndi.distance_transform_edt(padded)
+
+    # remove padding
+    dist = dist[(slice(None, -1),)*mask.ndim]
+    return dist

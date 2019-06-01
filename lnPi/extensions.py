@@ -12,7 +12,35 @@ class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-def _CachedAccessorWrapper(name, accessor):
+
+class _CachedAccessorSingle(object):
+    """
+    Custom property-like object (descriptor).
+    this gets created once on call
+    """
+
+    def __init__(self, name, accessor):
+        self._name = name
+        self._accessor = accessor
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self._accessor
+        try:
+            accessor_obj = self._accessor(obj)
+        except AttributeError:
+            # __getattr__ on data object will swallow any AttributeErrors
+            # raised when initializing the accessor, so we need to raise as
+            # something else (GH933):
+            raise RuntimeError('error initializing %r accessor.' % self._name)
+        # Replace the property with the accessor object. Inspired by:
+        # http://www.pydanny.com/cached-property.html
+        # We need to use object.__setattr__ because we overwrite __setattr__ on
+        # AttrAccessMixin.
+        object.__setattr__(obj, self._name, accessor_obj)
+        return accessor_obj
+
+def _CachedAccessorCleared(name, accessor):
     """
     Wrap accessor in a cached property
 
@@ -20,6 +48,10 @@ def _CachedAccessorWrapper(name, accessor):
     from `accessor(self)`
 
     this only gets initialized when called
+
+    NOTE : it gets deleted if self._cache is cleared.
+
+    If you only want to create it once, then use the Single access wrapper below
     """
     @gcached(key=name, prop=True)
     def _get_prop(self):
@@ -27,11 +59,17 @@ def _CachedAccessorWrapper(name, accessor):
     return _get_prop
 
 
+def _CachedAccessorWrapper(name, accessor, single_create=False):
+    if single_create:
+        return _CachedAccessorSingle(name, accessor)
+    else:
+        return _CachedAccessorCleared(name, accessor)
+
 
 
 class AccessorMixin(object):
     @classmethod
-    def _register_accessor(cls, name, accessor, accessor_wrapper):
+    def _register_accessor(cls, name, accessor, single_create=False):
         """
         most general accessor
         """
@@ -41,10 +79,10 @@ class AccessorMixin(object):
                 'overriding a preexisting attribute with the same name.' %
                 (accessor, name, cls),
                 AccessorRegistrationWarning, stacklevel=2)
-        setattr(cls, name, accessor_wrapper(name, accessor))
+        setattr(cls, name, _CachedAccessorWrapper(name, accessor, single_create))
 
     @classmethod
-    def register_accessor(cls, name, accessor):
+    def register_accessor(cls, name, accessor, single_create=False):
         """
         register a property `name` to `class` of type `accessor(self)`
         Examples
@@ -62,10 +100,10 @@ class AccessorMixin(object):
         >>> x.hello.there()
         'hello there parent'
         """
-        return cls._register_accessor(name, accessor, accessor_wrapper=_CachedAccessorWrapper)
+        return cls._register_accessor(name, accessor, single_create)
 
     @classmethod
-    def decorate_accessor(cls, name):
+    def decorate_accessor(cls, name, single_create=False):
         """
         register a property `name` to `class` of type `accessor(self)`
         Examples
@@ -83,7 +121,7 @@ class AccessorMixin(object):
         'hello there parent'
         """
         def decorator(accessor):
-            cls.register_accessor(name, accessor)
+            cls.register_accessor(name, accessor, single_create)
             return accessor
         return decorator
 
@@ -91,6 +129,12 @@ class AccessorMixin(object):
 
 ################################################################################
 # List access
+
+def deep_cache(func):
+    func.__dict__['_deep_cache'] = True
+    return func
+
+
 class _CallableListResults(object):
     """
     if items of collection accessor are callable, then 
@@ -100,12 +144,18 @@ class _CallableListResults(object):
         self.parent = parent
         self.items = items
         self._cache = {}
-
-    @gcached(prop=False)
+    #@gcached(prop=False)
     def __call__(self, *args, **kwargs):
+        if '__call__' in self._cache:
+            return self._cache['__call__']
+
+        # get value
         results = [x(*args, **kwargs) for x in self.items]
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
+        # store result?
+        if self.items[0].__dict__['_deep_cache']:
+            self._cache['__call__'] = results
         return results
 
 

@@ -125,8 +125,12 @@ def cached_func(key=None):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             key_func = (_key, args, frozenset(kwargs.items()))
+
             try:
                 return self._cache[key_func]
+            except TypeError:
+                # this means that key_func is bad hash
+                return func(self, *args, **kwargs)
             except AttributeError:
                 self._cache = dict()
             except KeyError:
@@ -134,6 +138,7 @@ def cached_func(key=None):
 
             self._cache[key_func] = ret = func(self, *args, **kwargs)
             return ret
+
 
         return wrapper
 
