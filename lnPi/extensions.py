@@ -144,18 +144,12 @@ class _CallableListResults(object):
         self.parent = parent
         self.items = items
         self._cache = {}
-    #@gcached(prop=False)
+    @gcached(prop=False)
     def __call__(self, *args, **kwargs):
-        if '__call__' in self._cache:
-            return self._cache['__call__']
-
         # get value
         results = [x(*args, **kwargs) for x in self.items]
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
-        # store result?
-        if self.items[0].__dict__['_deep_cache']:
-            self._cache['__call__'] = results
         return results
 
 

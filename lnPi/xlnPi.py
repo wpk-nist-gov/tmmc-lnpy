@@ -146,6 +146,7 @@ class xrlnPi(object):
         return self._wrapper.attrs(*self._ma.state_kws.keys())
 
     #@gcached() to much memory
+    @property
     @xr_name('ln[Pi(n; mu,V,T)]')
     def lnpi(self):
         return self._wrapper.wrap_lnpi(self._ma, mu=self._ma.mu, **self._ma.state_kws)
@@ -195,7 +196,7 @@ class xrlnPi(object):
     @property
     @xr_name('sum_{n} Pi(n; mu,V,T)')
     def pi_sum(self):
-        return self._ma.pi_sum
+        return xr.DataArray(self._ma.pi_sum, coords=self.coords_state)
     #@gcached()
     @property
     @xr_name('normalized Pi')

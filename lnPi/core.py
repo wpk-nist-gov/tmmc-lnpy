@@ -180,13 +180,13 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
     @gcached()
     def pi_sum(self):
-        return pi.sum()
+        return self.pi.sum()
 
     @gcached(prop=False)
     def omega(self, zval=None):
         if zval is None:
             zval = self.data.ravel()[0] - self.local_max()
-        return  (zval - np.log(self.pi_sum) / self.beta
+        return  (zval - np.log(self.pi_sum)) / self.beta
 
     def __setitem__(self, index, value):
         self._clear_cache()
