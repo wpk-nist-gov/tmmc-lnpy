@@ -170,7 +170,8 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
 
     # make these top level
-    @gcached()
+    #@gcached()
+    @property
     def pi(self):
         """
         basic pi = exp(lnpi)

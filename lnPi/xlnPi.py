@@ -128,7 +128,8 @@ def xr_name(long_name=None, name=None, **kwargs):
 
 
 
-BaselnPiCollection.register_listaccessor('xgce')
+BaselnPiCollection.register_listaccessor('xgce',
+                                         cache_list=['density', 'nave', 'nvar', 'molfrac', 'omega'])
 @MaskedlnPi.decorate_accessor('xgce')
 class xrlnPi(object):
     """

@@ -301,12 +301,14 @@ class FreeEnergylnPi(object):
         return segmentation.find_boundaries(
             self._masks[idx], connectivity=self._connectivity, mode='thick')
 
-    @gcached()
+    #@gcached() # no need to cache
+    @property
     def _boundaries(self):
         """boundary of each label"""
         return [self._find_boundaries(i) for i in self._index]
 
-    @gcached()
+    #@gcached()
+    @property
     def _boundaries_overlap(self):
         """overlap of boundaries"""
         boundaries = {}
