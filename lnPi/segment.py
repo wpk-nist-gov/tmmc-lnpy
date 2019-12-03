@@ -626,7 +626,7 @@ class PhaseCreator(object):
 
 
 
-    def build_phases(self, mu=None, ref=None, efac=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
+    def build_phases(self, lnz=None, ref=None, efac=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
         """
         build phases
         """
@@ -637,10 +637,10 @@ class PhaseCreator(object):
             ref = self.ref
 
         # reweight
-        if mu is not None:
+        if lnz is not None:
             if reweight_kws is None:
                 reweight_kws = {}
-            ref = ref.reweight(mu, **reweight_kws)
+            ref = ref.reweight(lnz, **reweight_kws)
 
 
         if self.nmax > 1:

@@ -7,10 +7,10 @@ from scipy import optimize
 
 from .segment import get_default_PhaseCreator
 
-def find_mu_molfrac(phaseID,
+def find_lnz_molfrac(phaseID,
                     target,
-                    muA,
-                    muB,
+                    lnzA,
+                    lnzB,
                     comp=0,
                     ref=None,
                     build_phases=None,
@@ -20,7 +20,7 @@ def find_mu_molfrac(phaseID,
                     tol=1e-4,
                     **kwargs):
     """
-    calculate mu which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
+    calculate lnz which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
 
     Parameters
     ----------
@@ -30,8 +30,8 @@ def find_mu_molfrac(phaseID,
         phaseID of the target
     target : float
         target molfraction
-    muA,muB : mu arrays bracketing solution
-        only one index can vary between muA and muB
+    lnzA,lnzB : lnz arrays bracketing solution
+        only one index can vary between lnzA and lnzB
     comp : int (Default 0)
         the component ID of target molfraction
     full_output : bool (Default False)
@@ -54,23 +54,23 @@ def find_mu_molfrac(phaseID,
     if build_kws is None:
         build_kws = {}
 
-    muA = np.array(muA, dtype=float)
-    muB = np.array(muB, dtype=float)
+    lnzA = np.array(lnzA, dtype=float)
+    lnzB = np.array(lnzB, dtype=float)
 
-    msk = muA != muB
+    msk = lnzA != lnzB
     if msk.sum() != 1:
-        raise ValueError('only one value can vary between muA and muB')
+        raise ValueError('only one value can vary between lnzA and lnzB')
 
-    mu_idx = np.where(msk)[0][0]
-    mu_in = muA.copy()
+    lnz_idx = np.where(msk)[0][0]
+    lnz_in = lnzA.copy()
 
-    a, b = sorted([x[mu_idx] for x in [muA, muB]])
+    a, b = sorted([x[lnz_idx] for x in [lnzA, lnzB]])
 
     def f(x):
-        mu = mu_in[:]
-        mu[mu_idx] = x
+        lnz = lnz_in[:]
+        lnz[lnz_idx] = x
 
-        p = build_phases(ref=ref, mu=mu, **build_kws)
+        p = build_phases(ref=ref, lnz=lnz, **build_kws)
 
         if phaseID in p.index:
             mf = p.xgce.molfrac.sel(phase=phaseID, component=comp).values

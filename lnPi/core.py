@@ -27,7 +27,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     Attributes
     ----------
     self : masked array containing lnPi
-    mu : chemical potential for each component
+    lnz : log(absolute activity) = beta * (chemical potential) for each component
     coords : coordinate array (ndim,N0,N1,...)
     pi : exp(lnPi)
     grand : grand potential (-pV) of system
@@ -41,7 +41,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
     def __new__(cls,
                 data,
-                mu=None,
+                lnz=None,
                 state_kws=None,
                 extra_kws=None,
                 **kwargs):
@@ -53,19 +53,21 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         data : array-like
          data for lnPi
 
-        mu : array-like (Default None)
-            if None, set mu=np.zeros(data.ndim)
+        lnz : array-like (Default None)
+            if None, set lnz=np.zeros(data.ndim)
         state_kws : dict, optional
-            dictionary of state values.  This needs to define beta and volume, if you want to use those parameters down the road.
+            dictionary of state values, such as `volume` and `beta`.
+            These parameters will be pushed to `self.xgce` coordinates.
         extra_kws : dict, optional
-            this defines extra parameters to pass along, like internal energy, etc
+            this defines extra parameters to pass along.
+            Note that for potential energy calculations, extra_kws should contain
+            `PE` (total potentail energy for each N vector).
         zeromax : bool (Default False)
             if True, shift lnPi = lnPi - lnPi.max()
         pad : bool (Default False)
             if True, pad masked region by interpolation
         kwargs : arguments to np.ma.array
             e.g., mask=...
-
         """
 
         obj = np.ma.array(data, **kwargs).view(cls)
@@ -79,11 +81,11 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             obj.mask = False
 
         # set mu value:
-        if mu is None:
-            mu = np.zeros(obj.ndim)
-        mu = np.atleast_1d(mu).astype(obj.dtype)
-        if len(mu) != obj.ndim:
-            raise ValueError('bad len on mu %s' % mu)
+        if lnz is None:
+            lnz = np.zeros(obj.ndim)
+        lnz = np.atleast_1d(lnz).astype(obj.dtype)
+        if len(lnz) != obj.ndim:
+            raise ValueError('bad len on lnz %s' % lnz)
 
 
 
@@ -93,7 +95,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
             extra_kws = {}
 
         obj._optinfo.update(
-            mu=mu,
+            lnz=lnz,
             state_kws=state_kws,
             extra_kws=extra_kws,
         )
@@ -124,8 +126,16 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return self._optinfo['extra_kws']
 
     @property
-    def mu(self):
-        return self._optinfo.get('mu', None)
+    def lnz(self):
+        return self._optinfo.get('lnz', None)
+    @property
+    def betamu(self):
+        return self.lnz
+
+
+    # @property
+    # def mu(self):
+    #     return self._optinfo.get('mu', None)
     @property
     def volume(self):
         return self.state_kws.get('volume', None)
@@ -133,9 +143,11 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def beta(self):
         return self.state_kws.get('beta', None)
 
+
+
     def __repr__(self):
         L = []
-        L.append('mu={}'.format(repr(self.mu)))
+        L.append('lnz={}'.format(repr(self.lnz)))
         L.append('state_kws={}'.format(repr(self.state_kws)))
 
         if len(self.extra_kws) > 0:
@@ -184,10 +196,10 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return self.pi.sum()
 
     @gcached(prop=False)
-    def omega(self, zval=None):
+    def betaOmega(self, zval=None):
         if zval is None:
             zval = self.data.ravel()[0] - self.local_max()
-        return  (zval - np.log(self.pi_sum)) / self.beta
+        return  (zval - np.log(self.pi_sum))
 
     def __setitem__(self, index, value):
         self._clear_cache()
@@ -272,17 +284,14 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return new
 
 
-    def reweight(self, mu, zeromax=False, pad=False):
+    def reweight(self, lnz, zeromax=False, pad=False):
         """
-        get lnpi at new mu
+        get lnpi at new lnz
 
         Parameters
         ----------
-        mu : array-like
+        lnz : array-like
             chem. pot. for new state point
-
-        beta : float
-            inverse temperature
 
         zeromax : bool (Default False)
 
@@ -293,18 +302,18 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
         Returns
         -------
-        lnPi(mu)
+        lnPi(lnz)
         """
 
-        mu = np.atleast_1d(mu)
+        lnz = np.atleast_1d(lnz)
 
-        assert(len(mu) == len(self.mu))
+        assert(len(lnz) == len(self.lnz))
 
         new = self.copy()
-        new._optinfo['mu'] = mu
+        new._optinfo['lnz'] = lnz
 
 
-        dmu = new.mu - self.mu
+        dlnz = new.lnz - self.lnz
 
         #s = _get_shift(self.shape,dmu)*self.beta
         #get shift
@@ -319,11 +328,11 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         # shift = (self.ncoords.values.T * dmu).sum(-1).T
 
         shift = np.zeros([], dtype=float)
-        for i, (s, m) in enumerate(zip(self.shape, dmu)):
+        for i, (s, m) in enumerate(zip(self.shape, dlnz)):
             shift = np.add.outer(shift, np.arange(s) * m)
 
         #scale by beta
-        shift *= self.beta
+        #shift *= self.beta
 
         new.data[...] += shift
         new.adjust(zeromax=zeromax, pad=pad, inplace=True)
@@ -399,7 +408,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     @classmethod
     def from_table(cls,
                    path,
-                   mu,
+                   lnz,
                    state_kws=None,
                    sep='\s+',
                    names=None,
@@ -412,8 +421,8 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         ----------
         path : string like
             file object to be read
-        mu : array-like
-            chemical potential for each component
+        lnz : array-like
+            beta*(chemical potential) for each component
         state_kws : dict, optional
             define state variables, like volume, beta
         sep : string, optional
@@ -424,8 +433,8 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         kwargs  : extra arguments
             Passed to lnPi constructor
         """
-        mu = np.atleast_1d(mu)
-        ndim = len(mu)
+        lnz = np.atleast_1d(lnz)
+        ndim = len(lnz)
 
         if names is None:
             names = ['n_{}'.format(i) for i in range(ndim)] + ['lnpi']
@@ -438,7 +447,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return cls(
             data=da.values,
             mask=da.isnull().values,
-            mu=mu,
+            lnz=lnz,
             state_kws=state_kws, **kwargs)
 
 
@@ -465,15 +474,15 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         else:
             c = da.coords
 
-        mu = []
+        lnz = []
         state_kws = {}
         for k in da.attrs['dims_state']:
             val = np.array(c[k])
-            if 'mu' in k:
-                mu.append(val)
+            if 'lnz' in k:
+                lnz.append(val)
             else:
                 state_kws[k] = val * 1
-        kws['mu'] = mu
+        kws['lnz'] = lnz
         kws['state_kws'] = state_kws
 
         # any overrides
@@ -692,14 +701,14 @@ class Phases(BaselnPiCollection):
 
 
     @classmethod
-    def from_labels(cls, ref, labels, mu=None, features=None, include_boundary=False, labels_kws=None, check_features=True, **kwargs):
+    def from_labels(cls, ref, labels, lnz=None, features=None, include_boundary=False, labels_kws=None, check_features=True, **kwargs):
         """
         create PHases from labels
         """
         if labels_kws is None:
             labels_kws = {}
-        if mu is not None:
-            ref = ref.reweight(mu)
+        if lnz is not None:
+            ref = ref.reweight(lnz)
         masks, features = labels_to_masks(labels=labels, features=features, include_boundary=include_boundary, convention=False, check_features=check_features, **labels_kws)
         index = np.array(features) - 1
 
@@ -730,28 +739,24 @@ class Phases(BaselnPiCollection):
         )
 
     @classmethod
-    def from_dataarray(cls, ref, da, mu=None, include_boundary=False, labels_kws=None, **kwargs):
+    def from_dataarray(cls, ref, da, lnz=None, include_boundary=False, labels_kws=None, **kwargs):
         labels = da.values
         ndim = labels.ndim
 
-        if mu is None:
-            mu = [da.coords[k] * 1.0 for k in da.attrs['dims_mu']]
+        if lnz is None:
+            lnz = [da.coords[k] * 1.0 for k in da.attrs['dims_lnz']]
 
-        beta = da.coords['beta']
-        volume = da.coords['volume']
-        assert beta == ref.beta
-        assert volume == ref.volume
-        return cls.from_labels(ref=ref, labels=labels, mu=mu, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
+        return cls.from_labels(ref=ref, labels=labels, lnz=lnz, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
 
 
     # properties
     @property
-    def mu(self):
-        return self[0].mu
+    def lnz(self):
+        return self[0].lnz
 
 
-# add in accessor to property mu
-@decorate_listproperty(['mu'])
+# add in accessor to property lnz
+@decorate_listproperty(['lnz'])
 class CollectionPhases(BaselnPiCollection):
     _CONCAT_DIM = 'rec'
     _CONCAT_COORDS = 'all'
@@ -768,8 +773,8 @@ class CollectionPhases(BaselnPiCollection):
 
 
 
-    def sort_by_mu(self, comp=0, inplace=True, **kwargs):
-        order = np.argsort(self.mu[:, comp])
+    def sort_by_lnz(self, comp=0, inplace=True, **kwargs):
+        order = np.argsort(self.lnz[:, comp])
         L = [self._items[i] for i in order]
 
         if inplace:
@@ -783,15 +788,15 @@ class CollectionPhases(BaselnPiCollection):
     #builders
     ##################################################
     @classmethod
-    def from_mu_iter(cls, mus, ref=None, build_phases=None, build_phases_kws=None,  nmax=2, xarray_output=True, **kwargs):
+    def from_lnz_iter(cls, lnzs, ref=None, build_phases=None, build_phases_kws=None,  nmax=2, xarray_output=True, **kwargs):
         """
-        build Collection from mus
+        build Collection from lnzs
 
         Parameters
         ----------
         ref : lnpi_phases object
             lnpi_phases to reweight to get list of lnpi's
-        mus : iterable
+        lnzs : iterable
             chem. pots. to get lnpi
         build_phases : callable
             function to create phases object
@@ -809,24 +814,24 @@ class CollectionPhases(BaselnPiCollection):
             raise ValueError('must supply build_phases')
         if build_phases_kws is None:
             build_phases_kws = {}
-        L = [build_phases(ref=ref, mu=mu, **build_phases_kws) for mu in mus]
+        L = [build_phases(ref=ref, lnz=lnz, **build_phases_kws) for lnz in lnzs]
         return cls(items=L, index=None, xarray_output=xarray_output)
 
     @classmethod
-    def from_mu(cls, mu, x, ref=None, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
+    def from_lnz(cls, lnz, x, ref=None, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
         """
-        build Collection from mu builder
+        build Collection from lnz builder
 
         Parameters
         --------- 
         ref : lnpi object
             lnpi to reweight to get list of lnpi's
 
-        mu : list
+        lnz : list
             list with one element equal to None.
             This is the component which will be varied
-            For example, mu=[mu0,None,mu2] implies use values
-            of mu0,mu2 for components 0 and 2, and vary component 1
+            For example, lnz=[lnz0,None,lnz2] implies use values
+            of lnz0,lnz2 for components 0 and 2, and vary component 1
 
         x : array
             values to insert for variable component
@@ -837,10 +842,10 @@ class CollectionPhases(BaselnPiCollection):
         -------
         out : Collection object
         """
-        from .utils import get_mu_iter
+        from .utils import get_lnz_iter
 
-        mus = get_mu_iter(mu, x)
-        return cls.from_mu_iter(ref=ref, mus=mus,
+        lnzs = get_lnz_iter(lnz, x)
+        return cls.from_lnz_iter(ref=ref, lnzs=lnzs,
                                 build_phases=build_phases,
                                 build_phases_kws=build_phases_kws,
                                 nmax=nmax,

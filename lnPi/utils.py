@@ -178,15 +178,15 @@ def bfill(arr, axis=-1, limit=None):
 ##################################################
 
 
-def get_mu_iter(mu, x):
+def get_lnz_iter(lnz, x):
     """
-    create a mu_iter object for varying a single mu
+    create a lnz_iter object for varying a single lnz
 
     Parameters
     ----------
-    mu : list
+    lnz : list
         list with one element equal to None.  This is the component which will be varied
-        For example, mu=[mu0,None,mu2] implies use values of mu0,mu2 for components 0 and 2, and
+        For example, lnz=[lnz0,None,lnz2] implies use values of lnz0,lnz2 for components 0 and 2, and
         vary component 1
 
     x : array
@@ -194,8 +194,8 @@ def get_mu_iter(mu, x):
 
     Returns
     -------
-    ouptut : array of shape (len(x),len(mu))
-       array with rows [mu0,mu1,mu2]
+    ouptut : array of shape (len(x),len(lnz))
+       array with rows [lnz0,lnz1,lnz2]
     """
 
     z = np.zeros_like(x)
@@ -203,7 +203,7 @@ def get_mu_iter(mu, x):
     x = np.asarray(x)
 
     L = []
-    for m in mu:
+    for m in lnz:
         if m is None:
             L.append(x)
         else:
