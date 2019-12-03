@@ -14,11 +14,11 @@ from .cached_decorators import gcached
 ################################################################################
 # Spinodal routines
 def _initial_bracket_spinodal_right(C,
-                                    mu_in,
+                                    lnz_in,
                                     idx,
                                     idx_nebr=None,
                                     efac=1.0,
-                                    dmu=0.5,
+                                    dlnz=0.5,
                                     vmax=1e5,
                                     ntry=20,
                                     step=+1,
@@ -36,12 +36,12 @@ def _initial_bracket_spinodal_right(C,
         initial estimates to work from
     idx, idx_nebr : int
         id's of from/to phases. 
-    mu_in : list
+    lnz_in : list
         list with value of static chem pot, and None for variable. e.g.,
-        mu_in=[None,0.0] implies mu[0] is variable, and mu[1]=0.0
+        lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
     efac : float (Default 1.0)
         cutoff value for spinodal
-    dmu : float (Default 0.5)
+    dlnz : float (Default 0.5)
         factor to kick back if C doesn't already have left and right bounds
     vmax : float (default 1e20)
         value indicating no transition, but phaseID==ID present
@@ -66,8 +66,8 @@ def _initial_bracket_spinodal_right(C,
     if build_phases is None:
         raise ValueError('must supply build_phases')
 
-    # mu which varies
-    mu_idx = mu_in.index(None)
+    # lnz which varies
+    lnz_idx = lnz_in.index(None)
     # delta E
     # dE = C.wlnPi.delta_w.sel(
     #     phase=idx, phase_nebr=idx_nebr).fillna(np.inf).values
@@ -90,14 +90,14 @@ def _initial_bracket_spinodal_right(C,
             break
 
     if left is None:
-        #need to find a new value mu bounding thing
-        new_mu = mu_in[:]
-        new_mu[mu_idx] = C[w[0]].mu[mu_idx]
-        new_mu = np.asarray(new_mu)
+        #need to find a new value lnz bounding thing
+        new_lnz = lnz_in[:]
+        new_lnz[lnz_idx] = C[w[0]].lnz[lnz_idx]
+        new_lnz = np.asarray(new_lnz)
 
         for i in range(ntry):
-            new_mu[mu_idx] -= step * dmu 
-            t = build_phases(ref=ref, mu=new_mu, **build_kws)
+            new_lnz[lnz_idx] -= step * dlnz 
+            t = build_phases(ref=ref, lnz=new_lnz, **build_kws)
             if idx in t.index:
                 # _get_dw(t, idx, idx_nebr)
                 dw = t.wlnPi.get_delta_w(idx, idx_nebr)
@@ -118,13 +118,13 @@ def _initial_bracket_spinodal_right(C,
         if w[-1] + 1 < len(C):
             right = C[w[-1] + 1]
         else:
-            new_mu = mu_in[:]
-            new_mu[mu_idx] = C[w[-1]].mu[mu_idx]
-            new_mu = np.asarray(new_mu)
+            new_lnz = lnz_in[:]
+            new_lnz[lnz_idx] = C[w[-1]].lnz[lnz_idx]
+            new_lnz = np.asarray(new_lnz)
 
             for i in range(ntry):
-                new_mu[mu_idx] += step * dmu
-                t = build_phases(ref=ref, mu=new_mu, **build_kws)
+                new_lnz[lnz_idx] += step * dlnz
+                t = build_phases(ref=ref, lnz=new_lnz, **build_kws)
                 if idx not in t.index:
                     right = t
                     break
@@ -200,12 +200,12 @@ def _refine_bracket_spinodal_right(left, right,
 
         ########
         #converged?
-        if np.allclose(left.mu, right.mu, **close_kws):
+        if np.allclose(left.lnz, right.lnz, **close_kws):
             #we've reached a breaking point
             if doneLeft:
                 #can't find a lower bound to efac, just return where we're at
                 r = optimize.zeros.RootResults(
-                    root=left.mu, iterations=i + 1, function_calls=i, flag=0)
+                    root=left.lnz, iterations=i + 1, function_calls=i, flag=0)
                 for k, val in [('left', left), ('right', right),
                                ('doneleft', doneLeft), ('doneright','doneRight'),
                                ('info','all close and doneleft')]:
@@ -227,8 +227,8 @@ def _refine_bracket_spinodal_right(left, right,
                 return None, None, r
 
         # mid point phases
-        mu_mid = 0.5 * (left.mu + right.mu)
-        mid    = build_phases(ref=ref, mu =mu_mid, **build_kws)
+        lnz_mid = 0.5 * (left.lnz + right.lnz)
+        mid    = build_phases(ref=ref, lnz =lnz_mid, **build_kws)
         # dw     = _get_dw(mid, idx, idx_nebr)
         dw     = mid.wlnPi.get_delta_w(idx, idx_nebr)
 
@@ -242,14 +242,14 @@ def _refine_bracket_spinodal_right(left, right,
     ntry      : {i}
     idx       : {idx}
     idx_nebr  : {idx_nebr}
-    left mu   : {left.mu}
-    right mu  : {right.mu}
+    left lnz   : {left.lnz}
+    right lnz  : {right.lnz}
     doneleft  : {doneleft}
     doneright : {doneright}
     """)
 
 
-def _solve_spinodal(mu_in,
+def _solve_spinodal(lnz_in,
                     a, b,
                     idx, idx_nebr=None,
                     efac=1.0,
@@ -258,14 +258,14 @@ def _solve_spinodal(mu_in,
                     build_kws=None,
                     **kwargs):
 
-    mu_idx = mu_in.index(None)
+    lnz_idx = lnz_in.index(None)
     if build_kws is None:
         build_kws = {}
 
     def f(x):
-        mu = mu_in[:]
-        mu[mu_idx] = x
-        c = build_phases(ref=ref, mu=mu, **build_kws)
+        lnz = lnz_in[:]
+        lnz[lnz_idx] = x
+        c = build_phases(ref=ref, lnz=lnz, **build_kws)
 
         dw = c.wlnPi.get_delta_w(idx, idx_nebr)
 
@@ -279,8 +279,8 @@ def _solve_spinodal(mu_in,
     xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
 
     r.residual = f(xx)
-    mu = f._lnpi.mu
-    return mu, r, f._lnpi
+    lnz = f._lnpi.lnz
+    return lnz, r, f._lnpi
 
 
 def _get_step(C, idx, idx_nebr):
@@ -307,7 +307,7 @@ def _get_step(C, idx, idx_nebr):
 def get_spinodal(C,
                  idx, idx_nebr=None,
                  efac=1.0,
-                 dmu=0.5,
+                 dlnz=0.5,
                  vmin=0.0,
                  vmax=1e5,
                  ntry=20,
@@ -327,15 +327,15 @@ def get_spinodal(C,
     ----------
     ref : MaskedlnPi
     C : lnPi_collection
-        initial estimates to work from.  Function assumes C is in mu sorted order
+        initial estimates to work from.  Function assumes C is in lnz sorted order
     idx, idx_nebr : int
         from/to phase id
-    mu_in : list
+    lnz_in : list
         list with value of static chem pot, and None for variable. e.g.,
-        mu_in=[None,0.0] implies mu[0] is variable, and mu[1]=0.0
+        lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
     efac : float, optional
         cutoff value for spinodal
-    dmu : float, optional
+    dlnz : float, optional
         factor to kick back if C doesn't already have left and right bounds
     vmin : float, optional
         value denoting vmin, i.e., value of DeltabetaE if phaseID does not exist
@@ -388,20 +388,20 @@ def get_spinodal(C,
     else:
         raise ValueError('bad step')
 
-    msk = C[0].mu != C[1].mu
+    msk = C[0].lnz != C[1].lnz
     assert msk.sum() == 1
 
-    mu_idx = np.where(msk)[0][0]
-    mu_in = list(C[0].mu[:])
-    mu_in[mu_idx] = None
+    lnz_idx = np.where(msk)[0][0]
+    lnz_in = list(C[0].lnz[:])
+    lnz_in[lnz_idx] = None
 
     #get initial bracket
     L, R = _initial_bracket_spinodal_right(CC,
                                            idx=idx,
                                            idx_nebr=idx_nebr,
-                                           mu_in=mu_in,
+                                           lnz_in=lnz_in,
                                            efac=efac,
-                                           dmu=dmu,
+                                           dlnz=dlnz,
                                            vmax=vmax,
                                            ntry=ntry,
                                            step=step,
@@ -434,10 +434,10 @@ def get_spinodal(C,
         #solve
         if step == -1:
             left, right = right, left
-        a, b = left.mu[mu_idx], right.mu[mu_idx]
-        mu, r, spin = _solve_spinodal(
+        a, b = left.lnz[lnz_idx], right.lnz[lnz_idx]
+        lnz, r, spin = _solve_spinodal(
             ref=ref, idx=idx, idx_nebr=idx_nebr,
-            mu_in=mu_in,
+            lnz_in=lnz_in,
             a=a, b=b,
             efac=efac,
             build_phases=build_phases,
@@ -460,8 +460,8 @@ def get_spinodal(C,
 # Binodal routines
 
 def get_binodal_point(IDs,
-                      muA,
-                      muB,
+                      lnzA,
+                      lnzB,
                       ref=None,
                       build_phases=None,
                       build_kws=None,
@@ -477,8 +477,8 @@ def get_binodal_point(IDs,
         object to reweight
     IDs : tuple
         phase index of pair to equate
-    muA,muB : arrays of shape (ncomp,)
-        mu arrays bracketing solution
+    lnzA,lnzB : arrays of shape (ncomp,)
+        lnz arrays bracketing solution
     build_phases : callable
         function to create Phases object
     build_kws : dict, optional
@@ -503,26 +503,26 @@ def get_binodal_point(IDs,
     if build_kws is None:
         build_kws = {}
 
-    muA = np.asarray(muA)
-    muB = np.asarray(muB)
+    lnzA = np.asarray(lnzA)
+    lnzB = np.asarray(lnzB)
 
-    msk = muA != muB
+    msk = lnzA != lnzB
     if msk.sum() != 1:
-        raise ValueError('only one value can vary between muA and muB')
+        raise ValueError('only one value can vary between lnzA and lnzB')
 
-    mu_idx = np.where(msk)[0][0]
-    mu_in = muA.copy()
+    lnz_idx = np.where(msk)[0][0]
+    lnz_in = lnzA.copy()
 
-    a, b = sorted([x[mu_idx] for x in [muA, muB]])
+    a, b = sorted([x[lnz_idx] for x in [lnzA, lnzB]])
 
     def f(x):
-        mu = mu_in[:]
-        mu[mu_idx] = x
-        c = build_phases(ref=ref, mu=mu, **build_kws)
+        lnz = lnz_in[:]
+        lnz[lnz_idx] = x
+        c = build_phases(ref=ref, lnz=lnz, **build_kws)
         f.lnpi = c
         # Omegas = c.omega_phase()
         # return Omegas[IDs[0]] - Omegas[IDs[1]]
-        return c.xgce.omega().reindex(phase=IDs).diff('phase')
+        return c.xgce.betaOmega().reindex(phase=IDs).diff('phase')
 
     xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
     r.residual = f(xx)
@@ -646,15 +646,15 @@ class Spinodals(_BaseStability):
 class Binodals(_BaseStability):
     _NAME = 'binodal'
 
-    def get_pair(self, ids, muA=None, muB=None, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None, **kwargs):
+    def get_pair(self, ids, lnzA=None, lnzB=None, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None, **kwargs):
 
-        if None in [muA, muB] and spinodals is None:
+        if None in [lnzA, lnzB] and spinodals is None:
             spinodals = self._c.spinodals
-        if muA is None:
-            muA = spinodals[ids[0]].mu
-        if muB is None:
-            muB = spinodals[ids[1]].mu
-        return get_binodal_point(ref=ref, IDs=ids, muA=muA, muB=muB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
+        if lnzA is None:
+            lnzA = spinodals[ids[0]].lnz
+        if lnzB is None:
+            lnzB = spinodals[ids[1]].lnz
+        return get_binodal_point(ref=ref, IDs=ids, lnzA=lnzA, lnzB=lnzB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
 
 
     def __call__(self, phase_ids, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None,  inplace=True, append=True, force=False, **kwargs):

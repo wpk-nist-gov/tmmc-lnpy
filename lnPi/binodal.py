@@ -8,8 +8,8 @@ from .segment import get_default_PhaseCreator
 
 
 def get_binodal_point(IDs,
-                      muA,
-                      muB,
+                      lnzA,
+                      lnzB,
                       ref=None,
                       build_phases=None,
                       build_kws=None,
@@ -25,8 +25,8 @@ def get_binodal_point(IDs,
         object to reweight
     IDs : tuple
         phase index of pair to equate
-    muA,muB : arrays of shape (ncomp,)
-        mu arrays bracketing solution
+    lnzA,lnzB : arrays of shape (ncomp,)
+        lnz arrays bracketing solution
     build_phases : callable
         function to create Phases object
     build_kws : dict, optional
@@ -51,24 +51,24 @@ def get_binodal_point(IDs,
     if build_kws is None:
         build_kws = {}
 
-    muA = np.asarray(muA)
-    muB = np.asarray(muB)
+    lnzA = np.asarray(lnzA)
+    lnzB = np.asarray(lnzB)
 
-    msk = muA != muB
+    msk = lnzA != lnzB
     if msk.sum() != 1:
-        raise ValueError('only one value can vary between muA and muB')
+        raise ValueError('only one value can vary between lnzA and lnzB')
 
-    mu_idx = np.where(msk)[0][0]
-    mu_in = muA.copy()
+    lnz_idx = np.where(msk)[0][0]
+    lnz_in = lnzA.copy()
 
-    a, b = sorted([x[mu_idx] for x in [muA, muB]])
+    a, b = sorted([x[lnz_idx] for x in [lnzA, lnzB]])
 
     def f(x):
-        mu = mu_in[:]
-        mu[mu_idx] = x
-        c = build_phases(ref=ref, mu=mu, **build_kws)
+        lnz = lnz_in[:]
+        lnz[lnz_idx] = x
+        c = build_phases(ref=ref, lnz=lnz, **build_kws)
         f.lnpi = c
-        print('mu',mu)
+        print('lnz',lnz)
         # Omegas = c.omega_phase()
         # return Omegas[IDs[0]] - Omegas[IDs[1]]
         return c.xgce.omega().reindex(phase=IDs).diff('phase')
@@ -102,15 +102,15 @@ class Binodals(object):
     def __getitem__(self, idx):
         return self.items[idx]
 
-    def get_pair(self, ids, muA=None, muB=None, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None, **kwargs):
+    def get_pair(self, ids, lnzA=None, lnzB=None, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None, **kwargs):
 
-        if None in [muA, muB] and spinodals is None:
+        if None in [lnzA, lnzB] and spinodals is None:
             spinodals = self._c.spinodals
-        if muA is None:
-            muA = spinodals[ids[0]].mu
-        if muB is None:
-            muB = spinodals[ids[1]].mu
-        return get_binodal_point(ref=ref, IDs=ids, muA=muA, muB=muB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
+        if lnzA is None:
+            lnzA = spinodals[ids[0]].lnz
+        if lnzB is None:
+            lnzB = spinodals[ids[1]].lnz
+        return get_binodal_point(ref=ref, IDs=ids, lnzA=lnzA, lnzB=lnzB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
 
 
     def get_all(self, phase_ids, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None,  inplace=False, append=False, force=False, **kwargs):

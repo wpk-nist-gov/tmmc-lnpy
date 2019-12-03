@@ -6,13 +6,13 @@ import numpy as np
 from scipy.optimize import brentq
 
 
-def get_mu_min(target,
-               mu,
+def get_lnz_min(target,
+               lnz,
                C,
                build_phases,
                phase_id=0,
                component=0,
-               dmu=0.5,
+               dlnz=0.5,
                ref=None,
                build_kws=None,
                ntry=20,
@@ -25,17 +25,17 @@ def get_mu_min(target,
     ----------
     target : float
         target density
-    mu : like with one element as None
-        mu array.  All values except index with value `None` are fixed
+    lnz : like with one element as None
+        lnz array.  All values except index with value `None` are fixed
     C : CollectionPhases
-        initial guess to work from.  This is assumed to be sorted in accending mu order
+        initial guess to work from.  This is assumed to be sorted in accending lnz order
     build_phases : callable
         funciton to build new phases objects
     phase_id : int, default=0
         phase id tag to consider
     component : int, default=0
         component to consider
-    dmu : float, default=0.5
+    dlnz : float, default=0.5
         how to change the chemical potential if `C` doesn't already
         bracket solution
     ref : MaskedlnPi, optional
@@ -51,7 +51,7 @@ def get_mu_min(target,
 
     Returns
     -------
-    phases : Phases object as solution mu
+    phases : Phases object as solution lnz
     solution_parameters : optional
     """
 
@@ -61,8 +61,8 @@ def get_mu_min(target,
 
     # where have phase_id
     w = np.where(has_idx)[0]
-    # which mu varies
-    mu_idx = mu.index(None)
+    # which lnz varies
+    lnz_idx = lnz.index(None)
 
     # input rho
     selector = dict(phase=phase_id, component=component)
@@ -80,22 +80,22 @@ def get_mu_min(target,
             break
 
     if left is None:
-        new_mu = mu.copy()
-        new_mu[mu_idx] = C[w[0]].mu[mu_idx]
-        new_mu = np.asarray(new_mu)
+        new_lnz = lnz.copy()
+        new_lnz[lnz_idx] = C[w[0]].lnz[lnz_idx]
+        new_lnz = np.asarray(new_lnz)
 
-        dmu_left = dmu
+        dlnz_left = dlnz
 
         for i in range(ntry):
-            new_mu[mu_idx] -= dmu_left
+            new_lnz[lnz_idx] -= dlnz_left
 
-            p = build_phases(ref=ref, mu=new_mu, **build_kws)
+            p = build_phases(ref=ref, lnz=new_lnz, **build_kws)
             if phase_id in p.index:
                 if p.xgce.density.sel(**selector).values < target:
                     left = p
                     break
-            # grow dmu
-            dmu_left += dmu
+            # grow dlnz
+            dlnz_left += dlnz
 
     if left is None:
         raise RuntimeError('could not find left bounds')
@@ -108,38 +108,38 @@ def get_mu_min(target,
             break
 
     if right is None:
-        new_mu = mu.copy()
-        new_mu[mu_idx] = C[w[-1]].mu[mu_idx]
-        new_mu = np.asarray(new_mu)
+        new_lnz = lnz.copy()
+        new_lnz[lnz_idx] = C[w[-1]].lnz[lnz_idx]
+        new_lnz = np.asarray(new_lnz)
 
-        dmu_right = dmu
+        dlnz_right = dlnz
 
         for i in range(ntry):
-            new_mu[mu_idx] += dmu_right
+            new_lnz[lnz_idx] += dlnz_right
 
-            p = build_phases(ref=ref, mu=mu_new, **build_kws)
+            p = build_phases(ref=ref, lnz=lnz_new, **build_kws)
             if phase_id not in p.index:
                 # went to far
-                new_mu[mu_idx] -= dmu_right
-                # reset to half dmu
-                dmu_right = dmu * 0.5
+                new_lnz[lnz_idx] -= dlnz_right
+                # reset to half dlnz
+                dlnz_right = dlnz * 0.5
             else:
                 if p.xgce.density.sel(**selector).values > target:
                     right = p
                     break
-            dmu_right += dmu
+            dlnz_right += dlnz
 
     if right is None:
         raise RuntimeError('could not find right bounds')
 
     def f(x):
-        mu_new = mu.copy()
-        mu_new[mu_idx] = x
-        p = build_phases(ref=ref, mu=mu_new, **build_kws)
+        lnz_new = lnz.copy()
+        lnz_new[lnz_idx] = x
+        p = build_phases(ref=ref, lnz=lnz_new, **build_kws)
         f.lnpi = p
         return p.xgce.density.sel(**selector).values - target
 
-    a, b = sorted([x.mu[mu_idx] for x in [left, right]])
+    a, b = sorted([x.lnz[lnz_idx] for x in [left, right]])
 
     if solve_kws is None:
         solve_kws = {}
@@ -155,27 +155,27 @@ def get_mu_min(target,
 
 
 
-def _get_mu_max(edge_distance_min,
-               mu,
+def _get_lnz_max(edge_distance_min,
+               lnz,
                C,
                build_phases,
                ref,
-               dmu=0.5,
-               dmu_min=1e-5,
+               dlnz=0.5,
+               dlnz_min=1e-5,
                ntry=50,
                build_kws=None,
                full_output=True):
     """
-    find the mu such that edge distance < edge_distance_min
+    find the lnz such that edge distance < edge_distance_min
     old version.  Use bisection below
     """
 
     if build_kws is None:
         build_kws = {}
 
-    # minimum edge distance
+    # minilnzm edge distance
     edge_distance = C.xgce.edge_distance(ref).min('phase').values
-    mu_idx = mu.index(None)
+    lnz_idx = lnz.index(None)
 
     left = None
     w = np.where(edge_distance > edge_distance_min)[0]
@@ -183,80 +183,80 @@ def _get_mu_max(edge_distance_min,
         # have a left bound
         left = C[w[-1]]
     else:
-        new_mu = mu.copy()
-        new_mu[mu_idx] = C[w[0]].mu[mu_idx]
-        new_mu = np.asarray(new_mu)
-        dmu_left = dmu
+        new_lnz = lnz.copy()
+        new_lnz[lnz_idx] = C[w[0]].lnz[lnz_idx]
+        new_lnz = np.asarray(new_lnz)
+        dlnz_left = dlnz
 
         for i in range(ntry):
-            new_mu[mu_idx] -= dmu_left
-            p = build_phases(ref=ref, mu=new_mu, **build_kws)
+            new_lnz[lnz_idx] -= dlnz_left
+            p = build_phases(ref=ref, lnz=new_lnz, **build_kws)
 
             if p.xgce.edge_distance(ref).min(
                     'phase').values > edge_distance_min:
                 left = p
                 break
-            dmu_left += dmu
+            dlnz_left += dlnz
 
     if left is None:
         raise RuntimeError('could not find left bound')
 
 
     # iteratively progress
-    new_mu = left.mu.copy()
-    dmu_right = dmu
+    new_lnz = left.lnz.copy()
+    dlnz_right = dlnz
 
     # set initial right
     right = left
 
     for i in range(ntry):
-        new_mu[mu_idx] += dmu_right
-        p = build_phases(ref=ref, mu=new_mu, **build_kws)
+        new_lnz[lnz_idx] += dlnz_right
+        p = build_phases(ref=ref, lnz=new_lnz, **build_kws)
         dist = p.xgce.edge_distance(ref).min('phase').values
 
         if dist < edge_distance_min:
             # step back
-            new_mu[mu_idx] -= dmu_right
-            # shrink delta_mu
-            dmu_right *= 0.5
+            new_lnz[lnz_idx] -= dlnz_right
+            # shrink delta_lnz
+            dlnz_right *= 0.5
         else:
             right = p
-            if dmu_right < dmu_min:
+            if dlnz_right < dlnz_min:
                 break
 
     if full_output:
-        info = dict(niter=i, precision=dmu_right)
+        info = dict(niter=i, precision=dlnz_right)
         return right, info
     else:
         return right
 
 
-def get_mu_max(edge_distance_min,
+def get_lnz_max(edge_distance_min,
                ref, build_phases,
-               mu_idx=0,
-               mu_start=None,
+               lnz_idx=0,
+               lnz_start=None,
                C=None,
-               dmu=0.5,
+               dlnz=0.5,
                threshold_abs=1e-4,
                niter=50,
                build_kws=None,
                full_output=True):
     """
-    find max mu by bisection
+    find max lnz by bisection
     """
 
     if build_kws is None:
         build_kws = {}
 
-    if mu_start is None:
-        mu_start = ref.mu.copy()
+    if lnz_start is None:
+        lnz_start = ref.lnz.copy()
 
 
     # need left/right bounds
-    # left is greatest mu point with edge_distance > edge_distance_min
-    # right is least mu point with edge_distance < edge_distance_min
+    # left is greatest lnz point with edge_distance > edge_distance_min
+    # right is least lnz point with edge_distance < edge_distance_min
     left = right = None
-    mu_left = mu_right = None
+    lnz_left = lnz_right = None
 
     n_left =  n_right = None
 
@@ -271,32 +271,32 @@ def get_mu_max(edge_distance_min,
             left = C[w[-1]]
         else:
             # no points with dist  > dist_min
-            mu_left = C[0].mu.copy()
+            lnz_left = C[0].lnz.copy()
 
         # right
         w = np.where(edge_distance < edge_distance_min)[0]
         if len(w) != 0:
             right = C[w[0]]
         else:
-            mu_right = C[-1].mu.copy()
+            lnz_right = C[-1].lnz.copy()
 
 
     # if left not set, try to find it
     if left is None:
-        if mu_left is None:
-            mu_left = mu_start.copy()
+        if lnz_left is None:
+            lnz_left = lnz_start.copy()
 
-        dmu_loc = dmu
+        dlnz_loc = dlnz
         for i in range(niter):
-            mu_left[mu_idx] -= dmu_loc
-            p = build_phases(ref=ref, mu=mu_left, **build_kws)
+            lnz_left[lnz_idx] -= dlnz_loc
+            p = build_phases(ref=ref, lnz=lnz_left, **build_kws)
 
             if p.xgce.edge_distance(ref).min('phase').values >= edge_distance_min:
                 left = p
                 n_left = i
                 break
-            # grow dmu
-            dmu_loc += dmu
+            # grow dlnz
+            dlnz_loc += dlnz
 
     if left is None:
         raise RuntimeError('could not find left bound')
@@ -304,20 +304,20 @@ def get_mu_max(edge_distance_min,
 
     # if right not set, try to find it
     if right is None:
-        if mu_right is None:
-            mu_right = mu_start.copy()
+        if lnz_right is None:
+            lnz_right = lnz_start.copy()
 
-        dmu_loc = dmu
+        dlnz_loc = dlnz
         for i in range(niter):
-            mu_right[mu_idx] += dmu_loc
-            p = build_phases(ref=ref, mu=mu_right, **build_kws)
+            lnz_right[lnz_idx] += dlnz_loc
+            p = build_phases(ref=ref, lnz=lnz_right, **build_kws)
 
             if p.xgce.edge_distance(ref).min('phase').values < edge_distance_min:
                 right = p
                 n_right = i
                 break
-            # grow dmu
-            dmu_loc += dmu
+            # grow dlnz
+            dlnz_loc += dlnz
 
     if right is None:
         raise RuntimeError('could not find right bound')
@@ -330,11 +330,11 @@ def get_mu_max(edge_distance_min,
 
 
     for i in range(niter):
-        delta = np.abs(P[1].mu[mu_idx] - P[0].mu[mu_idx])
+        delta = np.abs(P[1].lnz[lnz_idx] - P[0].lnz[lnz_idx])
         if delta < threshold_abs:
             break
-        mu_mid = 0.5 * (P[0].mu + P[1].mu)
-        mid = build_phases(ref=ref, mu=mu_mid, **build_kws)
+        lnz_mid = 0.5 * (P[0].lnz + P[1].lnz)
+        mid = build_phases(ref=ref, lnz=lnz_mid, **build_kws)
         y_mid = mid.xgce.edge_distance(ref).min('phase').values
 
         if y_mid >= edge_distance_min:
