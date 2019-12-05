@@ -530,15 +530,16 @@ class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
     _CONCAT_COORDS = 'different'
 
     def __init__(self, items, index=None, xarray_output=True, concat_dim=None, concat_coords=None):
-        self.items = items
-        self.index = index
-        self.xarray_output = xarray_output
-
         # maybe reset concat dims/coords
         if concat_dim is not None:
             self._CONCAT_DIM = concat_dim
         if concat_coords is not None:
             self._CONCAT_COORDS = concat_coords
+
+        self.items = items
+        self.index = index
+        self.xarray_output = xarray_output
+
 
 
     @property

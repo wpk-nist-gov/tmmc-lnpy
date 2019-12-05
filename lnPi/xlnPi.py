@@ -9,6 +9,29 @@ from .cached_decorators import gcached
 #from .core import accessor, listaccessor
 
 
+
+def dim_to_suffix_dataarray(da, dim, join='_'):
+    if dim in da.dims:
+        return (
+            da
+            .assign_coords(**{dim : lambda x: ['{}{}{}'.format(x.name, join, c) for c in x[dim].values]})
+            .to_dataset(dim=dim)
+        )
+    else:
+        return da.to_dataset()
+
+def dim_to_suffix_dataset(table, dim, join='_'):
+    out = table
+    for k in out:
+        if dim in out[k].dims:
+            out = (
+                out
+                .drop(k)
+                .update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
+            )
+    return out
+
+
 ################################################################################
 # xlnPi wrapper
 from functools import lru_cache
@@ -137,7 +160,7 @@ def xr_name(long_name=None, name=None, **kws):
 
 
 BaselnPiCollection.register_listaccessor('xgce',
-                                         cache_list=['density', 'nave', 'nvar', 'molfrac', 'betaOmega', 'Z'])
+                                         cache_list=['density', 'nave', 'nvar', 'molfrac', 'betaOmega', 'betapV', 'Z', 'PE'])
 @MaskedlnPi.decorate_accessor('xgce')
 class xrlnPi(object):
     """
@@ -249,6 +272,8 @@ class xrlnPi(object):
 
         return self.mean_pi((x - x_mean) * (y - y_mean))
 
+    def pipe(self, func, *args, **kwargs):
+        return func(self, *args, **kwargs)
 
     @gcached(prop=False)
     @xr_name('<n(component,lnz,V,beta)>')
@@ -351,8 +376,6 @@ class xrlnPi(object):
         """
         return self.PE() / self.ntot()
 
-    def pipe(self, func, *args, **kwargs):
-        return func(self, *args, **kwargs)
 
 
     def betaF_alt(self, betaF_can, correction=True):
@@ -374,15 +397,73 @@ class xrlnPi(object):
 # this would act on individual pis
 #BaselnPiCollection.register_listaccessor('xgce_fe',cache_list=[])
 # this acts on collective
-@BaselnPiCollection.decorate_accessor('xgce_fe')
-@MaskedlnPi.decorate_accessor('xgce_fe')
-class xrlnPi_extras(object):
+@BaselnPiCollection.decorate_accessor('xgce_props')
+@MaskedlnPi.decorate_accessor('xgce_props')
+class xrlnPi_props(object):
     """
     accessor for extra thermo props
     """
     def __init__(self, x):
         self._x = x
         self._xgce = self._x.xgce
+
+    @xr_name('mu')
+    def mu(self):
+        return self._xgce.lnz.pipe(lambda x: x * x.beta)
+
+
+    @xr_name('mask_stable')
+    def mask_stable(self):
+        betapV = self._xgce.betapV()
+        return betapV.max('phase') == betapV
+
+
+    def table(self, xgce_keys=None, props_keys=None,
+              default_xgce_keys=['nave','betapV', 'PE'],
+              edge_dist_ref=None,
+              mask_stable=False
+    ):
+        if xgce_keys is None:
+            xgce_keys = []
+
+        out = []
+        if edge_dist_ref is not None:
+            out.append(self._xgce.edge_distance(edge_dist_ref))
+
+
+        for key in xgce_keys + default_xgce_keys:
+            try:
+                v = getattr(self._xgce, key)
+                if callable(v):
+                    v = v()
+                out.append(v)
+            except:
+                pass
+
+        if props_keys is None:
+            props_keys = []
+
+        for key in props_keys:
+            try:
+                v = getattr(self, key)
+                if callable(v):
+                    v = v()
+                out.append(v)
+            except:
+                pass
+
+        out = xr.merge(out)
+        if mask_stable:
+            # mask_stable inserts nan in non-stable
+            mask_stable = self.mask_stable()
+            phase = out.phase
+            out = (
+                out
+                .where(mask_stable)
+                .max('phase')
+                .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
+            )
+        return out
 
     @gcached(prop=False)
     @xr_name('beta * G(lnz, V, beta)')
@@ -466,7 +547,8 @@ class TMCanonical(object):
     def ncoords(self):
         return (
             self._xgce.ncoords
-            .where(~self._xgce.lnpi.isnull())
+            # NOTE: if don't use '.values', then get extra coords don't want
+            .where(~self._xgce.lnpi.isnull().values)
         )
 
 
@@ -549,6 +631,25 @@ class TMCanonical(object):
         beta * P * V = lnz .dot. N - beta * F
         """
         return (self.lnz() * self.ncoords).sum(self._xgce.dims_comp) - self.betaF()
+
+
+    def table(self, keys=None, default_keys=['lnz','betapV','PE']):
+
+        out = []
+        if keys is None:
+            keys = []
+
+        for key in keys + default_keys:
+            try:
+                v = getattr(self, key)
+                if callable(v):
+                    v = v()
+                out.append(v)
+            except:
+                pass
+
+        out = xr.merge(out)
+        return out
 
 
     @xr_name('beta * P(n,V,T) / rho')

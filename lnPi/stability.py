@@ -611,7 +611,7 @@ class Spinodals(_BaseStability):
     _NAME = 'spinodal'
 
     def __call__(self, phase_ids, ref=None, build_phases=None, build_kws=None,
-                 nphases_max=None, inplace=True, append=True, force=False, **kwargs):
+                 nphases_max=None, inplace=False, append=False, force=False, as_dict=True, **kwargs):
 
         if inplace and hasattr(self, '_items') and not force:
             raise ValueError('can reset inplace without force')
@@ -637,7 +637,15 @@ class Spinodals(_BaseStability):
             self._items = out
             self._info = info
         else:
-            return out, info
+            if as_dict:
+                return out, info
+            else:
+                index, items = zip(*[(k,v) for k,v in out.items()])
+                # return CollectionPhases(items, index=index)
+                # for time being don't pass index
+                # this is a helper accessor anyway
+                return CollectionPhases(items, index=index), info
+
 
 
 
@@ -657,7 +665,7 @@ class Binodals(_BaseStability):
         return get_binodal_point(ref=ref, IDs=ids, lnzA=lnzA, lnzB=lnzB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
 
 
-    def __call__(self, phase_ids, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None,  inplace=True, append=True, force=False, **kwargs):
+    def __call__(self, phase_ids, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None,  inplace=False, append=False, force=False, as_dict=True, **kwargs):
 
         if inplace and not force and hasattr(self, '_items'):
             raise ValueError('can reset inplace without force')
@@ -686,6 +694,11 @@ class Binodals(_BaseStability):
             self._info = info
             self._index = index
         else:
-            return out, info
-
-
+            if as_dict:
+                return out, info
+            else:
+                index, items = zip(*[(k,v) for k,v in out.items()])
+                # return CollectionPhases(items, index=index)
+                # for time being don't pass index
+                # this is a helper accessor anyway
+                return CollectionPhases(items, index=index), info
