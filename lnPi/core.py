@@ -196,9 +196,10 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return self.pi.sum()
 
     @gcached(prop=False)
-    def betaOmega(self, zval=None):
-        if zval is None:
-            zval = self.data.ravel()[0] - self.local_max()
+    def betaOmega(self, lnpi_zero=None):
+        if lnpi_zero is None:
+            lnpi_zero = self.data.ravel()[0]
+        zval = lnpi_zero - self.local_max()
         return  (zval - np.log(self.pi_sum))
 
     def __setitem__(self, index, value):

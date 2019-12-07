@@ -66,7 +66,7 @@ def get_lnz_min(target,
 
     # input rho
     selector = dict(phase=phase_id, component=component)
-    rho = C.xgce.density.sel(**selector).values
+    rho = C.xgce.dens.sel(**selector).values
 
     # builder
     if build_kws is None:
@@ -91,7 +91,7 @@ def get_lnz_min(target,
 
             p = build_phases(ref=ref, lnz=new_lnz, **build_kws)
             if phase_id in p.index:
-                if p.xgce.density.sel(**selector).values < target:
+                if p.xgce.dens.sel(**selector).values < target:
                     left = p
                     break
             # grow dlnz
@@ -124,7 +124,7 @@ def get_lnz_min(target,
                 # reset to half dlnz
                 dlnz_right = dlnz * 0.5
             else:
-                if p.xgce.density.sel(**selector).values > target:
+                if p.xgce.dens.sel(**selector).values > target:
                     right = p
                     break
             dlnz_right += dlnz
@@ -137,7 +137,7 @@ def get_lnz_min(target,
         lnz_new[lnz_idx] = x
         p = build_phases(ref=ref, lnz=lnz_new, **build_kws)
         f.lnpi = p
-        return p.xgce.density.sel(**selector).values - target
+        return p.xgce.dens.sel(**selector).values - target
 
     a, b = sorted([x.lnz[lnz_idx] for x in [left, right]])
 
