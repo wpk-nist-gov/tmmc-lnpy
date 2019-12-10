@@ -593,7 +593,7 @@ class PhaseCreator(object):
         merge_kws = dict(merge_kws, convention=False, nfeature_max=self.nmax)
         self.merge_kws = merge_kws
 
-    def _merge_phase_ids(self, ref, phase_ids, lnpis):
+    def _merge_phase_ids(sel, ref, phase_ids, lnpis):
         """
         perform merge of phase_ids/index
         """
@@ -625,8 +625,7 @@ class PhaseCreator(object):
 
 
 
-
-    def build_phases(self, lnz=None, ref=None, efac=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
+    def build_phases(self, lnz=None, ref=None, efac=None, nmax=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
         """
         build phases
         """
@@ -642,12 +641,15 @@ class PhaseCreator(object):
                 reweight_kws = {}
             ref = ref.reweight(lnz, **reweight_kws)
 
+        if nmax is None:
+            nmax = self.nmax
 
-        if self.nmax > 1:
+        if nmax_peak is None:
+            nmax_peak = nmax * 2
+
+        if nmax > 1:
             # labels
-            kws = self.segment_kws.copy()
-            if nmax_peak is not None:
-                kws['num_peaks_max'] = nmax_peak
+            kws = dict(self.segment_kws, num_peaks_max=nmax_peak)
             if connectivity is not None:
                 kws['connectivity'] = connectivity
             labels = self.segmenter.segment_lnpi(lnpi=ref, **kws)
@@ -662,7 +664,7 @@ class PhaseCreator(object):
                 **kws)
 
             # merge
-            kws = dict(self.merge_kws)
+            kws = dict(self.merge_kws, nfeature_max=nmax)
             if efac is not None:
                 kws['efac'] = efac
             masks, wtran, wmin = wlnpi.merge_regions(**kws)
@@ -687,24 +689,108 @@ class PhaseCreator(object):
         else:
             return lnpis, index
 
+
+    def build_phases_mu(self, lnz):
+        return BuildPhases_mu(lnz, self)
+
+    def build_phases_dmu(self, dlnz):
+        return BuildPhases_dmu(dlnz, self)
+
+
+class _BuildPhases(object):
+    """
+    class to build phases object from scalar mu's
+    """
+
+    def __init__(self, X, phase_creator):
+
+        self._phase_creator = phase_creator
+        self.X = X
+
+    @property
+    def X(self):
+        return self._X
+
+    @X.setter
+    def X(self, X):
+        assert sum([x is None for x in X]) == 1
+        self._X = X
+        self._ncomp = len(self._X)
+        self._index = self._X.index(None)
+        self._set_params()
+
+    def _set_params(self):
+        pass
+
+    def _get_lnz(self, lnz_index):
+        # to be implemented in child class
+        raise NotImplementedError
+
+    def __call__(self, lnz_index, *args, **kwargs):
+        lnz = self._get_lnz(lnz_index)
+        return self._phase_creator.build_phases(lnz=lnz, *args, **kwargs)
+
+
+# from .utils import get_lnz_iter
+class BuildPhases_mu(_BuildPhases):
+    def __init__(self, lnz, phase_creator):
+        """
+        Parameters
+        ----------
+        lnz : list
+            list with one element equal to None.  This is the component which will be varied
+            For example, lnz=[lnz0,None,lnz2] implies use values of lnz0,lnz2 for components 0 and 2, and
+            vary component 1
+        phase_creator : PhaseCreator object
+        """
+        super().__init__(X=lnz, phase_creator=phase_creator)
+
+    def _get_lnz(self, lnz_index):
+        lnz = self.X.copy()
+        lnz[self._index] = lnz_index
+        return lnz
+
+
+class BuildPhases_dmu(_BuildPhases):
+    def __init__(self, dlnz, phase_creator):
+        """
+        Parameters
+        ----------
+        dlnz : list
+            list with one element equal to None.  This is the component which will be varied
+            For example, dlnz=[dlnz0,None,dlnz2] implies use values of dlnz0,dlnz2 for components 0 and 2, and
+            vary component 1
+            dlnz_i = lnz_i - lnz_index, where lnz_index is the value varied.
+        phase_creator : PhaseCreator object
+        """
+        super().__init__(X=dlnz, phase_creator=phase_creator)
+
+    def _set_params(self):
+        self._dlnz = np.array([x if x is not None else 0.0 for x in self.X])
+
+    def _get_lnz(self, lnz_index):
+        return self._dlnz + lnz_index
+
+
+
 from functools import lru_cache
 @lru_cache(maxsize=10)
 def get_default_PhaseCreator(nmax):
     return PhaseCreator(nmax=nmax)
 
 
-#@lru_cache(maxsize=10)
-def distance_matrix(mask):
-    import scipy.ndimage as ndi
+# #@lru_cache(maxsize=10)
+# def distance_matrix(mask):
+#     import scipy.ndimage as ndi
 
-    mask = np.asarray(mask)
+#     mask = np.asarray(mask)
 
-    # first have to pad mask
-    padded = np.pad(mask, ((0,1),)*mask.ndim, mode='constant', constant_values=0)
+#     # first have to pad mask
+#     padded = np.pad(mask, ((0,1),)*mask.ndim, mode='constant', constant_values=0)
 
-    # now calulate distance
-    dist = ndi.distance_transform_edt(padded)
+#     # now calulate distance
+#     dist = ndi.distance_transform_edt(padded)
 
-    # remove padding
-    dist = dist[(slice(None, -1),)*mask.ndim]
-    return dist
+#     # remove padding
+#     dist = dist[(slice(None, -1),)*mask.ndim]
+#     return dist

@@ -11,6 +11,7 @@ from scipy.ndimage import filters
 
 from .cached_decorators import gcached, cached_clear
 from .utils import labels_to_masks, masks_to_labels, masks_change_convention
+from .utils import get_tqdm_build as get_tqdm
 
 from .extensions import AccessorMixin, ListAccessorMixin
 from .extensions import decorate_listproperty, decorate_listaccessor
@@ -790,7 +791,18 @@ class CollectionPhases(BaselnPiCollection):
     #builders
     ##################################################
     @classmethod
-    def from_lnz_iter(cls, lnzs, ref=None, build_phases=None, build_phases_kws=None,  nmax=2, xarray_output=True, **kwargs):
+    def from_builder(cls, x, build_phases, ref=None, build_phases_kws=None, nmax=None, xarray_output=True, **kwargs):
+
+        if build_phases_kws is None:
+            build_phases_kws = {}
+        seq = get_tqdm(x, desc='build')
+        L = [build_phases(xx, ref=ref, nmax=nmax, **build_phases_kws) for xx in x]
+        return cls(items=L, index=None, xarray_output=xarray_output)
+
+
+
+    @classmethod
+    def from_lnz_iter(cls, lnzs, ref=None, build_phases=None, build_phases_kws=None,  nmax=None, xarray_output=True, **kwargs):
         """
         build Collection from lnzs
 
@@ -816,7 +828,9 @@ class CollectionPhases(BaselnPiCollection):
             raise ValueError('must supply build_phases')
         if build_phases_kws is None:
             build_phases_kws = {}
-        L = [build_phases(ref=ref, lnz=lnz, **build_phases_kws) for lnz in lnzs]
+
+        seq = get_tqdm(lnzs, desc='build')
+        L = [build_phases(lnz=lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
         return cls(items=L, index=None, xarray_output=xarray_output)
 
     @classmethod
@@ -825,7 +839,7 @@ class CollectionPhases(BaselnPiCollection):
         build Collection from lnz builder
 
         Parameters
-        --------- 
+        ---------
         ref : lnpi object
             lnpi to reweight to get list of lnpi's
 

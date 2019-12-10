@@ -8,9 +8,11 @@ import warnings
 from itertools import chain 
 from .cached_decorators import gcached
 
+from .utils import get_tqdm_calc as get_tqdm
+
+
 class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
-
 
 
 class _CachedAccessorSingle(object):
@@ -140,16 +142,19 @@ class _CallableListResultsCache(object):
     if items of collection accessor are callable, then 
     """
 
-    def __init__(self, parent, items):
+    def __init__(self, parent, items, desc=None):
         self.parent = parent
         self.items = items
+        self.desc = desc
         self._cache = {}
 
 
     @gcached(prop=False)
     def __call__(self, *args, **kwargs):
         # get value
-        results = [x(*args, **kwargs) for x in self.items]
+        seq = get_tqdm(self.items, desc=self.desc)
+
+        results = [x(*args, **kwargs) for x in seq]
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
         return results
@@ -160,25 +165,27 @@ class _CallableListResultsNoCache(object):
     if items of collection accessor are callable, then 
     """
 
-    def __init__(self, parent, items):
+    def __init__(self, parent, items, desc=None):
         self.parent = parent
         self.items = items
+        self.desc = desc
         self._cache = {}
 
     def __call__(self, *args, **kwargs):
         # get value
-        results = [x(*args, **kwargs) for x in self.items]
+        seq = get_tqdm(self.items, desc=self.desc)
+        results = [x(*args, **kwargs) for x in seq]
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
         return results
 
-def _CallableListResults(parent, items, use_cache=False):
+def _CallableListResults(parent, items, use_cache=False, desc=None):
     if use_cache:
         cls = _CallableListResultsCache
     else:
         cls = _CallableListResultsNoCache
 
-    return cls(parent=parent, items=items)
+    return cls(parent=parent, items=items, desc=desc)
 
 
 class _ListAccessor(object):
@@ -193,26 +200,21 @@ class _ListAccessor(object):
         self._cache = {}
 
     def __getattr__(self, attr):
-
         if attr in self._cache:
             # print('using cache')
             return self._cache[attr]
 
         try:
-            result = [getattr(x, attr) for x in self.items]
             use_cache = attr in self._cache_list
-
-            if callable(result[0]):
-                # create a callable wrapper
-                # always save this
-                result = _CallableListResults(self.parent, result, use_cache=use_cache)
-                # always cache this?
-                # self._cache[attr] = result
+            if callable(getattr(self.items[0], attr)):
+                seq = [getattr(x, attr) for x in self.items]
+                result = _CallableListResults(self.parent, seq, use_cache=use_cache, desc=attr)
             else:
+                seq = get_tqdm(self.items, desc=attr)
+                result = [getattr(x, attr) for x in seq]
                 if hasattr(self.parent, 'wrap_list_results'):
                     result = self.parent.wrap_list_results(result)
-                # print('caching')
-                # self._cache[attr] = result
+
         except:
             raise AttributeError(f'no attribute {attr} found')
 

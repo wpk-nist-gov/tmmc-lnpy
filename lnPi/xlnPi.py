@@ -8,28 +8,7 @@ from .cached_decorators import gcached
 #from . import extensions
 #from .core import accessor, listaccessor
 
-
-
-def dim_to_suffix_dataarray(da, dim, join='_'):
-    if dim in da.dims:
-        return (
-            da
-            .assign_coords(**{dim : lambda x: ['{}{}{}'.format(x.name, join, c) for c in x[dim].values]})
-            .to_dataset(dim=dim)
-        )
-    else:
-        return da.to_dataset()
-
-def dim_to_suffix_dataset(table, dim, join='_'):
-    out = table
-    for k in out:
-        if dim in out[k].dims:
-            out = (
-                out
-                .drop(k)
-                .update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
-            )
-    return out
+from .utils import dim_to_suffix_dataset
 
 
 ################################################################################
@@ -165,7 +144,7 @@ def xr_name(long_name=None, name=None, **kws):
 
 
 BaselnPiCollection.register_listaccessor('xgce',
-                                         cache_list=['density', 'nave', 'nvar', 'molfrac', 'betaOmega', 'betapV', 'Z', 'PE'])
+                                         cache_list=['betamu', 'nvec', 'dens','betaOmega', 'PE'])
 @MaskedlnPi.decorate_accessor('xgce')
 class xrlnPi(object):
     """
@@ -192,6 +171,12 @@ class xrlnPi(object):
     @xr_name(r'$\beta {\bf \mu}$')
     def betamu(self):
         return self._wrapper.wrap_lnz(self._ma.lnz, **self._ma.state_kws)
+
+    @gcached()
+    @xr_name(r'$\ln\beta{\bf\mu}$')
+    def lnz(self):
+        return self._wrapper.wrap_lnz(self._ma.lnz, **self._ma.state_kws)
+
 
     @property
     def ncoords(self):
@@ -254,25 +239,43 @@ class xrlnPi(object):
         return np.log(xr.where(pi > 0, pi, np.nan))
 
 
-    def mean_pi(self, x):
+    def mean_pi(self, x, *args, **kwargs):
         """
         sum(Pi * x)
-        """
 
+        x can be an array or a callable
+
+        f(self, *args, **kwargs)
+
+        """
+        if callable(x):
+            x = x(self, *args, **kwargs)
         return (self.pi_norm * x).sum(self.dims_n)
 
-    def var_pi(self, x, y=None):
+    def var_pi(self, x, y=None, *args, **kwargs):
         """
         given x(N) and y(N), calculate
 
         v = <x(N) y(N)> - <x(N)> <y(N)>
+
+        x and y can be arrays, or callables, in which case:
+        x = x(self, *args, **kwargs)
+
+        etc.
+
         """
+
+        if callable(x):
+            x = x(self, *args, **kwargs)
         x_mean = self.mean_pi(x)
+
         if y is None:
             y = x
         if y is x:
             y_mean = x_mean
         else:
+            if callable(y):
+                y = y(self, *args, **kwargs)
             y_mean = self.mean_pi(y)
         return self.mean_pi((x - x_mean) * (y - y_mean))
 
@@ -281,20 +284,32 @@ class xrlnPi(object):
 
     @gcached()
     @xr_name(r'${\bf n}(\mu,V,T)$')
-    def nave(self):
+    def nvec(self):
         """average number of particles of each component"""
         return self.mean_pi(self.ncoords)
 
     @gcached()
+    @xr_name(r'$n(\mu,V,T)$')
+    def ntot(self):
+        return self.mean_pi(self.ncoords.sum(self.dims_comp))
+
+    @gcached()
     @xr_name(r'$var[{\bf n}(\mu,V,T)]$')
-    def nvar(self):
+    def nvec_var(self):
         return self.var_pi(self.ncoords)
+
+    @gcached()
+    @xr_name(r'$var[n(\mu,V,T)]$')
+    def ntot_var(self):
+        """variance in total number of particles"""
+        return self.var_pi(self.ncoords.sum(self.dims_comp))
 
     @property
     @xr_name(r'${\bf \rho}(\mu,V,T)$')
     def dens(self):
         """density of each component"""
-        return self.nave.pipe(lambda x: x / x['volume'])
+        # NOTE: keep this here because of some internal calculations
+        return self.nvec.pipe(lambda x: x / x['volume'])
 
     def argmax(self, *args, **kwargs):
         return self._ma.local_argmax(*args, **kwargs)
@@ -371,23 +386,23 @@ class xrlnPi_prop(object):
     @gcached()
     @xr_name(r'$n(\mu,V,T)$', standard_name='total_particles')
     def ntot(self):
-        return self._xgce.nave.pipe(lambda x: x.sum(x.dims_comp, skipna=False))
+        return self._xgce.nvec.pipe(lambda x: x.sum(x.dims_comp, skipna=False))
 
     @property
     @xr_name(r'${\bf \rho}(\mu,V,T)$')
     def dens(self):
         """density of each component"""
-        return self._xgce.nave.pipe(lambda x: x / x['volume'])
+        return self._xgce.nvec.pipe(lambda x: x / x['volume'])
 
     @property
     @xr_name(r'$\rho(\mu,V,T)$', standard_name='total_density')
     def dens_tot(self):
-        return self._xgce.nave.pipe(lambda x: (x / x['volume']).sum(x.dims_comp, skipna=False))
+        return self._xgce.nvec.pipe(lambda x: (x / x['volume']).sum(x.dims_comp, skipna=False))
 
     @property
     @xr_name(r'${\bf x}(\mu,V,T)$')
     def molfrac(self):
-        return self._xgce.nave / self.ntot
+        return self._xgce.nvec / self.ntot
 
     #@gcached(prop=False)
     @xr_name(r'$\beta\omega(\mu,V,T)', standard_name='grand_potential_per_particle')
@@ -404,6 +419,12 @@ class xrlnPi_prop(object):
         Note: this is just - beta * Omega
         """
         return -self._xgce.betaOmega(lnpi_zero)
+
+
+    @property
+    @xr_name('mask_stable', description='True where state is most stable')
+    def mask_stable(self):
+        return self.betapV().pipe(lambda x: x.max('phase') == x)
 
     #@gcached(prop=False)
     @xr_name(r'$\beta p(\mu,V,T)/\rho$', standard_name='compressibility_factor')
@@ -425,13 +446,9 @@ class xrlnPi_prop(object):
         """
         return self._xgce.PE / self.ntot
 
-    @property
-    @xr_name('mask_stable', description='True where state is most stable')
-    def mask_stable(self):
-        return self.betapv().pipe(lambda x: x.max('phase') == x)
 
     def table(self, keys=None,
-              default_keys=['nave', 'betapV', 'PE_n'],
+              default_keys=['nvec', 'betapV', 'PE_n'],
               edge_dist_ref=None,
               mask_stable=False,
               dim_to_suffix=None,
@@ -461,7 +478,7 @@ class xrlnPi_prop(object):
 
         if mask_stable:
             # mask_stable inserts nan in non-stable
-            mask_stable = self.mask_stable()
+            mask_stable = self.mask_stable
             phase = out.phase
             out = (
                 out
@@ -483,7 +500,7 @@ class xrlnPi_prop(object):
         """
         beta * (Gibbs free energy)
         """
-        return self._xgce.betamu.pipe(lambda betamu: (betamu * self._xgce.nave).sum(betamu.dims_comp))
+        return self._xgce.betamu.pipe(lambda betamu: (betamu * self._xgce.nvec).sum(betamu.dims_comp))
 
     @property
     @xr_name(r'$\beta G(\mu,V,T)/n$', standard_name='Gibbs_free_energy_per_particle')
@@ -561,7 +578,7 @@ class TMCanonical(object):
 
 
     @property
-    def nave(self):
+    def nvec(self):
         return self.ncoords
 
     @gcached()

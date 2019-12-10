@@ -3,8 +3,83 @@ utility functions
 """
 
 import numpy as np
+import xarray as xr
 from scipy import ndimage as ndi
 from skimage import segmentation
+
+#--------------------------------------------------
+# TQDM stuff
+try:
+    import tqdm as _tqdm
+    _HAS_TQDM = True
+except ImportError:
+    _HAS_TQDM = False
+
+if _HAS_TQDM:
+    try:
+        from IPython import get_ipython
+        if get_ipython().has_trait('kernel'):
+            tqdm = _tqdm.tqdm_notebook
+        else:
+            tqdm = _tqdm.tqdm
+    except:
+        tqdm = _tqdm.tqdm
+
+from .options import OPTIONS
+
+def _get_tqdm(seq, len_min, leave=False, **kwargs):
+    if OPTIONS['use_tqdm'] and _HAS_TQDM and len(seq) >= len_min:
+        seq = tqdm(seq, leave=leave, **kwargs)
+    return seq
+
+
+def get_tqdm_calc(seq, len_min=None, leave=False, **kwargs):
+    if len_min is None:
+        len_min = OPTIONS['tqdm_min_len_calc']
+    return _get_tqdm(seq, len_min, leave=leave, **kwargs)
+
+
+def get_tqdm_build(seq, len_min=None, leave=False, **kwargs):
+    if len_min is None:
+        len_min = OPTIONS['tqdm_min_len_build']
+    return _get_tqdm(seq, len_min, leave=leave, **kwargs)
+
+
+
+#----------------------------------------
+# xarray utils
+def dim_to_suffix_dataarray(da, dim, join='_'):
+    if dim in da.dims:
+        return (
+            da
+            .assign_coords(**{dim : lambda x: ['{}{}{}'.format(x.name, join, c) for c in x[dim].values]})
+            .to_dataset(dim=dim)
+        )
+    else:
+        return da.to_dataset()
+
+def dim_to_suffix_dataset(table, dim, join='_'):
+    out = table
+    for k in out:
+        if dim in out[k].dims:
+            out = (
+                out
+                .drop(k)
+                .update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
+            )
+    return out
+
+
+def dim_to_suffix(ds, dim='component', join='_'):
+    if isinstance(ds, xr.DataArray):
+        f = dim_to_suffix_dataarray
+    elif isinstance(ds, xr.Dataset):
+        f = dim_to_suffix_dataset
+    else:
+        raise ValueError('ds must be `DataArray` or `Dataset`')
+    return f(ds, dim=dim, join=join)
+
+
 
 
 def _convention_to_bool(convention):
