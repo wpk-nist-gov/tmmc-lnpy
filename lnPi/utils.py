@@ -36,13 +36,13 @@ def _get_tqdm(seq, len_min, leave=False, **kwargs):
 def get_tqdm_calc(seq, len_min=None, leave=False, **kwargs):
     if len_min is None:
         len_min = OPTIONS['tqdm_min_len_calc']
-    return _get_tqdm(seq, len_min, leave=leave, **kwargs)
+    return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
 
 
 def get_tqdm_build(seq, len_min=None, leave=False, **kwargs):
     if len_min is None:
         len_min = OPTIONS['tqdm_min_len_build']
-    return _get_tqdm(seq, len_min, leave=leave, **kwargs)
+    return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
 
 
 

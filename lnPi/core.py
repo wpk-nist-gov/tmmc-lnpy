@@ -785,20 +785,36 @@ class CollectionPhases(BaselnPiCollection):
             self._cache = {}
         else:
             return self.__class__(items=L, **kwargs)
-        
 
     ##################################################
     #builders
     ##################################################
     @classmethod
-    def from_builder(cls, x, build_phases, ref=None, build_phases_kws=None, nmax=None, xarray_output=True, **kwargs):
+    def from_builder(cls, lnzs, build_phases, ref=None, build_phases_kws=None, nmax=None, xarray_output=True, **kwargs):
+        """
+        build collection from scalar builder
 
+        Parameters
+        ----------
+        lnzs : 1-D sequence
+            lnz value for the varying value
+        ref : lnpi_phases object
+            lnpi_phases to reweight to get list of lnpi's
+        build_phases : callable
+            Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
+        build_phases_kws : optional
+            optional arguments to `build_phases`
+        **kwargs : arguments to ref.reweight
+
+        Returns
+        -------
+        out : Collection object
+        """
         if build_phases_kws is None:
             build_phases_kws = {}
-        seq = get_tqdm(x, desc='build')
-        L = [build_phases(xx, ref=ref, nmax=nmax, **build_phases_kws) for xx in x]
+        seq = get_tqdm(lnzs, desc='build')
+        L = [build_phases(lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
         return cls(items=L, index=None, xarray_output=xarray_output)
-
 
 
     @classmethod

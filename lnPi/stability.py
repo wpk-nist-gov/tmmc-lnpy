@@ -6,15 +6,14 @@ import itertools
 import numpy as np
 from scipy import optimize
 
-from .segment import get_default_PhaseCreator
 from .core import CollectionPhases
 from .cached_decorators import gcached
 
 
-################################################################################
+# ###############################################################################
 # Spinodal routines
 def _initial_bracket_spinodal_right(C,
-                                    lnz_in,
+                                    build_phases,
                                     idx,
                                     idx_nebr=None,
                                     efac=1.0,
@@ -23,7 +22,6 @@ def _initial_bracket_spinodal_right(C,
                                     ntry=20,
                                     step=+1,
                                     ref=None,
-                                    build_phases=None,
                                     build_kws=None):
     """
     find initial bracketing lnpi_phases of phaseID==ID bracketing point where
@@ -31,7 +29,9 @@ def _initial_bracket_spinodal_right(C,
 
     Parameters
     ----------
-    ref : MaskedlnPi
+    ref : MaskedlnPi, optional
+    build_phases : callable
+        scalar funciton to build phases
     C : lnPi_collection
         initial estimates to work from
     idx, idx_nebr : int
@@ -63,26 +63,19 @@ def _initial_bracket_spinodal_right(C,
 
     if build_kws is None:
         build_kws = {}
-    if build_phases is None:
-        raise ValueError('must supply build_phases')
 
-    # lnz which varies
-    lnz_idx = lnz_in.index(None)
     # delta E
-    # dE = C.wlnPi.delta_w.sel(
-    #     phase=idx, phase_nebr=idx_nebr).fillna(np.inf).values
-    # dE = np.array([_get_dw(p, idx, idx_nebr) for p in C])
     dE = C.wlnPi.get_delta_w(idx, idx_nebr)
 
     # where idx exists
     has_idx = np.array([idx in x.index for x in C])
 
-    #find locations where have 'ID'
+    # find locations where have 'ID'
     if has_idx.sum() == 0:
         raise ValueError('no phase %i' % idx)
     w = np.where(has_idx)[0]
 
-    #left
+    # left
     left = None
     for i in w[-1::-1]:
         if dE[i] > efac:
@@ -90,14 +83,12 @@ def _initial_bracket_spinodal_right(C,
             break
 
     if left is None:
-        #need to find a new value lnz bounding thing
-        new_lnz = lnz_in[:]
-        new_lnz[lnz_idx] = C[w[0]].lnz[lnz_idx]
-        new_lnz = np.asarray(new_lnz)
+        # need to find a new value lnz bounding thing
 
+        new_lnz = C[w[0]].lnz[build_phases.index]
         for i in range(ntry):
-            new_lnz[lnz_idx] -= step * dlnz 
-            t = build_phases(ref=ref, lnz=new_lnz, **build_kws)
+            new_lnz -= step * dlnz
+            t = build_phases(new_lnz, ref=ref, **build_kws)
             if idx in t.index:
                 # _get_dw(t, idx, idx_nebr)
                 dw = t.wlnPi.get_delta_w(idx, idx_nebr)
@@ -118,13 +109,11 @@ def _initial_bracket_spinodal_right(C,
         if w[-1] + 1 < len(C):
             right = C[w[-1] + 1]
         else:
-            new_lnz = lnz_in[:]
-            new_lnz[lnz_idx] = C[w[-1]].lnz[lnz_idx]
-            new_lnz = np.asarray(new_lnz)
+            new_lnz = C[w[-1]].lnz[build_phases.index]
 
             for i in range(ntry):
-                new_lnz[lnz_idx] += step * dlnz
-                t = build_phases(ref=ref, lnz=new_lnz, **build_kws)
+                new_lnz += step * dlnz
+                t = build_phases(new_lnz, ref=ref, **build_kws)
                 if idx not in t.index:
                     right = t
                     break
@@ -134,14 +123,16 @@ def _initial_bracket_spinodal_right(C,
     return left, right
 
 
-def _refine_bracket_spinodal_right(left, right,
-                                   idx, idx_nebr=None,
+def _refine_bracket_spinodal_right(left,
+                                   right,
+                                   build_phases,
+                                   idx,
+                                   idx_nebr=None,
                                    efac=1.0,
                                    nmax=30,
                                    vmax=1e5,
                                    vmin=0.0,
                                    ref=None,
-                                   build_phases=None,
                                    build_kws=None,
                                    close_kws=None):
     """
@@ -194,8 +185,10 @@ def _refine_bracket_spinodal_right(left, right,
         #checks
         if doneLeft and doneRight:
             #find bracket
-            r = optimize.zeros.RootResults(
-                root=None, iterations=i, function_calls=i, flag=1)
+            r = optimize.zeros.RootResults(root=None,
+                                           iterations=i,
+                                           function_calls=i,
+                                           flag=1)
             return left, right, r
 
         ########
@@ -204,33 +197,39 @@ def _refine_bracket_spinodal_right(left, right,
             #we've reached a breaking point
             if doneLeft:
                 #can't find a lower bound to efac, just return where we're at
-                r = optimize.zeros.RootResults(
-                    root=left.lnz, iterations=i + 1, function_calls=i, flag=0)
+                r = optimize.zeros.RootResults(root=left.lnz,
+                                               iterations=i + 1,
+                                               function_calls=i,
+                                               flag=0)
                 for k, val in [('left', left), ('right', right),
-                               ('doneleft', doneLeft), ('doneright','doneRight'),
-                               ('info','all close and doneleft')]:
+                               ('doneleft', doneLeft),
+                               ('doneright', 'doneRight'),
+                               ('info', 'all close and doneleft')]:
                     setattr(r, k, val)
                 return left, right, r
 
             #elif not doneLeft and not doneRight:
             else:
                 #all close, and no good on either end -> no spinodal
-                r = optimize.zeros.RootResults(
-                    root=None, iterations=i + 1, function_calls=i, flag=1)
+                r = optimize.zeros.RootResults(root=None,
+                                               iterations=i + 1,
+                                               function_calls=i,
+                                               flag=1)
                 for k, val in [('left', left), ('right', right),
-                               ('doneleft', doneLeft), ('doneright','doneRight'),
-                               ('info','all close and doneleft')]:
+                               ('doneleft', doneLeft),
+                               ('doneright', 'doneRight'),
+                               ('info', 'all close and doneleft')]:
                     setattr(r, k, val)
                 for k, val in [('left', left), ('right', right),
-                               ('info','all close and not doneleft')]:
+                               ('info', 'all close and not doneleft')]:
                     setattr(r, k, val)
                 return None, None, r
 
         # mid point phases
-        lnz_mid = 0.5 * (left.lnz + right.lnz)
-        mid    = build_phases(ref=ref, lnz =lnz_mid, **build_kws)
-        # dw     = _get_dw(mid, idx, idx_nebr)
-        dw     = mid.wlnPi.get_delta_w(idx, idx_nebr)
+        lnz_mid = 0.5 * (left.lnz[build_phases.index] +
+                         right.lnz[build_phases.index])
+        mid = build_phases(lnz_mid, ref=ref, **build_kws)
+        dw = mid.wlnPi.get_delta_w(idx, idx_nebr)
 
         if idx in mid.index and dw >= efac:
             left = mid
@@ -249,24 +248,20 @@ def _refine_bracket_spinodal_right(left, right,
     """)
 
 
-def _solve_spinodal(lnz_in,
-                    a, b,
-                    idx, idx_nebr=None,
+def _solve_spinodal(a,
+                    b,
+                    build_phases,
+                    idx,
+                    idx_nebr=None,
                     efac=1.0,
                     ref=None,
-                    build_phases=None,
                     build_kws=None,
                     **kwargs):
-
-    lnz_idx = lnz_in.index(None)
     if build_kws is None:
         build_kws = {}
 
     def f(x):
-        lnz = lnz_in[:]
-        lnz[lnz_idx] = x
-        c = build_phases(ref=ref, lnz=lnz, **build_kws)
-
+        c = build_phases(x, ref=ref, **build_kws)
         dw = c.wlnPi.get_delta_w(idx, idx_nebr)
 
         out = dw - efac
@@ -279,7 +274,7 @@ def _solve_spinodal(lnz_in,
     xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
 
     r.residual = f(xx)
-    lnz = f._lnpi.lnz
+    lnz = f._lnpi.lnz[build_phases.index]
     return lnz, r, f._lnpi
 
 
@@ -291,10 +286,8 @@ def _get_step(C, idx, idx_nebr):
 
     else step = -1
     """
-    delta = (
-        C[-1].wlnPi.get_delta_w(idx, idx_nebr) -
-        C[0].wlnPi.get_delta_w(idx, idx_nebr)
-    )
+    delta = (C[-1].wlnPi.get_delta_w(idx, idx_nebr) -
+             C[0].wlnPi.get_delta_w(idx, idx_nebr))
 
     if delta == 0:
         raise ValueError('could not determine step, delta==0')
@@ -305,7 +298,9 @@ def _get_step(C, idx, idx_nebr):
 
 
 def get_spinodal(C,
-                 idx, idx_nebr=None,
+                 build_phases,
+                 idx,
+                 idx_nebr=None,
                  efac=1.0,
                  dlnz=0.5,
                  vmin=0.0,
@@ -314,7 +309,6 @@ def get_spinodal(C,
                  step=None,
                  nmax=20,
                  ref=None,
-                 build_phases=None,
                  build_kws=None,
                  nphases_max=None,
                  close_kws=None,
@@ -368,10 +362,7 @@ def get_spinodal(C,
     r : output info object (optional, returned if full_output is True)
 
     """
-    assert(len(C) > 1)
-    if build_phases is None:
-        assert nphases_max is not None
-        build_phases = get_default_PhaseCreator(nphases_max)
+    assert (len(C) > 1)
     if build_kws is None:
         build_kws = {}
     if close_kws is None:
@@ -391,15 +382,10 @@ def get_spinodal(C,
     msk = C[0].lnz != C[1].lnz
     assert msk.sum() == 1
 
-    lnz_idx = np.where(msk)[0][0]
-    lnz_in = list(C[0].lnz[:])
-    lnz_in[lnz_idx] = None
-
     #get initial bracket
     L, R = _initial_bracket_spinodal_right(CC,
                                            idx=idx,
                                            idx_nebr=idx_nebr,
-                                           lnz_in=lnz_in,
                                            efac=efac,
                                            dlnz=dlnz,
                                            vmax=vmax,
@@ -409,16 +395,18 @@ def get_spinodal(C,
                                            build_phases=build_phases,
                                            build_kws=build_kws)
 
-    left, right, rr = _refine_bracket_spinodal_right(
-        L, R, idx=idx, idx_nebr=idx_nebr,
-        efac=efac,
-        nmax=nmax,
-        vmin=vmin,
-        vmax=vmax,
-        ref=ref,
-        build_phases=build_phases,
-        build_kws=build_kws,
-        close_kws=close_kws)
+    left, right, rr = _refine_bracket_spinodal_right(L,
+                                                     R,
+                                                     idx=idx,
+                                                     idx_nebr=idx_nebr,
+                                                     efac=efac,
+                                                     nmax=nmax,
+                                                     vmin=vmin,
+                                                     vmax=vmax,
+                                                     ref=ref,
+                                                     build_phases=build_phases,
+                                                     build_kws=build_kws,
+                                                     close_kws=close_kws)
 
     if left is None and right is None:
         #no spinodal found and left and right are close
@@ -434,15 +422,16 @@ def get_spinodal(C,
         #solve
         if step == -1:
             left, right = right, left
-        a, b = left.lnz[lnz_idx], right.lnz[lnz_idx]
-        lnz, r, spin = _solve_spinodal(
-            ref=ref, idx=idx, idx_nebr=idx_nebr,
-            lnz_in=lnz_in,
-            a=a, b=b,
-            efac=efac,
-            build_phases=build_phases,
-            build_kws=build_kws,
-            **solve_kws)
+        a, b = left.lnz[build_phases.index], right.lnz[build_phases.index]
+        lnz, r, spin = _solve_spinodal(ref=ref,
+                                       idx=idx,
+                                       idx_nebr=idx_nebr,
+                                       a=a,
+                                       b=b,
+                                       efac=efac,
+                                       build_phases=build_phases,
+                                       build_kws=build_kws,
+                                       **solve_kws)
         r.bracket_iterations = rr.iterations
         r.from_solve = True
     if full_output:
@@ -451,19 +440,15 @@ def get_spinodal(C,
         return spin
 
 
-
-
-
-
-
 ################################################################################
 # Binodal routines
+
 
 def get_binodal_point(IDs,
                       lnzA,
                       lnzB,
+                      build_phases,
                       ref=None,
-                      build_phases=None,
                       build_kws=None,
                       nphases_max=None,
                       full_output=False,
@@ -477,8 +462,8 @@ def get_binodal_point(IDs,
         object to reweight
     IDs : tuple
         phase index of pair to equate
-    lnzA,lnzB : arrays of shape (ncomp,)
-        lnz arrays bracketing solution
+    lnzA, lnzB : float
+        lnz_index values bracketing solution
     build_phases : callable
         function to create Phases object
     build_kws : dict, optional
@@ -497,28 +482,15 @@ def get_binodal_point(IDs,
     IDs = list(IDs)
     assert len(IDs) == 2
 
-    if build_phases is None:
-        assert nphases_max is not None
-        build_phases = get_default_PhaseCreator(nphases_max).build_phases
     if build_kws is None:
         build_kws = {}
 
-    lnzA = np.asarray(lnzA)
-    lnzB = np.asarray(lnzB)
+    lnz_idx = build_phases.index
 
-    msk = lnzA != lnzB
-    if msk.sum() != 1:
-        raise ValueError('only one value can vary between lnzA and lnzB')
-
-    lnz_idx = np.where(msk)[0][0]
-    lnz_in = lnzA.copy()
-
-    a, b = sorted([x[lnz_idx] for x in [lnzA, lnzB]])
+    a, b = min(lnzA, lnzB), max(lnzA, lnzB)
 
     def f(x):
-        lnz = lnz_in[:]
-        lnz[lnz_idx] = x
-        c = build_phases(ref=ref, lnz=lnz, **build_kws)
+        c = build_phases(x, ref=ref, **build_kws)
         f.lnpi = c
         # Omegas = c.omega_phase()
         # return Omegas[IDs[0]] - Omegas[IDs[1]]
@@ -526,7 +498,6 @@ def get_binodal_point(IDs,
 
     xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
     r.residual = f(xx)
-
     if full_output:
         return f.lnpi, r
     else:
@@ -536,8 +507,10 @@ def get_binodal_point(IDs,
 ################################################################################
 # Accessor classes/routines
 
+
 class _BaseStability(object):
     _NAME = 'base'
+
     def __init__(self, collection):
         self._c = collection
 
@@ -547,7 +520,7 @@ class _BaseStability(object):
 
     @gcached()
     def access(self):
-        index, items = zip(*[(k,v) for k,v in self.items.items()])
+        index, items = zip(*[(k, v) for k, v in self.items.items()])
         # return CollectionPhases(items, index=index)
         # for time being don't pass index
         # this is a helper accessor anyway
@@ -591,10 +564,7 @@ class _BaseStability(object):
         if name is None:
             name = self._NAME
         kws = {name: (self._c._CONCAT_DIM, self.index_collection(dtype=dtype))}
-        return (
-            da
-            .assign_coords(**kws)
-        )
+        return (da.assign_coords(**kws))
 
     def from_dataarray(self, da, name=None):
         """set from dataarray"""
@@ -603,15 +573,22 @@ class _BaseStability(object):
         self.set_by_index(da[name].values)
 
 
-
-
 # NOTE : single create means this is only created once
 @CollectionPhases.decorate_accessor('spinodals', single_create=True)
 class Spinodals(_BaseStability):
     _NAME = 'spinodal'
 
-    def __call__(self, phase_ids, ref=None, build_phases=None, build_kws=None,
-                 nphases_max=None, inplace=False, append=False, force=False, as_dict=True, **kwargs):
+    def __call__(self,
+                 phase_ids,
+                 build_phases,
+                 ref=None,
+                 build_kws=None,
+                 nphases_max=None,
+                 inplace=False,
+                 append=False,
+                 force=False,
+                 as_dict=True,
+                 **kwargs):
 
         if inplace and hasattr(self, '_items') and not force:
             raise ValueError('can reset inplace without force')
@@ -624,10 +601,13 @@ class Spinodals(_BaseStability):
         info = {}
         kwargs['full_output'] = True
         for idx in phase_ids:
-            s, r = get_spinodal(ref=ref, C=self._c, idx=idx,
+            s, r = get_spinodal(ref=ref,
+                                C=self._c,
+                                idx=idx,
                                 build_phases=build_phases,
                                 build_kws=build_kws,
-                                nphases_max=nphases_max, **kwargs)
+                                nphases_max=nphases_max,
+                                **kwargs)
             out[idx] = s
             info[idx] = r
 
@@ -640,32 +620,55 @@ class Spinodals(_BaseStability):
             if as_dict:
                 return out, info
             else:
-                index, items = zip(*[(k,v) for k,v in out.items()])
+                index, items = zip(*[(k, v) for k, v in out.items()])
                 # return CollectionPhases(items, index=index)
                 # for time being don't pass index
                 # this is a helper accessor anyway
                 return CollectionPhases(items, index=index), info
 
 
-
-
-
 @CollectionPhases.decorate_accessor('binodals', single_create=True)
 class Binodals(_BaseStability):
     _NAME = 'binodal'
 
-    def get_pair(self, ids, lnzA=None, lnzB=None, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None, **kwargs):
+    def get_pair(self,
+                 ids,
+                 lnzA=None,
+                 lnzB=None,
+                 spinodals=None,
+                 ref=None,
+                 build_phases=None,
+                 build_kws=None,
+                 nphases_max=None,
+                 **kwargs):
 
         if None in [lnzA, lnzB] and spinodals is None:
             spinodals = self._c.spinodals
         if lnzA is None:
-            lnzA = spinodals[ids[0]].lnz
+            lnzA = spinodals[ids[0]].lnz[build_phases.index]
         if lnzB is None:
-            lnzB = spinodals[ids[1]].lnz
-        return get_binodal_point(ref=ref, IDs=ids, lnzA=lnzA, lnzB=lnzB, build_phases=build_phases, build_kws=build_kws, nphases_max=nphases_max,**kwargs)
+            lnzB = spinodals[ids[1]].lnz[build_phases.index]
+        return get_binodal_point(ref=ref,
+                                 IDs=ids,
+                                 lnzA=lnzA,
+                                 lnzB=lnzB,
+                                 build_phases=build_phases,
+                                 build_kws=build_kws,
+                                 nphases_max=nphases_max,
+                                 **kwargs)
 
-
-    def __call__(self, phase_ids, spinodals=None, ref=None, build_phases=None, build_kws=None, nphases_max=None,  inplace=False, append=False, force=False, as_dict=True, **kwargs):
+    def __call__(self,
+                 phase_ids,
+                 spinodals=None,
+                 ref=None,
+                 build_phases=None,
+                 build_kws=None,
+                 nphases_max=None,
+                 inplace=False,
+                 append=False,
+                 force=False,
+                 as_dict=True,
+                 **kwargs):
 
         if inplace and not force and hasattr(self, '_items'):
             raise ValueError('can reset inplace without force')
@@ -674,16 +677,18 @@ class Binodals(_BaseStability):
         if not isinstance(phase_ids, list):
             raise ValueError('phase_ids must be an int or list')
 
-
         out = {}
         info = {}
         index = {}
         kwargs['full_output'] = True
         for idx, ids in enumerate(itertools.combinations(phase_ids, 2)):
-            s, r = self.get_pair(ref=ref, ids=ids, spinodals=spinodals,
+            s, r = self.get_pair(ref=ref,
+                                 ids=ids,
+                                 spinodals=spinodals,
                                  build_phases=build_phases,
                                  build_kws=build_kws,
-                                 nphases_max=nphases_max, **kwargs)
+                                 nphases_max=nphases_max,
+                                 **kwargs)
             out[idx] = s
             info[idx] = r
             index[idx] = ids
@@ -697,7 +702,7 @@ class Binodals(_BaseStability):
             if as_dict:
                 return out, info
             else:
-                index, items = zip(*[(k,v) for k,v in out.items()])
+                index, items = zip(*[(k, v) for k, v in out.items()])
                 # return CollectionPhases(items, index=index)
                 # for time being don't pass index
                 # this is a helper accessor anyway

@@ -711,6 +711,10 @@ class _BuildPhases(object):
     def X(self):
         return self._X
 
+    @property
+    def phase_creator(self):
+        return self._phase_creator
+
     @X.setter
     def X(self, X):
         assert sum([x is None for x in X]) == 1
@@ -718,6 +722,10 @@ class _BuildPhases(object):
         self._ncomp = len(self._X)
         self._index = self._X.index(None)
         self._set_params()
+
+    @property
+    def index(self):
+        return self._index
 
     def _set_params(self):
         pass
@@ -747,7 +755,7 @@ class BuildPhases_mu(_BuildPhases):
 
     def _get_lnz(self, lnz_index):
         lnz = self.X.copy()
-        lnz[self._index] = lnz_index
+        lnz[self.index] = lnz_index
         return lnz
 
 
