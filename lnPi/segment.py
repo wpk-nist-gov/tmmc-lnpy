@@ -625,7 +625,7 @@ class PhaseCreator(object):
 
 
 
-    def build_phases(self, lnz=None, ref=None, efac=None, nmax=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True):
+    def build_phases(self, lnz=None, ref=None, efac=None, nmax=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True, phase_kws=None):
         """
         build phases
         """
@@ -685,7 +685,9 @@ class PhaseCreator(object):
             index = None
 
         if phases_output:
-            return self.phases_class(items=lnpis, index=index)
+            if phase_kws is None:
+                phase_kws = {}
+            return self.phases_class(items=lnpis, index=index, **phase_kws)
         else:
             return lnpis, index
 

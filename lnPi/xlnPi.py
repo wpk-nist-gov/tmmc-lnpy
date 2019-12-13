@@ -87,6 +87,11 @@ class xrlnPiWrapper(object):
             dims=self.dims_comp + self.dims_n,
             coords=coords, name=self.n_name)
 
+
+    @gcached(prop=False)
+    def ncoords_tot(self, coords_n=False):
+        return self.ncoords(coords_n).sum(self.dims_comp)
+
     def wrap_data(self, data, lnz, coords_n=False, **kwargs):
         if coords_n:
             get_coords = self.coords_state_n
@@ -177,15 +182,19 @@ class xrlnPi(object):
     def lnz(self):
         return self._wrapper.wrap_lnz(self._ma.lnz, **self._ma.state_kws)
 
-
     @property
     def ncoords(self):
         return self._wrapper.ncoords()
 
-    #@gcached()
+
     @property
-    def lnpi_zero(self):
-        return self._ma.data.reshape(-1)[0]
+    def ncoords_tot(self):
+        return self._wrapper.ncoords_tot()
+
+    #@gcached()
+    # @property
+    # def lnpi_zero(self):
+    #     return self._ma.data.ravel()[0]
 
     @property
     def volume(self):
@@ -215,20 +224,45 @@ class xrlnPi(object):
     def coords_state(self):
         return {k: self.lnpi.coords[k] for k in self.dims_state}
 
-    @property
-    @xr_name(r'$\tilde{\Pi}(n)$', standard_name='unnormalized_distribution')
-    def pi(self):
-        return self._wrapper.wrap_lnpi(self._ma.pi, lnz=self._ma.lnz, **self._ma.state_kws)
+
+    @gcached()
+    def _pi_params(self):
+        """
+        store pi_norm and pi_sum for later calculations
+        """
+        lnpi_local_max = self._ma.local_max()
+        pi = np.exp(self._ma - lnpi_local_max)
+        pi_sum = pi.sum()
+        pi_norm =  pi / pi_sum
+
+        lnpi_zero = self._ma.data.ravel()[0] -lnpi_local_max
+
+        # wrap results
+        pi_sum = xr.DataArray(pi_sum, coords=self.coords_state,
+                              attrs={'long_name': r'$\sum \tilde{\Pi}(n)$'}, name='pi_sum')
+
+        pi_norm = (
+            self._wrapper.wrap_lnpi(pi_norm, lnz=self._ma.lnz,
+                                    **self._ma.state_kws)
+            .rename('pi_norm')
+            .assign_attrs(long_name=r'$\Pi(n)$',
+                          standard_name='normalized_distribution')
+        )
+        return pi_sum, pi_norm, lnpi_zero
+
 
     @property
-    @xr_name(r'$\sum \tilde{\Pi}(n)$')
     def pi_sum(self):
-        return xr.DataArray(self._ma.pi_sum, coords=self.coords_state)
+        return self._pi_params[0]
 
     @property
-    @xr_name(r'$\Pi(n)$', standard_name='normalized_distribution')
     def pi_norm(self):
-        return ( self.pi / self.pi_sum )
+        return self._pi_params[1]
+
+    @property
+    def _lnpi_zero(self):
+        return self._pi_params[2]
+
 
     @property
     def lnpi_norm(self):
@@ -237,7 +271,6 @@ class xrlnPi(object):
         """
         pi = self.pi_norm
         return np.log(xr.where(pi > 0, pi, np.nan))
-
 
     def mean_pi(self, x, *args, **kwargs):
         """
@@ -291,7 +324,7 @@ class xrlnPi(object):
     @gcached()
     @xr_name(r'$n(\mu,V,T)$')
     def ntot(self):
-        return self.mean_pi(self.ncoords.sum(self.dims_comp))
+        return self.mean_pi(self.ncoords_tot)
 
     @gcached()
     @xr_name(r'$var[{\bf n}(\mu,V,T)]$')
@@ -302,7 +335,7 @@ class xrlnPi(object):
     @xr_name(r'$var[n(\mu,V,T)]$')
     def ntot_var(self):
         """variance in total number of particles"""
-        return self.var_pi(self.ncoords.sum(self.dims_comp))
+        return self.var_pi(self.ncoords_tot)
 
     @property
     @xr_name(r'${\bf \rho}(\mu,V,T)$')
@@ -333,7 +366,11 @@ class xrlnPi(object):
         lnpi_zero : float or None
          if None, lnpi_zero = self.data.ravel()[0]
         """
-        return xr.DataArray(self._ma.betaOmega(lnpi_zero), coords=self.coords_state)
+
+        if lnpi_zero is None:
+            lnpi_zero = self._lnpi_zero
+        return (lnpi_zero - np.log(self.pi_sum))
+
 
     @gcached()
     @xr_name(r'${\rm PE}(\mu,V,T)$', standard_name='potential_energy')

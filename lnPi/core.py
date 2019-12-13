@@ -12,6 +12,7 @@ from scipy.ndimage import filters
 from .cached_decorators import gcached, cached_clear
 from .utils import labels_to_masks, masks_to_labels, masks_change_convention
 from .utils import get_tqdm_build as get_tqdm
+from .utils import parallel_map_build as parallel_map
 
 from .extensions import AccessorMixin, ListAccessorMixin
 from .extensions import decorate_listproperty, decorate_listaccessor
@@ -41,7 +42,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     """
 
     def __new__(cls,
-                data,
+                data=None,
                 lnz=None,
                 state_kws=None,
                 extra_kws=None,
@@ -70,12 +71,14 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         kwargs : arguments to np.ma.array
             e.g., mask=...
         """
+        if data is not None and issubclass(data.dtype.type, np.floating):
+            kwargs.setdefault('fill_value', np.nan)
 
         obj = np.ma.array(data, **kwargs).view(cls)
-        fv = kwargs.get('fill_value', None) or getattr(data, 'fill_value', None)
-        if fv is None:
-            fv = np.nan
-        obj.set_fill_value(fv)
+        # fv = kwargs.get('fill_value', None) or getattr(data, 'fill_value', None)
+        # if fv is None:
+        #     fv = np.nan
+        # obj.set_fill_value(fv)
 
         # make sure to broadcase mask if it is just False
         if obj.mask is False:
@@ -110,6 +113,9 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
     def _clear_cache(self):
         self._cache = {}
+
+    def assign_phase(self, phase):
+        self._optinfo['state_kws']['phase'] = phase
 
     ##################################################
     #properties
@@ -184,24 +190,24 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
 
     # make these top level
     #@gcached()
-    @property
-    def pi(self):
-        """
-        basic pi = exp(lnpi)
-        """
-        pi = np.exp(self - self.local_max())
-        return pi
+    # @property
+    # def pi(self):
+    #     """
+    #     basic pi = exp(lnpi)
+    #     """
+    #     pi = np.exp(self - self.local_max())
+    #     return pi
 
-    @gcached()
-    def pi_sum(self):
-        return self.pi.sum()
+    # @gcached()
+    # def pi_sum(self):
+    #     return self.pi.sum()
 
-    @gcached(prop=False)
-    def betaOmega(self, lnpi_zero=None):
-        if lnpi_zero is None:
-            lnpi_zero = self.data.ravel()[0]
-        zval = lnpi_zero - self.local_max()
-        return  (zval - np.log(self.pi_sum))
+    # @gcached(prop=False)
+    # def betaOmega(self, lnpi_zero=None):
+    #     if lnpi_zero is None:
+    #         lnpi_zero = self.data.ravel()[0]
+    #     zval = lnpi_zero - self.local_max()
+    #     return  (zval - np.log(self.pi_sum))
 
     def __setitem__(self, index, value):
         self._clear_cache()
@@ -407,6 +413,27 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return self.copy_shallow(mask=mask * self.mask, **kwargs)
 
 
+
+    def __getstate__(self):
+        ma = self.view(np.ma.MaskedArray).__getstate__()
+        opt = self._optinfo
+        return ma, opt
+    def __setstate__(self, state):
+        ma, opt = state
+        super(MaskedlnPi, self).__setstate__(ma)
+        self._optinfo.update(opt)
+
+#        opt = self._optinfo
+#        return ma, opt
+#         # ma = self.view(np.ma.MaskedArray)
+#         # info = self._optinfo
+#         # return ma, info
+        #self._optinfo.update(opt)
+        # ma, info = state
+#         # super(MaskedlnPi, self).__setstate__(ma)
+#         # self._optinfo.update(info)
+
+
     @classmethod
     def from_table(cls,
                    path,
@@ -521,6 +548,10 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
                                                   convention=False, check_features=check_features,
                                                   **kwargs)
         return self.list_from_masks(masks, convention=False)
+
+
+#class MaskedlnPi2(AccessorMixin):
+
 
 
 class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
@@ -813,7 +844,8 @@ class CollectionPhases(BaselnPiCollection):
         if build_phases_kws is None:
             build_phases_kws = {}
         seq = get_tqdm(lnzs, desc='build')
-        L = [build_phases(lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
+        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
+        #L = [build_phases(lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
         return cls(items=L, index=None, xarray_output=xarray_output)
 
 
@@ -846,7 +878,8 @@ class CollectionPhases(BaselnPiCollection):
             build_phases_kws = {}
 
         seq = get_tqdm(lnzs, desc='build')
-        L = [build_phases(lnz=lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
+        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
+        #L = [build_phases(lnz=lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
         return cls(items=L, index=None, xarray_output=xarray_output)
 
     @classmethod

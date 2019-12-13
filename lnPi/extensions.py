@@ -9,6 +9,7 @@ from itertools import chain
 from .cached_decorators import gcached
 
 from .utils import get_tqdm_calc as get_tqdm
+from .utils import parallel_map_calc as parallel_map
 
 
 class AccessorRegistrationWarning(Warning):
@@ -154,6 +155,7 @@ class _CallableListResultsCache(object):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
 
+        #results = parallel_map(lambda x: x(*args, **kwargs), seq)
         results = [x(*args, **kwargs) for x in seq]
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
@@ -175,6 +177,7 @@ class _CallableListResultsNoCache(object):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
         results = [x(*args, **kwargs) for x in seq]
+        #results = parallel_map(lambda x: x(*args, **kwargs), seq)
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
         return results
@@ -212,6 +215,7 @@ class _ListAccessor(object):
             else:
                 seq = get_tqdm(self.items, desc=attr)
                 result = [getattr(x, attr) for x in seq]
+                #result = parallel_map(lambda x: getattr(x, attr), seq)
                 if hasattr(self.parent, 'wrap_list_results'):
                     result = self.parent.wrap_list_results(result)
 

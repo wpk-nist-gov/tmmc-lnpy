@@ -2,6 +2,8 @@
 utility functions
 """
 
+from functools import partial
+
 import numpy as np
 import xarray as xr
 from scipy import ndimage as ndi
@@ -27,22 +29,61 @@ if _HAS_TQDM:
 
 from .options import OPTIONS
 
-def _get_tqdm(seq, len_min, leave=False, **kwargs):
-    if OPTIONS['use_tqdm'] and _HAS_TQDM and len(seq) >= len_min:
+def get_tqdm(seq, len_min, leave=None, **kwargs):
+    if _HAS_TQDM and OPTIONS['tqdm_use'] and len(seq) >= len_min:
+        if leave is None:
+            leave = OPTIONS['tqdm_leave']
         seq = tqdm(seq, leave=leave, **kwargs)
     return seq
 
 
-def get_tqdm_calc(seq, len_min=None, leave=False, **kwargs):
-    if len_min is None:
-        len_min = OPTIONS['tqdm_min_len_calc']
-    return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
+get_tqdm_calc = partial(get_tqdm, len_min=OPTIONS['tqdm_len_calc'])
+get_tqdm_build = partial(get_tqdm, len_min=OPTIONS['tqdm_len_build'])
+
+# def get_tqdm_calc(seq, len_min=None, leave=None, **kwargs):
+#     if len_min is None:
+#         len_min = OPTIONS['tqdm_len_calc']
+#     return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
 
 
-def get_tqdm_build(seq, len_min=None, leave=False, **kwargs):
-    if len_min is None:
-        len_min = OPTIONS['tqdm_min_len_build']
-    return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
+# def get_tqdm_build(seq, len_min=None, leave=None, **kwargs):
+#     if len_min is None:
+#         len_min = OPTIONS['tqdm_len_build']
+#     return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
+
+
+
+# --------------------------------------------------
+# JOBLIB stuff
+try:
+    from joblib import Parallel, delayed
+    _HAS_JOBLIB = True
+except ImportError:
+    _HAS_JOBLIB = False
+
+
+def parallel_map(func, items, len_min, *args, **kwargs):
+    if _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= len_min:
+        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
+                        backend=OPTIONS['joblib_backend'],
+                        **OPTIONS['joblib_kws'])(
+                            delayed(func)(x, *args, **kwargs)
+                            for x in items)
+    else:
+        return [func(x, *args, **kwargs) for x in items]
+
+parallel_map_calc = partial(parallel_map, len_min=OPTIONS['joblib_len_calc'])
+parallel_map_build = partial(parallel_map, len_min=OPTIONS['joblib_len_build'])
+
+
+
+
+
+
+
+
+
+
 
 
 
