@@ -470,7 +470,6 @@ import xarray as xr
 from .core import Phases, CollectionPhases
 
 CollectionPhases.register_listaccessor('wlnPi')
-
 @Phases.decorate_accessor('wlnPi')
 class wlnPi(FreeEnergylnPi):
     def __init__(self, phases):
@@ -490,7 +489,7 @@ class wlnPi(FreeEnergylnPi):
 
         xgce = self._phases[0].xgce
 
-        dim_phase = self._phases._CONCAT_DIM
+        dim_phase = self._phases._concat_dim
         dims = [dim_phase, dim_phase + '_nebr']
 
         coords = dict(zip(dims, [self._phases.index.values]*2))

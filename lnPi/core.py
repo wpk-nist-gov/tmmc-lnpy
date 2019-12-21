@@ -16,6 +16,9 @@ from .utils import parallel_map_build as parallel_map
 
 from .extensions import AccessorMixin, ListAccessorMixin
 from .extensions import decorate_listproperty, decorate_listaccessor
+
+from .lnpicollections import BaseCollectionlnPi, Phases, FlatCollectionlnPi, CollectionPhases
+
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
 # [ ] : split splitting into separate classes
@@ -550,426 +553,430 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         return self.list_from_masks(masks, convention=False)
 
 
-#class MaskedlnPi2(AccessorMixin):
-
-
-
-class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
-    """
-    collection of phases
-    """
-
-    _CONCAT_DIM = None #'phase'
-    _CONCAT_COORDS = 'different'
-
-    def __init__(self, items, index=None, xarray_output=True, concat_dim=None, concat_coords=None):
-        # maybe reset concat dims/coords
-        if concat_dim is not None:
-            self._CONCAT_DIM = concat_dim
-        if concat_coords is not None:
-            self._CONCAT_COORDS = concat_coords
-
-        self.items = items
-        self.index = index
-        self.xarray_output = xarray_output
-
-
-
-    @property
-    def items(self):
-        return self._items
-
-    @items.setter
-    @cached_clear()
-    def items(self, items):
-        if not isinstance(items, Iterable):
-            items = [items]
-        self._items = list(items)
-
-
-    @property
-    def index(self):
-        return self._index
-
-    @index.setter
-    def index(self, index):
-        if index is None:
-            index = np.arange(len(self))
-        else:
-            assert len(index) == len(self)
-        self._index = pd.Index(index, name=self._CONCAT_DIM)
-
-    def __getitem__(self, idx):
-        return self.items[idx]
-
-    def __setitem__(self, idx, val):
-        self._cache = {}
-        self._items[idx] = val
-
-    def __len__(self):
-        return len(self.items)
-
-    def wrap_list_results(self, items):
-        if self.xarray_output:
-            x = items[0]
-            if isinstance(x, xr.DataArray):
-                return (
-                    xr.concat(items, self.index, coords=self._CONCAT_COORDS)
-                )
-        # else try to make array
-        try:
-            return np.array(items)
-        except:
-            return itmes
-
-
-    def copy(self):
-        return self.__class__(items=self.items, index=self.index, xarray_output=self.xarray_output)
-
-    @cached_clear()
-    def append(self, val, index=None):
-        if not issubclass(type(val), self[0].__class__):
-            raise ValueError(
-                'can only append subclasses of type '.format(
-                    type(self[0].__class__)))
-        if index is None:
-            index = self.index[-1] + 1
-        if not isinstance(index, list):
-            index = [index]
-        self._items.append(val)
-        self.index = self.index.to_list() + index
-
-    @cached_clear()
-    def extend(self, vals, index=None):
-        # two cases
-        # vals is same type as self
-        # vals is list of same type of self[0]...
-
-        if isinstance(vals, self.__class__):
-            items = vals.items
-            if index is None:
-                index = vals.index.to_list()
-        elif isinstance(vals, list):
-            # list of stuff
-            # check if all items are of right type
-            for val in vals:
-                assert(issubclass(type(val), self[0].__class__))
-            items = vals
-            if index is None:
-                offset = self.index[-1]+1
-                index = [x+offset for x in range(len(vals))]
-        else:
-            raise ValueError(
-                'can only extend with type {} or list of subclasses of type {}'.format(
-                    self.__class__,
-                    self[0].__class__,
-                ))
-
-        assert len(index) == len(items)
-        self._items.extend(items)
-        self.index = self.index.to_list() + index
-
-    def __add__(self, vals):
-        # if adding something
-        # save requirements as extend
-        if isinstance(vals, self.__class__):
-            items = vals.items
-            index = self.index.to_list()
-        elif isinstance(vals, list):
-            # check vals
-            for val in vals:
-                assert(issubclass(type(val), self[0].__class__))
-            items = vals
-            offset = self.index[-1] + 1
-            index = [x+offset for x in range(len(vals))]
-        else:
-            raise ValueError(
-                'can add/extend self with with type {} or list of subclasses of type {}'.format(
-                    self.__class__,
-                    self[0].__class__,
-                ))
-
-        return self.__class__(items=self.items + items,
-                              index=self.index.to_list() + index,
-                              xarray_output=self.xarray_output)
-
-    def __iadd__(self, x):
-        self.extend(x)
-        return self
-
-
-    def __repr__(self):
-        header = f"<{self.__class__.__name__}  ({self._CONCAT_DIM} : {len(self)})>"
-        index = f"index {repr(self.index)}"
-        return '\n'.join([header, index])
-
-
-
-
-class Phases(BaselnPiCollection):
-    _CONCAT_DIM = 'phase'
-    _CONCAT_COORDS = 'different'
-
-    # @property
-    # def phases(self):
-    #     """provide top level access to collections of phases"""
-    #     return self
-
-    @gcached()
-    def _series(self):
-        """
-        series representation of items
-        """
-        return pd.Series(self.items, index=self.index)
-
-    def _check_items(self):
-        pass
-
-    @classmethod
-    def from_masks(cls, ref, masks, convention='image', index=None, **kwargs):
-        """
-        create Phases from masks
-        """
-        items = ref.list_from_masks(masks, convention=convention)
-        return cls(items=items, index=index, **kwargs)
-
-
-    @classmethod
-    def from_labels(cls, ref, labels, lnz=None, features=None, include_boundary=False, labels_kws=None, check_features=True, **kwargs):
-        """
-        create PHases from labels
-        """
-        if labels_kws is None:
-            labels_kws = {}
-        if lnz is not None:
-            ref = ref.reweight(lnz)
-        masks, features = labels_to_masks(labels=labels, features=features, include_boundary=include_boundary, convention=False, check_features=check_features, **labels_kws)
-        index = np.array(features) - 1
-
-        items = ref.list_from_masks(masks, convention=False)
-
-        return cls(items=items, index=index, **kwargs)
-
-    @gcached()
-    def labels(self):
-        """labels corresponding to masks"""
-        features = np.array(self.index) + 1
-        return masks_to_labels([x.mask for x in self], features=features, convention=False, dtype=np.int8)
-
-    def to_dataarray(self, dtype=np.uint8, **kwargs):
-        """
-        create dataarray object from labels
-        """
-
-        data = self.labels
-        if dtype is not None:
-            data = data.astype(dtype)
-        return xr.DataArray(
-            data,
-            dims=self[0].xgce.dims_n,
-            name='labels',
-            coords=self[0].xgce.coords_state,
-            attrs=self[0].xgce.lnpi.attrs
-        )
-
-    @classmethod
-    def from_dataarray(cls, ref, da, lnz=None, include_boundary=False, labels_kws=None, **kwargs):
-        labels = da.values
-        ndim = labels.ndim
-
-        if lnz is None:
-            lnz = [da.coords[k] * 1.0 for k in da.attrs['dims_lnz']]
-
-        return cls.from_labels(ref=ref, labels=labels, lnz=lnz, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
-
-
-    # properties
-    @property
-    def lnz(self):
-        return self[0].lnz
-
-
-# add in accessor to property lnz
-@decorate_listproperty(['lnz'])
-class CollectionPhases(BaselnPiCollection):
-    _CONCAT_DIM = 'rec'
-    _CONCAT_COORDS = 'all'
-
-    def __getitem__(self, idx):
-        if isinstance(idx, slice):
-            return self.__class__(items=self.items[idx], index=self.index[idx], xarray_output=self.xarray_output)
-        else:
-            return self.items[idx]
-
-    @gcached()
-    def _series(self):
-        return pd.concat({rec: x._series for rec, x in zip(self.index, self.items)}, names=self.index.names)
-
-
-
-    def sort_by_lnz(self, comp=0, inplace=True, **kwargs):
-        order = np.argsort(self.lnz[:, comp])
-        L = [self._items[i] for i in order]
-
-        if inplace:
-            self._items = L
-            self._cache = {}
-        else:
-            return self.__class__(items=L, **kwargs)
-
-    ##################################################
-    #builders
-    ##################################################
-    @classmethod
-    def from_builder(cls, lnzs, build_phases, ref=None, build_phases_kws=None, nmax=None, xarray_output=True, **kwargs):
-        """
-        build collection from scalar builder
-
-        Parameters
-        ----------
-        lnzs : 1-D sequence
-            lnz value for the varying value
-        ref : lnpi_phases object
-            lnpi_phases to reweight to get list of lnpi's
-        build_phases : callable
-            Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
-        build_phases_kws : optional
-            optional arguments to `build_phases`
-        **kwargs : arguments to ref.reweight
-
-        Returns
-        -------
-        out : Collection object
-        """
-        if build_phases_kws is None:
-            build_phases_kws = {}
-        seq = get_tqdm(lnzs, desc='build')
-        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
-        #L = [build_phases(lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
-        return cls(items=L, index=None, xarray_output=xarray_output)
-
-
-    @classmethod
-    def from_lnz_iter(cls, lnzs, ref=None, build_phases=None, build_phases_kws=None,  nmax=None, xarray_output=True, **kwargs):
-        """
-        build Collection from lnzs
-
-        Parameters
-        ----------
-        ref : lnpi_phases object
-            lnpi_phases to reweight to get list of lnpi's
-        lnzs : iterable
-            chem. pots. to get lnpi
-        build_phases : callable
-            function to create phases object
-            if None, then use `DefaultBuilder`.
-        build_phases_kws : optional
-            optional arguments to `build_phases`
-
-        **kwargs : arguments to ref.reweight
-
-        Returns
-        -------
-        out : Collection object
-        """
-        if build_phases is None:
-            raise ValueError('must supply build_phases')
-        if build_phases_kws is None:
-            build_phases_kws = {}
-
-        seq = get_tqdm(lnzs, desc='build')
-        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
-        #L = [build_phases(lnz=lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
-        return cls(items=L, index=None, xarray_output=xarray_output)
-
-    @classmethod
-    def from_lnz(cls, lnz, x, ref=None, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
-        """
-        build Collection from lnz builder
-
-        Parameters
-        ---------
-        ref : lnpi object
-            lnpi to reweight to get list of lnpi's
-
-        lnz : list
-            list with one element equal to None.
-            This is the component which will be varied
-            For example, lnz=[lnz0,None,lnz2] implies use values
-            of lnz0,lnz2 for components 0 and 2, and vary component 1
-
-        x : array
-            values to insert for variable component
-
-        **kwargs : arguments to ref.reweight
-
-        Returns
-        -------
-        out : Collection object
-        """
-        from .utils import get_lnz_iter
-
-        lnzs = get_lnz_iter(lnz, x)
-        return cls.from_lnz_iter(ref=ref, lnzs=lnzs,
-                                build_phases=build_phases,
-                                build_phases_kws=build_phases_kws,
-                                nmax=nmax,
-                                xarray_output=xarray_output, **kwargs)
-
-    def to_dataarray(self,
-                     dtype=np.uint8,
-                     **kwargs):
-        da = self.wrap_list_results(
-            [x.to_dataarray(dtype=dtype, **kwargs) for x in self])
-
-
-
-
-        # add in spinodal/binodal
-        # for k in ['spinodals', 'binodals']:
-        #     _k = '_' + k
-        #     label = np.zeros(len(self), dtype=dtype)
-        #     if hasattr(self, _k):
-        #         for i, target in enumerate(getattr(self, _k)):
-        #             if target is None:
-        #                 break
-        #             for rec, x in enumerate(self):
-        #                 if x is target:
-        #                     label[rec] = i + 1
-        #     # else no mark
-        #     da.coords[k] = (dim, label)
-        return da
-
-
-    # binodal/spinodal stuff
-    @classmethod
-    def from_dataarray(cls, ref, da, dim='rec', child=Phases, child_kws=None, **kwargs):
-
-        if child_kws is None:
-            child_kws = {}
-
-        items = []
-        index = []
-        for i, g in da.groupby(dim):
-            index.append(i)
-            items.append(child.from_dataarray(ref=ref, da=g, **child_kws))
-        new = cls(items=items, index=index, **kwargs)
-
-        # d = {}
-        # for k in ['spinodals', 'binodals']:
-        #     _k = '_' + k
-        #     label = da.coords[k]
-        #     features = np.unique(label[label > 0])
-        #     for feature in features:
-        #         idx = np.where(label == feature)[0][0]
-        #         if _k not in d:
-        #             d[_k] = [lnpis[idx]]
-        #         else:
-        #             d[_k].append(lnpis[idx])
-        # for _k, v in d.items():
-        #     if len(v) > 0:
-        #         setattr(new, _k, v)
-        return new
+
+
+
+
+
+
+# class BaselnPiCollection(AccessorMixin, ListAccessorMixin):
+#     """
+#     collection of phases
+#     """
+
+#     _CONCAT_DIM_ = None #'phase'
+#     _CONCAT_COORDS_ = 'different'
+
+#     def __init__(self, items, index=None, xarray_output=True, concat_dim=None, concat_coords=None, collapse=None):
+#         # maybe reset concat dims/coords
+#         if concat_dim is None:
+#             concat_dim = self._CONCAT_DIM_
+#         if concat_coords is None:
+#             concat_coords = self._CONCAT_COORDS_
+
+#         self._concat_dim = concat_dim
+#         self._concat_coords = concat_coords
+
+#         self.items = items
+#         self.index = index
+#         self.xarray_output = xarray_output
+
+#     @property
+#     def items(self):
+#         return self._items
+
+#     @items.setter
+#     @cached_clear()
+#     def items(self, items):
+#         if not isinstance(items, Iterable):
+#             items = [items]
+#         self._items = list(items)
+
+
+#     @property
+#     def index(self):
+#         return self._index
+
+#     @index.setter
+#     def index(self, index):
+#         if index is None:
+#             index = np.arange(len(self))
+#         else:
+#             assert len(index) == len(self)
+#         self._index = pd.Index(index, name=self._concat_dim)
+
+#     def __getitem__(self, idx):
+#         return self.items[idx]
+
+#     def __setitem__(self, idx, val):
+#         self._cache = {}
+#         self._items[idx] = val
+
+#     def __len__(self):
+#         return len(self.items)
+
+#     def wrap_list_results(self, items):
+#         if self.xarray_output:
+#             x = items[0]
+#             if isinstance(x, xr.DataArray):
+#                 return (
+#                     xr.concat(items, self.index, coords=self._concat_coords)
+#                 )
+#         # else try to make array
+#         try:
+#             return np.array(items)
+#         except:
+#             return itmes
+
+
+#     def copy(self):
+#         return self.__class__(items=self.items, index=self.index, xarray_output=self.xarray_output)
+
+#     @cached_clear()
+#     def append(self, val, index=None):
+#         if not issubclass(type(val), self[0].__class__):
+#             raise ValueError(
+#                 'can only append subclasses of type '.format(
+#                     type(self[0].__class__)))
+#         if index is None:
+#             index = self.index[-1] + 1
+#         if not isinstance(index, list):
+#             index = [index]
+#         self._items.append(val)
+#         self.index = self.index.to_list() + index
+
+#     @cached_clear()
+#     def extend(self, vals, index=None):
+#         # two cases
+#         # vals is same type as self
+#         # vals is list of same type of self[0]...
+
+#         if isinstance(vals, self.__class__):
+#             items = vals.items
+#             if index is None:
+#                 index = vals.index.to_list()
+#         elif isinstance(vals, list):
+#             # list of stuff
+#             # check if all items are of right type
+#             for val in vals:
+#                 assert(issubclass(type(val), self[0].__class__))
+#             items = vals
+#             if index is None:
+#                 offset = self.index[-1]+1
+#                 index = [x+offset for x in range(len(vals))]
+#         else:
+#             raise ValueError(
+#                 'can only extend with type {} or list of subclasses of type {}'.format(
+#                     self.__class__,
+#                     self[0].__class__,
+#                 ))
+
+#         assert len(index) == len(items)
+#         self._items.extend(items)
+#         self.index = self.index.to_list() + index
+
+#     def __add__(self, vals):
+#         # if adding something
+#         # save requirements as extend
+#         if isinstance(vals, self.__class__):
+#             items = vals.items
+#             index = self.index.to_list()
+#         elif isinstance(vals, list):
+#             # check vals
+#             for val in vals:
+#                 assert(issubclass(type(val), self[0].__class__))
+#             items = vals
+#             offset = self.index[-1] + 1
+#             index = [x+offset for x in range(len(vals))]
+#         else:
+#             raise ValueError(
+#                 'can add/extend self with with type {} or list of subclasses of type {}'.format(
+#                     self.__class__,
+#                     self[0].__class__,
+#                 ))
+
+#         return self.__class__(items=self.items + items,
+#                               index=self.index.to_list() + index,
+#                               xarray_output=self.xarray_output)
+
+#     def __iadd__(self, x):
+#         self.extend(x)
+#         return self
+
+
+#     def __repr__(self):
+#         header = f"<{self.__class__.__name__}  ({self._concat_dim} : {len(self)})>"
+#         index = f"index {repr(self.index)}"
+#         return '\n'.join([header, index])
+
+
+
+
+# class Phases(BaselnPiCollection):
+#     _CONCAT_DIM_ = 'phase'
+#     _CONCAT_COORDS_ = 'different'
+
+#     # @property
+#     # def phases(self):
+#     #     """provide top level access to collections of phases"""
+#     #     return self
+
+#     @gcached()
+#     def _series(self):
+#         """
+#         series representation of items
+#         """
+#         return pd.Series(self.items, index=self.index)
+
+#     def _check_items(self):
+#         pass
+
+#     @classmethod
+#     def from_masks(cls, ref, masks, convention='image', index=None, **kwargs):
+#         """
+#         create Phases from masks
+#         """
+#         items = ref.list_from_masks(masks, convention=convention)
+#         return cls(items=items, index=index, **kwargs)
+
+
+#     @classmethod
+#     def from_labels(cls, ref, labels, lnz=None, features=None, include_boundary=False, labels_kws=None, check_features=True, **kwargs):
+#         """
+#         create PHases from labels
+#         """
+#         if labels_kws is None:
+#             labels_kws = {}
+#         if lnz is not None:
+#             ref = ref.reweight(lnz)
+#         masks, features = labels_to_masks(labels=labels, features=features, include_boundary=include_boundary, convention=False, check_features=check_features, **labels_kws)
+#         index = np.array(features) - 1
+
+#         items = ref.list_from_masks(masks, convention=False)
+
+#         return cls(items=items, index=index, **kwargs)
+
+#     @gcached()
+#     def labels(self):
+#         """labels corresponding to masks"""
+#         features = np.array(self.index) + 1
+#         return masks_to_labels([x.mask for x in self], features=features, convention=False, dtype=np.int8)
+
+#     def to_dataarray(self, dtype=np.uint8, **kwargs):
+#         """
+#         create dataarray object from labels
+#         """
+
+#         data = self.labels
+#         if dtype is not None:
+#             data = data.astype(dtype)
+#         return xr.DataArray(
+#             data,
+#             dims=self[0].xgce.dims_n,
+#             name='labels',
+#             coords=self[0].xgce.coords_state,
+#             attrs=self[0].xgce.lnpi.attrs
+#         )
+
+#     @classmethod
+#     def from_dataarray(cls, ref, da, lnz=None, include_boundary=False, labels_kws=None, **kwargs):
+#         labels = da.values
+#         ndim = labels.ndim
+
+#         if lnz is None:
+#             lnz = [da.coords[k] * 1.0 for k in da.attrs['dims_lnz']]
+
+#         return cls.from_labels(ref=ref, labels=labels, lnz=lnz, include_boundary=include_boundary, labels_kws=labels_kws, **kwargs)
+
+
+#     # properties
+#     @property
+#     def lnz(self):
+#         return self[0].lnz
+
+
+
+# # add in accessor to property lnz
+# @decorate_listproperty(['lnz'])
+# class CollectionPhases(BaselnPiCollection):
+#     _CONCAT_DIM_ = 'rec'
+#     _CONCAT_COORDS_ = 'all'
+
+#     def __getitem__(self, idx):
+#         if isinstance(idx, slice):
+#             return self.__class__(items=self.items[idx], index=self.index[idx], xarray_output=self.xarray_output)
+#         else:
+#             return self.items[idx]
+
+#     @gcached()
+#     def _series(self):
+#         return pd.concat({rec: x._series for rec, x in zip(self.index, self.items)}, names=self.index.names)
+
+
+
+#     def sort_by_lnz(self, comp=0, inplace=True, **kwargs):
+#         order = np.argsort(self.lnz[:, comp])
+#         L = [self._items[i] for i in order]
+
+#         if inplace:
+#             self._items = L
+#             self._cache = {}
+#         else:
+#             return self.__class__(items=L, **kwargs)
+
+#     ##################################################
+#     #builders
+#     ##################################################
+#     @classmethod
+#     def from_builder(cls, lnzs, build_phases, ref=None, build_phases_kws=None, nmax=None, xarray_output=True, **kwargs):
+#         """
+#         build collection from scalar builder
+
+#         Parameters
+#         ----------
+#         lnzs : 1-D sequence
+#             lnz value for the varying value
+#         ref : lnpi_phases object
+#             lnpi_phases to reweight to get list of lnpi's
+#         build_phases : callable
+#             Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
+#         build_phases_kws : optional
+#             optional arguments to `build_phases`
+#         **kwargs : arguments to ref.reweight
+
+#         Returns
+#         -------
+#         out : Collection object
+#         """
+#         if build_phases_kws is None:
+#             build_phases_kws = {}
+#         seq = get_tqdm(lnzs, desc='build')
+#         L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
+#         #L = [build_phases(lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
+#         return cls(items=L, index=None, xarray_output=xarray_output)
+
+
+#     @classmethod
+#     def from_lnz_iter(cls, lnzs, ref=None, build_phases=None, build_phases_kws=None,  nmax=None, xarray_output=True, **kwargs):
+#         """
+#         build Collection from lnzs
+
+#         Parameters
+#         ----------
+#         ref : lnpi_phases object
+#             lnpi_phases to reweight to get list of lnpi's
+#         lnzs : iterable
+#             chem. pots. to get lnpi
+#         build_phases : callable
+#             function to create phases object
+#             if None, then use `DefaultBuilder`.
+#         build_phases_kws : optional
+#             optional arguments to `build_phases`
+
+#         **kwargs : arguments to ref.reweight
+
+#         Returns
+#         -------
+#         out : Collection object
+#         """
+#         if build_phases is None:
+#             raise ValueError('must supply build_phases')
+#         if build_phases_kws is None:
+#             build_phases_kws = {}
+
+#         seq = get_tqdm(lnzs, desc='build')
+#         L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
+#         #L = [build_phases(lnz=lnz, ref=ref, nmax=nmax, **build_phases_kws) for lnz in seq]
+#         return cls(items=L, index=None, xarray_output=xarray_output)
+
+#     @classmethod
+#     def from_lnz(cls, lnz, x, ref=None, build_phases=None, build_phases_kws=None, nmax=2,  xarray_output=True, **kwargs):
+#         """
+#         build Collection from lnz builder
+
+#         Parameters
+#         ---------
+#         ref : lnpi object
+#             lnpi to reweight to get list of lnpi's
+
+#         lnz : list
+#             list with one element equal to None.
+#             This is the component which will be varied
+#             For example, lnz=[lnz0,None,lnz2] implies use values
+#             of lnz0,lnz2 for components 0 and 2, and vary component 1
+
+#         x : array
+#             values to insert for variable component
+
+#         **kwargs : arguments to ref.reweight
+
+#         Returns
+#         -------
+#         out : Collection object
+#         """
+#         from .utils import get_lnz_iter
+
+#         lnzs = get_lnz_iter(lnz, x)
+#         return cls.from_lnz_iter(ref=ref, lnzs=lnzs,
+#                                 build_phases=build_phases,
+#                                 build_phases_kws=build_phases_kws,
+#                                 nmax=nmax,
+#                                 xarray_output=xarray_output, **kwargs)
+
+#     def to_dataarray(self,
+#                      dtype=np.uint8,
+#                      **kwargs):
+#         da = self.wrap_list_results(
+#             [x.to_dataarray(dtype=dtype, **kwargs) for x in self])
+
+
+
+
+#         # add in spinodal/binodal
+#         # for k in ['spinodals', 'binodals']:
+#         #     _k = '_' + k
+#         #     label = np.zeros(len(self), dtype=dtype)
+#         #     if hasattr(self, _k):
+#         #         for i, target in enumerate(getattr(self, _k)):
+#         #             if target is None:
+#         #                 break
+#         #             for rec, x in enumerate(self):
+#         #                 if x is target:
+#         #                     label[rec] = i + 1
+#         #     # else no mark
+#         #     da.coords[k] = (dim, label)
+#         return da
+
+
+#     # binodal/spinodal stuff
+#     @classmethod
+#     def from_dataarray(cls, ref, da, dim='rec', child=Phases, child_kws=None, **kwargs):
+
+#         if child_kws is None:
+#             child_kws = {}
+
+#         items = []
+#         index = []
+#         for i, g in da.groupby(dim):
+#             index.append(i)
+#             items.append(child.from_dataarray(ref=ref, da=g, **child_kws))
+#         new = cls(items=items, index=index, **kwargs)
+
+#         # d = {}
+#         # for k in ['spinodals', 'binodals']:
+#         #     _k = '_' + k
+#         #     label = da.coords[k]
+#         #     features = np.unique(label[label > 0])
+#         #     for feature in features:
+#         #         idx = np.where(label == feature)[0][0]
+#         #         if _k not in d:
+#         #             d[_k] = [lnpis[idx]]
+#         #         else:
+#         #             d[_k].append(lnpis[idx])
+#         # for _k, v in d.items():
+#         #     if len(v) > 0:
+#         #         setattr(new, _k, v)
+#         return new
 
 
 

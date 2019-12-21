@@ -5,15 +5,14 @@ import xarray as xr
 import pandas as pd
 
 from .cached_decorators import gcached
-#from . import extensions
-#from .core import accessor, listaccessor
+from .core import MaskedlnPi, BaseCollectionlnPi, CollectionPhases
 
+from functools import wraps, lru_cache
 from .utils import dim_to_suffix_dataset
 
 
 ################################################################################
 # xlnPi wrapper
-from functools import lru_cache
 
 @lru_cache(maxsize=10)
 def _get_indices(shape):
@@ -116,8 +115,6 @@ class xrlnPiWrapper(object):
 ################################################################################
 # xlnPi
 # register xgce property to collection classes
-from .core import MaskedlnPi, BaselnPiCollection
-from functools import wraps
 def xr_name(long_name=None, name=None, **kws):
     """
     decorator to add name, longname to xarray output
@@ -148,8 +145,9 @@ def xr_name(long_name=None, name=None, **kws):
 
 
 
-BaselnPiCollection.register_listaccessor('xgce',
+BaseCollectionlnPi.register_listaccessor('xgce',
                                          cache_list=['betamu', 'nvec', 'dens','betaOmega', 'PE'])
+CollectionPhases.register_accessor_flat(['xgce', 'xgce_prop'])
 @MaskedlnPi.decorate_accessor('xgce')
 class xrlnPi(object):
     """
@@ -326,6 +324,11 @@ class xrlnPi(object):
     def ntot(self):
         return self.mean_pi(self.ncoords_tot)
 
+    @property
+    @xr_name(r'${\bf x}(\mu,V,T)$')
+    def molfrac(self):
+        return self.nvec.pipe(lambda x: x / x.sum(self.dims_comp))
+
     @gcached()
     @xr_name(r'$var[{\bf n}(\mu,V,T)]$')
     def nvec_var(self):
@@ -400,9 +403,9 @@ class xrlnPi(object):
 
 
 # this would act on individual pis
-#BaselnPiCollection.register_listaccessor('xgce_fe',cache_list=[])
+#BaseCollectionlnPi.register_listaccessor('xgce_fe',cache_list=[])
 # this acts on collective
-@BaselnPiCollection.decorate_accessor('xgce_prop')
+@BaseCollectionlnPi.decorate_accessor('xgce_prop')
 @MaskedlnPi.decorate_accessor('xgce_prop')
 class xrlnPi_prop(object):
     """
@@ -412,13 +415,6 @@ class xrlnPi_prop(object):
         self._x = x
         self._xgce = self._x.xgce
 
-    # when in doubt, return xgce attribute
-    # but only consider public attributes
-    def __getattr__(self, attr):
-        if attr[0] != '_':
-            return getattr(self._xgce, attr)
-        else:
-            raise AttributeError
 
     @gcached()
     @xr_name(r'$n(\mu,V,T)$', standard_name='total_particles')
@@ -442,7 +438,7 @@ class xrlnPi_prop(object):
         return self._xgce.nvec / self.ntot
 
     #@gcached(prop=False)
-    @xr_name(r'$\beta\omega(\mu,V,T)', standard_name='grand_potential_per_particle')
+    @xr_name(r'$\beta\omega(\mu,V,T)$', standard_name='grand_potential_per_particle')
     def betaOmega_n(self, lnpi_zero=None):
         """
         beta * (Grand potential) / <n> = -beta * p * V / <n>
@@ -457,11 +453,15 @@ class xrlnPi_prop(object):
         """
         return -self._xgce.betaOmega(lnpi_zero)
 
-
-    @property
+    @gcached()
     @xr_name('mask_stable', description='True where state is most stable')
     def mask_stable(self):
-        return self.betapV().pipe(lambda x: x.max('phase') == x)
+
+        if hasattr(self._x, 'unstack') and not self._x._unstack:
+            return self.betapV().groupby('rec').apply(lambda x: x.max() == x)
+        else:
+            return self.betapV().pipe(lambda x: x.max('phase') == x)
+
 
     #@gcached(prop=False)
     @xr_name(r'$\beta p(\mu,V,T)/\rho$', standard_name='compressibility_factor')
@@ -516,13 +516,17 @@ class xrlnPi_prop(object):
         if mask_stable:
             # mask_stable inserts nan in non-stable
             mask_stable = self.mask_stable
-            phase = out.phase
-            out = (
-                out
-                .where(mask_stable)
-                .max('phase')
-                .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
-            )
+            if hasattr(self._x,'_unstack') and not self._x._unstack:
+                out = out.where(mask_stable, drop=True)
+            else:
+                phase = out.phase
+                out = (
+                    out
+                    .where(mask_stable)
+                    .max('phase')
+                    .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
+                )
+
 
         if dim_to_suffix is not None:
             if isinstance(dim_to_suffix, str):
@@ -591,6 +595,14 @@ class xrlnPi_prop(object):
         Entropy / (N kB)
         """
         return self.S(lnpi_zero, ndim) / self.ntot
+
+    # when in doubt, return xgce attribute
+    # but only consider public attributes
+    def __getattr__(self, attr):
+        if attr[0] != '_':
+            return getattr(self._xgce, attr)
+        else:
+            raise AttributeError
 
 
 

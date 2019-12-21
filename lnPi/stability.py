@@ -511,6 +511,7 @@ def get_binodal_point(IDs,
 class _BaseStability(object):
     _NAME = 'base'
 
+
     def __init__(self, collection):
         self._c = collection
 
@@ -524,7 +525,13 @@ class _BaseStability(object):
         # return CollectionPhases(items, index=index)
         # for time being don't pass index
         # this is a helper accessor anyway
-        return CollectionPhases(items)
+        return self._c.new_like(items=items, index=index, concat_coords='all')
+
+    # def __getattr__(self, attr):
+    #     if hasattr(self.access, attr):
+    #         return getattr(self.access,'attr')
+    #     else:
+    #         raise AttributeError('no attribute {}'.format(attr))
 
     def __getitem__(self, idx):
         return self._items[idx]
@@ -557,13 +564,15 @@ class _BaseStability(object):
             items[feature - 1] = self._c[idx]
         self._items = items
 
-    def assign_coords(self, da, name=None, dtype=np.uint8):
+    def assign_coords(self, da, name=None, dim=None, dtype=np.uint8):
         """
         add in index to dataarray
         """
         if name is None:
             name = self._NAME
-        kws = {name: (self._c._CONCAT_DIM, self.index_collection(dtype=dtype))}
+        if dim is None:
+            dim = self._concat_dim
+        kws = {name: (dim, self.index_collection(dtype=dtype))}
         return (da.assign_coords(**kws))
 
     def from_dataarray(self, da, name=None):
@@ -612,7 +621,9 @@ class Spinodals(_BaseStability):
             info[idx] = r
 
         if append:
-            self._c.extend([v for v in out.values() if v is not None])
+            for v in out.values():
+                self._c.append(v, index=None, get_index=False)
+#            self._c.extend([v for v in out.values() if v is not None])
         if inplace:
             self._items = out
             self._info = info
@@ -659,9 +670,9 @@ class Binodals(_BaseStability):
 
     def __call__(self,
                  phase_ids,
+                 build_phases,
                  spinodals=None,
                  ref=None,
-                 build_phases=None,
                  build_kws=None,
                  nphases_max=None,
                  inplace=False,
@@ -693,7 +704,9 @@ class Binodals(_BaseStability):
             info[idx] = r
             index[idx] = ids
         if append:
-            self._c.extend([v for v in out.values() if v is not None])
+            for v in out.values():
+                self._c.append(v, index=None, get_index=False)
+#            self._c.extend([v for v in out.values() if v is not None])
         if inplace:
             self._items = out
             self._info = info

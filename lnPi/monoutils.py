@@ -342,13 +342,16 @@ def get_lnz_max(edge_distance_min,
 from .core import CollectionPhases
 from functools import partial
 
-def limited_collection(build_phases, lnz_range, dlnz, course_step=None,
-                  edge_distance_min=None, rho_min=None,
-                  lnz_min_kws=None, lnz_max_kws=None,
-                  ref=None, build_phases_kws=None, build_stability_kws=None, nmax=None,
-                  xarray_output=True, collection_kws=None):
+def limited_collection(build_phases,
+                       lnz_range, dlnz,
+                       course_step=None,
+                       edge_distance_min=None, rho_min=None,
+                       lnz_min_kws=None, lnz_max_kws=None,
+                       ref=None, build_phases_kws=None, build_stability_kws=None, nmax=None,
+                       xarray_output=True, collection_kws=None):
 
     lnzs = np.arange(lnz_range[0], lnz_range[1] + dlnz * 0.5, dlnz)
+
 
     if course_step is None:
         course_step = max(len(lnzs) // 40, 1)
@@ -365,6 +368,7 @@ def limited_collection(build_phases, lnz_range, dlnz, course_step=None,
     )
 
     # limit lnz
+    c_course = None
     lnz_min, lnz_max = lnzs[0], lnzs[-1]
     if edge_distance_min is not None or rho_min is not None:
         c_course = get_collection(lnzs[::course_step])
@@ -376,7 +380,7 @@ def limited_collection(build_phases, lnz_range, dlnz, course_step=None,
                 p_min, o = get_lnz_min(rho_min, c_course, build_phases,
                                        build_kws=build_phases_kws, **lnz_min_kws)
                 if o.converged:
-                    lnz_min = p_min.lnz[build_phases.index]
+                    lnz_min = p_min.lnz[build_phases.index] - dlnz
             except:
                 pass
 
@@ -391,7 +395,10 @@ def limited_collection(build_phases, lnz_range, dlnz, course_step=None,
                 pass
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
 
+
     c = get_collection(lnzs)
+    if c_course is None:
+        c_course = c
     return c_course, c
 
 

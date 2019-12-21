@@ -5,16 +5,16 @@ This is inspired by xarray accessors
 """
 
 import warnings
-from itertools import chain 
+from itertools import chain
 from .cached_decorators import gcached
 
-from .utils import get_tqdm_calc as get_tqdm
-from .utils import parallel_map_calc as parallel_map
+from operator import attrgetter
 
+from .utils import get_tqdm_calc as get_tqdm
+from .utils import parallel_map_call, parallel_map_attr
 
 class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
-
 
 class _CachedAccessorSingle(object):
     """
@@ -69,6 +69,7 @@ def _CachedAccessorWrapper(name, accessor, single_create=False):
         return _CachedAccessorCleared(name, accessor)
 
 
+from operator import attrgetter
 
 class AccessorMixin(object):
     @classmethod
@@ -83,6 +84,18 @@ class AccessorMixin(object):
                 (accessor, name, cls),
                 AccessorRegistrationWarning, stacklevel=2)
         setattr(cls, name, _CachedAccessorWrapper(name, accessor, single_create))
+
+
+    @classmethod
+    def register_accessor_flat(cls, names, single_create=True, subattr='flat'):
+        """
+        helper class to register stuff to top of CollectionPhases
+        """
+
+        if isinstance(names, str):
+            names = [names]
+        for name in names:
+            cls._register_accessor(name=name, accessor=attrgetter('.'.join((subattr,name))), single_create=single_create)
 
     @classmethod
     def register_accessor(cls, name, accessor, single_create=False):
@@ -103,7 +116,7 @@ class AccessorMixin(object):
         >>> x.hello.there()
         'hello there parent'
         """
-        return cls._register_accessor(name, accessor, single_create)
+        cls._register_accessor(name, accessor, single_create)
 
     @classmethod
     def decorate_accessor(cls, name, single_create=False):
@@ -148,15 +161,15 @@ class _CallableListResultsCache(object):
         self.items = items
         self.desc = desc
         self._cache = {}
+        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
 
 
     @gcached(prop=False)
     def __call__(self, *args, **kwargs):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
-
-        #results = parallel_map(lambda x: x(*args, **kwargs), seq)
-        results = [x(*args, **kwargs) for x in seq]
+        #results = [x(*args, **kwargs) for x in seq]
+        results = parallel_map_call(seq, self._use_joblib, *args, **kwargs)
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
         return results
@@ -172,12 +185,13 @@ class _CallableListResultsNoCache(object):
         self.items = items
         self.desc = desc
         self._cache = {}
+        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
 
     def __call__(self, *args, **kwargs):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
-        results = [x(*args, **kwargs) for x in seq]
-        #results = parallel_map(lambda x: x(*args, **kwargs), seq)
+        #results = [x(*args, **kwargs) for x in seq]
+        results = parallel_map_call(seq, self._use_joblib, *args, **kwargs)
         if hasattr(self.parent, 'wrap_list_results'):
             results = self.parent.wrap_list_results(results)
         return results
@@ -199,8 +213,9 @@ class _ListAccessor(object):
         if cache_list is None:
             cache_list = []
         self._cache_list = cache_list
-
         self._cache = {}
+        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
+
 
     def __getattr__(self, attr):
         if attr in self._cache:
@@ -214,8 +229,8 @@ class _ListAccessor(object):
                 result = _CallableListResults(self.parent, seq, use_cache=use_cache, desc=attr)
             else:
                 seq = get_tqdm(self.items, desc=attr)
-                result = [getattr(x, attr) for x in seq]
-                #result = parallel_map(lambda x: getattr(x, attr), seq)
+                #result = [getattr(x, attr) for x in seq]
+                result = parallel_map_attr(attr, items=seq, use_joblib=self._use_joblib)
                 if hasattr(self.parent, 'wrap_list_results'):
                     result = self.parent.wrap_list_results(result)
 

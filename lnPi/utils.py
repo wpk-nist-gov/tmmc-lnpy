@@ -62,8 +62,10 @@ except ImportError:
     _HAS_JOBLIB = False
 
 
-def parallel_map(func, items, len_min, *args, **kwargs):
-    if _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= len_min:
+from operator import attrgetter
+
+def parallel_map_build(func, items, *args, **kwargs):
+    if _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_build']:
         return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
                         backend=OPTIONS['joblib_backend'],
                         **OPTIONS['joblib_kws'])(
@@ -72,8 +74,33 @@ def parallel_map(func, items, len_min, *args, **kwargs):
     else:
         return [func(x, *args, **kwargs) for x in items]
 
-parallel_map_calc = partial(parallel_map, len_min=OPTIONS['joblib_len_calc'])
-parallel_map_build = partial(parallel_map, len_min=OPTIONS['joblib_len_build'])
+def _func_call(x, *args, **kwargs):
+    return x(*args, **kwargs)
+
+def parallel_map_call(items, use_joblib, *args, **kwargs):
+    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_calc']:
+        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
+                        backend=OPTIONS['joblib_backend'],
+                        **OPTIONS['joblib_kws'])(
+                            delayed(_func_call)(x, *args, **kwargs)
+                            for x in items)
+    else:
+        return [x(*args, **kwargs) for x in items]
+
+def parallel_map_attr(attr, use_joblib, items):
+    func = attrgetter(attr)
+    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_calc']:
+        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
+                        backend=OPTIONS['joblib_backend'],
+                        **OPTIONS['joblib_kws'])(
+                            delayed(func)(x)
+                            for x in items)
+    else:
+        return [func(x) for x in items]
+
+
+
+
 
 
 

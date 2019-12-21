@@ -72,10 +72,18 @@ def find_lnz_molfrac(phaseID,
 
         p = build_phases(ref=ref, lnz=lnz, **build_kws)
 
-        if phaseID in p.index:
-            mf = p.xgce.molfrac.sel(phase=phaseID, component=comp).values
+        # by not using the ListAccessor,
+        # can parralelize
+        idx = p.index.get_indexer([phaseID])
+        if idx >= 0:
+            mf = p[idx].xgce.molfrac.sel(component=comp).values
         else:
-            mf = np.nan
+            mf = np.inf
+
+        # if phaseID in p.index:
+        #     mf = p.xgce.molfrac.sel(phase=phaseID, component=comp).values
+        # else:
+        #     mf = np.inf
 
         f.lnpi = p
         return mf - target
