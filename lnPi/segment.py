@@ -12,6 +12,7 @@ import itertools
 from collections import Iterable
 
 import numpy as np
+import pandas as pd
 
 from scipy import ndimage as ndi
 from skimage import feature, morphology, segmentation
@@ -515,7 +516,6 @@ class wlnPi(FreeEnergylnPi):
             - if only phase idx exists, dw = np.inf
             - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
             - else min of transition for idx to idx_nebr
-A
         """
         p = self._phases
 
@@ -539,6 +539,113 @@ A
         return dw
 
 
+
+
+from .serieswrapper import CollectionlnPi
+@CollectionlnPi.decorate_accessor('wlnPi')
+class wlnPiVec(object):
+    def __init__(self, parent):
+        self._parent = parent
+
+
+    @gcached()
+    def _phases(self):
+        phases = []
+        df = self._parent._series.reset_index(name='lnpi')
+        for meta, g in df.groupby(df.columns.drop(['phase','lnpi']).tolist()):
+            phases.append(g)
+        return phases
+
+    @gcached()
+    def _ws(self):
+        ws = []
+
+        for phases in self._phases:
+            masks = [x.mask for x in phases.lnpi.values]
+            ws.append(
+                FreeEnergylnPi(data=phases.iloc[0].lnpi.data, masks=masks, convention=False)
+
+            )
+        return ws
+
+    @gcached()
+    def w_min(self):
+        out = []
+        for phases, w in zip(self._phases, self._ws):
+            out.append(phases.drop('lnpi', axis=1).assign(w_min=w.w_min))
+
+        out = pd.concat(out)
+        out = out.set_index(out.columns.drop('w_min').tolist())['w_min']
+        return out
+
+
+    @gcached()
+    def w_tran(self):
+        out = []
+        for phases, w in zip(self._phases, self._ws):
+            phases = phases.drop('lnpi', axis=1)
+            w_tran_mat = w.w_tran
+            for (i, phase), wt in zip(phases.iterrows(), w_tran_mat):
+                d = phase.to_dict()
+                for phase_nebr, x in zip(phases['phase'].values, wt):
+                    out.append(
+                        dict(d, phase_nebr=phase_nebr, w_tran=x)
+                    )
+        out = pd.DataFrame(out)
+        out = (
+            out
+            .assign(phase=lambda x: x['phase'].astype(int))
+            .set_index(out.columns.drop('w_tran').tolist())['w_tran']
+        )
+        return out
+
+
+    @gcached()
+    def delta_w(self):
+        delta_w = (self.w_tran - self.w_min).rename('delta_w')
+        return delta_w
+
+
+    def get_delta_w(self, idx, idx_nebr=None):
+        """
+        helper function to get the change in energy from
+        phase idx to idx_nebr.
+
+        Parameters
+        ----------
+        idx : int
+            phase index to consider transitions from
+        idx_nebr : int or list, optional
+            if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
+            Default behavior is to return minimum transition from idx to all other neighboring regions
+
+        Returns
+        -------
+        dw : float
+            - if only phase idx exists, dw = np.inf
+            - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
+            - else min of transition for idx to idx_nebr
+        """
+        df = (
+            self.delta_w.to_frame()
+            .query('phase==@idx')
+        )
+
+        if idx_nebr is not None:
+            if not isinstance(idx_nebr, list):
+                idx_nebr = [idx_nebr]
+            df = df.query('phase_nebr in @idx_nebr')
+
+        if len(df) == 0:
+            return 0.0
+        else:
+            return df['delta_w'].min()
+
+
+
+
+
+
 class PhaseCreator(object):
     """
     Helper class to create phases
@@ -546,7 +653,7 @@ class PhaseCreator(object):
 
     def __init__(self, nmax, nmax_peak=None, ref=None,
                  segmenter=None, segment_kws=None,
-                 tag_phases=None, phases_class=Phases,
+                 tag_phases=None, phases_factory=Phases,
                  FreeEnergylnPi_kws=None, merge_kws=None):
         """
         Parameters
@@ -574,9 +681,7 @@ class PhaseCreator(object):
 
         self.tag_phases = tag_phases
 
-        if phases_class is None:
-            phases_class = Phases
-        self.phases_class = phases_class
+        self.phases_factory = phases_factory
 
         if segment_kws is None:
             segment_kws = {}
@@ -624,9 +729,9 @@ class PhaseCreator(object):
 
 
 
-    def build_phases(self, lnz=None, ref=None, efac=None, nmax=None, nmax_peak=None, connectivity=None, reweight_kws=None, phases_output=True, merge_phase_ids=True, phase_kws=None):
+    def build_phases(self, lnz=None, ref=None, efac=None, nmax=None, nmax_peak=None, connectivity=None, reweight_kws=None, merge_phase_ids=True, phases_factory=None, phase_kws=None):
         """
-        build phases
+        build phase
         """
 
         if ref is None:
@@ -683,10 +788,14 @@ class PhaseCreator(object):
             lnpis = [ref]
             index = None
 
-        if phases_output:
+        if phases_factory is None:
+            phases_factory = self.phases_factory
+        if isinstance(phases_factory, str) and phases_factory.lower() == 'none':
+            phases_factory = None
+        if phases_factory is not None:
             if phase_kws is None:
                 phase_kws = {}
-            return self.phases_class(items=lnpis, index=index, **phase_kws)
+            return phases_factory(items=lnpis, index=index, **phase_kws)
         else:
             return lnpis, index
 

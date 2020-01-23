@@ -11,7 +11,7 @@ from functools import wraps, lru_cache
 from .utils import dim_to_suffix_dataset
 
 
-################################################################################
+###############################################################################
 # xlnPi wrapper
 
 @lru_cache(maxsize=10)

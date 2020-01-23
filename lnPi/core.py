@@ -117,6 +117,7 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def _clear_cache(self):
         self._cache = {}
 
+
     def assign_phase(self, phase):
         self._optinfo['state_kws']['phase'] = phase
 
@@ -134,6 +135,28 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def extra_kws(self):
         """all extra parameters"""
         return self._optinfo['extra_kws']
+
+    def _index_dict(self, phase=None):
+
+        out = {'lnz_{}'.format(i): v for i, v in enumerate(self.lnz)}
+        if phase is not None:
+            out['phase'] = phase
+        #out.update(**self.state_kws)
+        return out
+
+
+    @property
+    def _lnpi_tot(self):
+        return self.filled()
+
+    @property
+    def _lnpi_0_tot(self):
+        return self.data.ravel()[0]
+
+    @property
+    def _lnz_tot(self):
+        return self.lnz
+
 
     @property
     def lnz(self):
@@ -160,15 +183,21 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         L.append('lnz={}'.format(repr(self.lnz)))
         L.append('state_kws={}'.format(repr(self.state_kws)))
 
-        if len(self.extra_kws) > 0:
-            L.append('extra_kws={}'.format(repr(self.extra_kws)))
 
         L.append('data={}'.format(super(MaskedlnPi,self).__repr__()))
+        if len(self.extra_kws) > 0:
+            L.append('extra_kws={}'.format(repr(self.extra_kws)))
 
         indent = ' ' * 5
         p = 'MaskedlnPi(\n' + '\n'.join([indent + x for x in L]) + '\n)'
 
         return p
+
+    def __str__(self):
+        return 'MaskedlnPi(lnz={})'.format(str(self.lnz))
+
+
+
 
     @gcached(prop=False)
     def local_argmax(self, *args, **kwargs):
