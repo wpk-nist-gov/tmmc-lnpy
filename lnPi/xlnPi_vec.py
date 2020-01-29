@@ -11,13 +11,12 @@ from .serieswrapper import CollectionlnPi
 from functools import wraps, lru_cache
 from .utils import dim_to_suffix_dataset
 
-
 ###############################################################################
 # xlnPi wrapper
-
 @lru_cache(maxsize=10)
 def _get_indices(shape):
     return np.indices(shape)
+
 
 @lru_cache(maxsize=10)
 def _get_range(n):
@@ -25,25 +24,36 @@ def _get_range(n):
 
 
 @lru_cache(maxsize=10)
-def get_xrlnPiWrapper(shape, rec_name='sample', n_name='n', lnz_name='lnz', comp_name='component',
+def get_xrlnPiWrapper(shape,
+                      rec_name='sample',
+                      n_name='n',
+                      lnz_name='lnz',
+                      comp_name='component',
                       phase_name='phase'):
-    return xrlnPiWrapper(shape=shape, rec_name=rec_name, n_name=n_name, lnz_name=lnz_name,
-                         comp_name=comp_name, phase_name=phase_name)
+    return xrlnPiWrapper(shape=shape,
+                         rec_name=rec_name,
+                         n_name=n_name,
+                         lnz_name=lnz_name,
+                         comp_name=comp_name,
+                         phase_name=phase_name)
+
 
 class xrlnPiWrapper(object):
     """
     this class just wraps lnPi with xarray functionality
     """
-    def __init__(self, shape,
-                 rec_name='sample',
-                 n_name='n',
-                 lnz_name='lnz',
-                 comp_name='component',
-                 phase_name='phase',
+    def __init__(
+            self,
+            shape,
+            rec_name='sample',
+            n_name='n',
+            lnz_name='lnz',
+            comp_name='component',
+            phase_name='phase',
     ):
 
         self.shape = shape
-        self.ndim  = len(shape)
+        self.ndim = len(shape)
 
         # dimension names
         if rec_name is None:
@@ -56,12 +66,14 @@ class xrlnPiWrapper(object):
         self.dims_lnz = ['{}_{}'.format(lnz_name, i) for i in range(self.ndim)]
         self.dims_comp = [comp_name]
 
-
-
-
     @gcached()
     def coords_n(self):
-        return {k:xr.DataArray(_get_range(n), dims=k, attrs={'long_name': r'${}$'.format(k)}) for k,n in zip(self.dims_n, self.shape)}
+        return {
+            k: xr.DataArray(_get_range(n),
+                            dims=k,
+                            attrs={'long_name': r'${}$'.format(k)})
+            for k, n in zip(self.dims_n, self.shape)
+        }
 
     @gcached(prop=False)
     def attrs(self, *args):
@@ -82,11 +94,10 @@ class xrlnPiWrapper(object):
             coords = self.coords_n
         else:
             coords = None
-        return xr.DataArray(
-            _get_indices(self.shape),
-            dims=self.dims_comp + self.dims_n,
-            coords=coords, name=self.n_name)
-
+        return xr.DataArray(_get_indices(self.shape),
+                            dims=self.dims_comp + self.dims_n,
+                            coords=coords,
+                            name=self.n_name)
 
     @gcached(prop=False)
     def ncoords_tot(self, coords_n=False):
@@ -98,37 +109,30 @@ class xrlnPiWrapper(object):
         else:
             coords = None
 
-        return xr.DataArray(
-            data,
-            dims=self.dims_rec + self.dims_n,
-            coords=coords,
-            attrs=self.attrs(*kwargs.keys())
-        )
+        return xr.DataArray(data,
+                            dims=self.dims_rec + self.dims_n,
+                            coords=coords,
+                            attrs=self.attrs(*kwargs.keys()))
 
     def wrap_lnpi(self, lnpi, coords_n=False, **kwargs):
         return self.wrap_data(lnpi, coords_n=coords_n, **kwargs)
 
     def wrap_lnz(self, lnz, **kwargs):
-        return xr.DataArray(
-            lnz,
-            dims=self.dims_rec + self.dims_comp,
-            coords=None)
-
+        return xr.DataArray(lnz,
+                            dims=self.dims_rec + self.dims_comp,
+                            coords=None)
 
     def wrap_lnpi_0(self, lnpi_0, **kwargs):
-        return xr.DataArray(
-            lnpi_0,
-            dims=self.dims_rec
-        )
+        return xr.DataArray(lnpi_0, dims=self.dims_rec)
+
 
 ################################################################################
 # xlnPi
 # register xgce property to collection classes
-def xr_name(long_name=None, name=None, **kws):
+def xr_name(long_name=None, name=None, unstack=True, **kws):
     """
     decorator to add name, longname to xarray output
     """
-
     def decorator(func):
         if name is None:
             _name = func.__name__
@@ -147,18 +151,21 @@ def xr_name(long_name=None, name=None, **kws):
             if long_name is not None:
                 attrs['long_name'] = long_name
             out = out.assign_attrs(**attrs)
+            if unstack and self._xarray_unstack:
+                out = out.unstack()
+
             return out
+
         return wrapper
+
     return decorator
-
-
 
 
 # BaseCollectionlnPi.register_listaccessor('xgce',
 #                                         cache_list=['betamu', #'nvec', 'dens','betaOmega', 'PE'])
 # CollectionPhases.register_accessor_flat(['xgce', 'xgce_prop'])
 @MaskedlnPi.decorate_accessor('vgce')
-@CollectionlnPi.decorate_accessor('vgce')
+@CollectionlnPi.decorate_accessor('xgce')
 class xrlnPiVec(object):
     """
     accessor for lnpi properties
@@ -172,10 +179,11 @@ class xrlnPiVec(object):
         else:
             shape = self._parent._series.iloc[0].shape
 
-        self._wrapper = get_xrlnPiWrapper(
-            shape=shape, rec_name=self._rec_name)
+        self._wrapper = get_xrlnPiWrapper(shape=shape, rec_name=self._rec_name)
 
-
+    @property
+    def _xarray_unstack(self):
+        return getattr(self._parent, '_xarray_unstack', True)
 
     @gcached()
     def _standard_attrs(self):
@@ -185,32 +193,12 @@ class xrlnPiVec(object):
     @property
     def _rec_coords(self):
         if self._rec_name is None:
-            return self._parent._index_dict()
+            return dict(self._parent._index_dict(), **self._parent.state_kws)
         else:
-            return {self._parent._concat_dim : self._parent.index, **self._parent.state_kws}
-
-
-    @property
-    @xr_name(r'$\ln \Pi(n,\mu,V,T)$')
-    def lnpi(self):
-        return (
-            self._wrapper.wrap_lnpi(self._parent._lnpi_tot, **self._parent.state_kws)
-            .assign_coords(**self._rec_coords)
-        )
-
-
-    @gcached()
-    @xr_name(r'$\beta {\bf \mu}$')
-    def betamu(self):
-        return (
-            self._wrapper.wrap_lnz(self._parent._lnz_tot, **self._parent.state_kws)
-            .assign_coords(**self._rec_coords)
-        )
-
-    @property
-    @xr_name(r'$\ln\beta{\bf\mu}$')
-    def lnz(self):
-        return self.betamu
+            return {
+                self._parent._concat_dim: self._parent.index,
+                **self._parent.state_kws
+            }
 
     @property
     def ncoords(self):
@@ -234,22 +222,34 @@ class xrlnPiVec(object):
 
     @property
     def dims_state(self):
-        return self.lnpi.attrs['dims_state']
+        return self.pi_norm.attrs['dims_state']
 
     @property
     def dims_rec(self):
         return self._wrapper.dims_rec
 
-
     @gcached()
     def coords_state(self):
-        return {k: self.lnpi.coords[k] for k in self.dims_state}
+        return {k: self.pi_norm.coords[k] for k in self.dims_state}
+
+    @gcached()
+    @xr_name(r'$\beta {\bf \mu}$')
+    def betamu(self):
+        return (self._wrapper.wrap_lnz(
+            self._parent._lnz_tot,
+            **self._parent.state_kws).assign_coords(**self._rec_coords))
 
     @property
-    def _lnpi_0(self):
-        return self._wrapper.wrap_lnpi_0(
-            self._parent._lnpi_0_tot
-        )
+    @xr_name(r'$\ln\beta{\bf\mu}$')
+    def lnz(self):
+        return self.betamu
+
+    @property
+    @xr_name(r'$\ln \Pi(n,\mu,V,T)$', unstack=False)
+    def lnpi(self):
+        return (self._wrapper.wrap_lnpi(
+            self._parent._lnpi_tot,
+            **self._parent.state_kws).assign_coords(**self._rec_coords))
 
     @gcached()
     def _pi_params(self):
@@ -263,11 +263,8 @@ class xrlnPiVec(object):
         pi_sum = pi.sum(self.dims_n)
         pi_norm = pi / pi_sum
 
-        lnpi_zero = (
-            self._wrapper.wrap_lnpi_0(
-                self._parent._lnpi_0_tot
-            ) - lnpi_local_max
-        )
+        lnpi_zero = (self._wrapper.wrap_lnpi_0(self._parent._lnpi_0_tot) -
+                     lnpi_local_max)
 
         return pi_sum, pi_norm, lnpi_zero
 
@@ -282,7 +279,6 @@ class xrlnPiVec(object):
     @property
     def _lnpi_zero(self):
         return self._pi_params[2]
-
 
     @property
     def lnpi_norm(self):
@@ -372,12 +368,12 @@ class xrlnPiVec(object):
     @property
     @xr_name(r'$\rho(\mu,V,T)$', standard_name='total_density')
     def dens_tot(self):
-        return self.ntot.pipe(lambda x: x/ x['volume'])
+        return self.ntot.pipe(lambda x: x / x['volume'])
 
     def argmax(self, *args, **kwargs):
         return np.array(
-            [x.local_argmax(*args, **kwargs) for x in self._parent]
-        )
+            [x.local_argmax(*args, **kwargs) for x in self._parent])
+
     #return self._ma.local_argmax(*args, **kwargs)
 
     def max(self, *args, **kwargs):
@@ -387,9 +383,9 @@ class xrlnPiVec(object):
     def edge_distance(self, ref, *args, **kwargs):
         """distance from endpoint"""
 
-        return xr.DataArray(
-            [x.edge_distance(ref) for x in self._parent],
-            dims=self.dims_rec, coords=self._rec_coords)
+        return xr.DataArray([x.edge_distance(ref) for x in self._parent],
+                            dims=self.dims_rec,
+                            coords=self._rec_coords)
 
     @gcached(prop=False)
     @xr_name(r'$\beta \Omega(\mu,V,T)$', standard_name='grand_potential')
@@ -406,7 +402,6 @@ class xrlnPiVec(object):
         if lnpi_zero is None:
             lnpi_zero = self._lnpi_zero
         return (lnpi_zero - np.log(self.pi_sum))
-
 
     @gcached()
     @xr_name(r'${\rm PE}(\mu,V,T)$', standard_name='potential_energy')
@@ -434,5 +429,171 @@ class xrlnPiVec(object):
         if correction:
             betaF_can = betaF_can + self.lnpi_norm
         return (self.pi_norm * betaF_can).sum(self.dims_n)
+
+
+    ################################################################################
+    # Other properties
+    @xr_name(r'$\beta\omega(\mu,V,T)$', standard_name='grand_potential_per_particle')
+    def betaOmega_n(self, lnpi_zero=None):
+        """
+        beta * (Grand potential) / <n> = -beta * p * V / <n>
+        """
+        return self.betaOmega(lnpi_zero) / self.ntot
+
+    #@gcached(prop=False)
+    @xr_name(r'$\beta p(\mu,V,T)V$')
+    def betapV(self, lnpi_zero=None):
+        """
+        Note: this is just - beta * Omega
+        """
+        return -self.betaOmega(lnpi_zero)
+
+    @gcached()
+    @xr_name('mask_stable', description='True where state is most stable')
+    def mask_stable(self):
+        """
+        stable mask.  Only works with unstack
+        """
+        if not self._xarray_unstack:
+            raise ValueError('only mask with unstack')
+        return self.betapV().pipe(lambda x: x.max('phase') == x)
+
+
+    #@gcached(prop=False)
+    @xr_name(r'$\beta p(\mu,V,T)/\rho$', standard_name='compressibility_factor')
+    def Z(self, lnpi_zero=None):
+        """
+        compressibility factor = beta * P / rho
+        """
+        return -self.betaOmega_n(lnpi_zero)
+
+    @xr_name(r'$p(\mu,V,T)$')
+    def pressure(self, lnpi_zero=None):
+        return self.betapV(lnpi_zero).pipe(lambda x: x / (x['beta'] * x['volume']))
+
+    @property
+    @xr_name(r'${\rm PE}(\mu,V,T)/n$', standard_name='potential_energy_per_particle')
+    def PE_n(self):
+        """
+        beta * (Internal energy) / n
+        """
+        return self.PE / self.ntot
+
+
+    def table(self, keys=None,
+              default_keys=['nvec', 'betapV', 'PE_n'],
+              ref=None,
+              mask_stable=False,
+              dim_to_suffix=None,
+    ):
+
+        out = []
+        if ref is not None:
+            out.append(self.edge_distance(ref))
+
+        if keys is None:
+            keys = []
+        keys = keys + default_keys
+
+        for key in keys:
+            try:
+                v = getattr(self, key)
+                if callable(v):
+                    v = v()
+                out.append(v)
+            except:
+                pass
+
+        out = xr.merge(out)
+        if 'lnz' in keys:
+            # if including property lnz, then drop lnz_0, lnz_1,...
+            out = out.drop(out['lnz']['dims_lnz'])
+
+        if mask_stable:
+            # mask_stable inserts nan in non-stable
+            mask_stable = self.mask_stable
+            # if hasattr(self._x,'_unstack') and not self._x._unstack:
+            #     out = out.where(mask_stable, drop=True)
+            # else:
+            phase = out.phase
+            out = (
+                out
+                .where(mask_stable)
+                .max('phase')
+                .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
+            )
+
+
+        if dim_to_suffix is not None:
+            if isinstance(dim_to_suffix, str):
+                dim_to_suffix = [dim_to_suffix]
+            for dim in dim_to_suffix:
+                out = out.pipe(dim_to_suffix_dataset, dim=dim)
+        return out
+
+    @property
+    @xr_name(r'$\beta G(\mu,V,T)$', standard_name='Gibbs_free_energy')
+    def betaG(self):
+        """
+        beta * (Gibbs free energy)
+        """
+        #return self.betamu.pipe(lambda betamu: (betamu * self.nvec).sum(betamu.dims_comp))
+        return (self.betamu * self.nvec).sum(self.dims_comp)
+
+    @property
+    @xr_name(r'$\beta G(\mu,V,T)/n$', standard_name='Gibbs_free_energy_per_particle')
+    def betaG_n(self):
+        """
+        beta * (Gibbs free energy) / n
+        """
+        return self.betaG / self.ntot
+
+    @xr_name(r'$\beta F(\mu,V,T)$', standard_name='helmholtz_free_energy')
+    def betaF(self, lnpi_zero=None):
+        """
+        beta * (Helmholtz free energy)
+        """
+        return self.betaOmega(lnpi_zero) + self.betaG
+
+    @xr_name(r'$\beta F(\mu,V,T)/n$', standard_name='helmholtz_free_energy_per_particle')
+    def betaF_n(self, lnpi_zero=None):
+        """
+        beta * (Helmholtz free energy) / n
+        """
+        return self.betaF(lnpi_zero) / self.ntot
+
+    @xr_name(r'$\beta E(\mu,V,T)$', standard_name='total_energy')
+    def betaE(self, ndim=3):
+        """
+        Total energy
+        """
+        return (
+            ndim/2. * self.ntot +
+            self.PE.pipe(lambda x: x * x.beta)
+        )
+
+    @xr_name(r'$\beta E(\mu,V,T)/ n$', standard_name='total_energy_per_particle')
+    def betaE_n(self, ndim=3):
+        """
+        (Total energy) / n
+        """
+        return self.betaE(ndim) / self.ntot
+
+    @xr_name(r'$S(\mu,V,T) / k_{\rm B}$', standard_name='entropy')
+    def S(self, lnpi_zero=None, ndim=3):
+        """
+        Entropy / kB
+        """
+        return self.betaE(ndim) - self.betaF(lnpi_zero)
+
+    @xr_name(r'$S(\mu,V,T)/(n kB)$', standard_name='entropy_per_particle')
+    def S_n(self, lnpi_zero=None, ndim=3):
+        """
+        Entropy / (N kB)
+        """
+        return self.S(lnpi_zero, ndim) / self.ntot
+
+
+
 
 

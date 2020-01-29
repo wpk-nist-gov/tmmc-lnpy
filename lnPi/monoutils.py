@@ -393,6 +393,7 @@ def limited_collection(build_phases,
                 lnz_max = p_max.lnz[build_phases.index]
             except:
                 pass
+
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
 
 

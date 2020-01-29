@@ -5,6 +5,7 @@ utility functions
 from functools import partial
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 from scipy import ndimage as ndi
 from skimage import segmentation
@@ -30,7 +31,11 @@ if _HAS_TQDM:
 from .options import OPTIONS
 
 def get_tqdm(seq, len_min, leave=None, **kwargs):
-    if _HAS_TQDM and OPTIONS['tqdm_use'] and len(seq) >= len_min:
+
+    n = kwargs.get('total', None)
+    if n is None:
+        n = len(seq)
+    if _HAS_TQDM and OPTIONS['tqdm_use'] and n >= len_min:
         if leave is None:
             leave = OPTIONS['tqdm_leave']
         seq = tqdm(seq, leave=leave, **kwargs)
@@ -99,19 +104,30 @@ def parallel_map_attr(attr, use_joblib, items):
         return [func(x) for x in items]
 
 
+def parallel_map_func_starargs(func, use_joblib, items, total=None):
+
+    if total is None:
+        total = len(items)
+
+    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and total >= OPTIONS['joblib_len_calc']:
+        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
+                        backend=OPTIONS['joblib_backend'],
+                        **OPTIONS['joblib_kws'])(
+                            delayed(func)(*x)
+                            for x in items)
+    else:
+        return [func(*x) for x in items]
 
 
 
 
 
 
-
-
-
-
-
-
-
+#----------------------------------------
+# pandas stuff
+def allbut(levels, *names):
+    names = set(names)
+    return [item for item in levels if item not in names]
 
 
 #----------------------------------------
