@@ -455,8 +455,17 @@ class xrlnPiVec(object):
         stable mask.  Only works with unstack
         """
         if not self._xarray_unstack:
-            raise ValueError('only mask with unstack')
-        return self.betapV().pipe(lambda x: x.max('phase') == x)
+            # raise ValueError('only mask with unstack')
+            pv = self.betapV()
+            sample = self._parent._concat_dim
+            return (
+                pv
+                .unstack(sample)
+                .pipe(lambda x: x.max('phase') == x)
+                .stack(sample=pv.indexes[sample].names)
+            )
+        else:
+            return self.betapV().pipe(lambda x: x.max('phase') == x)
 
 
     #@gcached(prop=False)

@@ -190,9 +190,8 @@ class SeriesWrapper(AccessorMixin):
 
 
 
-
     @classmethod
-    def concat(cls, objs, concat_kws=None, *args, **kwargs):
+    def _concat_to_series(cls, objs, **concat_kws):
         from collections.abc import Sequence, Mapping
         if isinstance(objs, Sequence):
             first = objs[0]
@@ -215,12 +214,50 @@ class SeriesWrapper(AccessorMixin):
             objs = out
         else:
             raise ValueError('bad input type {}'.format(type(first)))
+        return pd.concat(objs, **concat_kws)
 
+
+    def concat_like(self, objs, **concat_kws):
+        s = self._concat_to_series(objs, **concat_kws)
+        return self.new_like(s)
+
+
+    @classmethod
+    def concat(cls, objs, concat_kws=None, *args, **kwargs):
         if concat_kws is None:
             concat_kws = {}
-
-        s = pd.concat(objs, **concat_kws)
+        s = cls._concat_to_series(objs, **concat_kws)
         return cls(s, *args, **kwargs)
+        # from collections.abc import Sequence, Mapping
+        # if isinstance(objs, Sequence):
+        #     first = objs[0]
+        #     if isinstance(first, cls):
+        #         objs = (x._series for x in objs)
+        # elif isinstance(objs, Mapping):
+        #     out = {}
+        #     remap = None
+        #     for k in objs:
+        #         v = objs[k]
+        #         if remap is None:
+        #             if isinstance(v, cls):
+        #                 remap = True
+        #             else:
+        #                 remap = False
+        #         if remap:
+        #             out[k] = v._series
+        #         else:
+        #             out[k] = v
+        #     objs = out
+        # else:
+        #     raise ValueError('bad input type {}'.format(type(first)))
+
+        # if concat_kws is None:
+        #     concat_kws = {}
+
+        # s = pd.concat(objs, **concat_kws)
+        # return cls(s, *args, **kwargs)
+
+
 
 
 # Accessors
@@ -350,6 +387,20 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
                 if state_kws is None:
                     state_kws = lnpi.state_kws
                 assert lnpi.state_kws == state_kws
+
+
+    # repr
+    @gcached()
+    def _lnz_series(self):
+        return self._series.apply(lambda x: x.lnz)
+
+    def __repr__(self):
+        return '<class {}>\n{}'.format(self.__class__.__name__, repr(self._lnz_series))
+
+    def __str__(self):
+        return str(self._lnz_series)
+
+
 
     @property
     def state_kws(self):
@@ -620,6 +671,40 @@ class _LocIndexer_unstack(object):
             out = out.stack(self._level)
         else:
             out = out.dropna()
+
+        if isinstance(out, pd.Series):
+            out = self._parent.new_like(out)
+        return out
+
+
+@SeriesWrapper.decorate_accessor('mloc')
+class _LocIndexer_unstack(object):
+    """indexer with pandas index"""
+    def __init__(self, parent, level=['phase']):
+        self._parent = parent
+        self._level = level
+        self._index = self._parent.index
+
+        self._index_names = set(self._index.names)
+        self._loc = self._parent._series.iloc
+
+    def _get_loc_idx(self, idx):
+        index = self._index
+        if isinstance(idx, pd.MultiIndex):
+            # names in idx and 
+            drop = list(self._index_names - set(idx.names))
+            index = index.droplevel(drop)
+            # reorder idx
+            idx = idx.reorder_levels(index.names)
+        else:
+            drop = list(set(index.names) - {idx.name})
+            index = index.droplevel(drop)
+        indexer = index.get_indexer_for(idx)
+        return indexer
+
+    def __getitem__(self, idx):
+        indexer = self._get_loc_idx(idx)
+        out = self._loc[indexer]
 
         if isinstance(out, pd.Series):
             out = self._parent.new_like(out)

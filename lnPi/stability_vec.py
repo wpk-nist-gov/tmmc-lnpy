@@ -19,6 +19,7 @@ def _initial_bracket_spinodal_right(C,
                                     idx_nebr=None,
                                     efac=1.0,
                                     dlnz=0.5,
+                                    dfac=1.0,
                                     vmax=1e5,
                                     ntry=20,
                                     step=+1,
@@ -81,9 +82,9 @@ def _initial_bracket_spinodal_right(C,
     ss = s_idx[s_idx > efac]
     if len(ss) > 0:
         # get last one
-        left = C.loc[ss.index[[-1]]]
+        left = C.mloc[ss.index[[-1]]]
     else:
-        new_lnz = C.loc[s_idx.index[[0]]]._get_lnz(
+        new_lnz = C.mloc[s_idx.index[[0]]]._get_lnz(
             build_phases.index)
         for i in range(ntry):
             new_lnz -= step * dlnz
@@ -100,16 +101,18 @@ def _initial_bracket_spinodal_right(C,
     right = None
     ss = s[s < efac]
     if len(ss) > 0:
-        right = C.loc[ss.index[[0]]]
+        right = C.mloc[ss.index[[0]]]
     else:
-        new_lnz = C.loc[s.index[[-1]]]._get_lnz(build_phases.index)
+        new_lnz = C.mloc[s.index[[-1]]]._get_lnz(build_phases.index)
+        dlnz_ = dlnz
         for i in range(ntry):
-            new_lnz += step * dlnz
+            new_lnz += step * dlnz_
             t = build_phases(new_lnz, ref=ref, **build_kws)
             if idx not in t._get_level('phase') or \
                t.wlnPi_single.get_dw(idx, idx_nebr) < efac:
                 right = t
                 break
+            dlnz_ *= dfac
 
     if right is None:
         raise RuntimeError('could not find right')
@@ -295,6 +298,7 @@ def get_spinodal(C,
                  idx_nebr=None,
                  efac=1.0,
                  dlnz=0.5,
+                 dfac=1.0,
                  vmin=0.0,
                  vmax=1e5,
                  ntry=20,
@@ -302,7 +306,6 @@ def get_spinodal(C,
                  nmax=20,
                  ref=None,
                  build_kws=None,
-                 nphases_max=None,
                  close_kws=None,
                  solve_kws=None,
                  full_output=False):
@@ -339,8 +342,6 @@ _
         function to create Phases.  Default is that fro get_default_PhaseCreator
     build_kws : dict, optional
         extra arguments to `build_phases`
-    nphases_max : int
-        max number of phases.  To be used in get_default_PhaseCreator if passed `build_phases` is None
     close_kws : dict, optional
         arguments to np.allclose
     solve_kws : dict, optional
@@ -381,6 +382,7 @@ _
                                            idx_nebr=idx_nebr,
                                            efac=efac,
                                            dlnz=dlnz,
+                                           dfac=dfac,
                                            vmax=vmax,
                                            ntry=ntry,
                                            step=step,
@@ -444,7 +446,6 @@ def get_binodal_point(IDs,
                       build_phases,
                       ref=None,
                       build_kws=None,
-                      nphases_max=None,
                       full_output=False,
                       **kwargs):
     """
@@ -508,25 +509,37 @@ class _BaseStability(object):
 
     def __init__(self, collection):
         self._parent = collection
+        self.access_kws = {}
 
     def set_values(self, items, info, index=None):
         self._items = items
         self._info = info
         self._index = index
 
+
+    def set_access_kws(self, **kwargs):
+        for k, v in kwargs.items():
+            self.access_kws[k] = v
+
     @property
     def items(self):
         return self._items
 
-    def _get_access(self, items, concat_kws=None, *args, **kwargs):
+    def _get_access(self, items=None, concat_kws=None, **kwargs):
+        if items is None:
+            items = self._items
         if concat_kws is None:
             concat_kws = {}
         concat_kws = dict(names=[self._NAME], **concat_kws)
-        return self._parent.concat(items, concat_kws=concat_kws, *args, **kwargs)
+        kwargs = dict(self.access_kws, **kwargs)
+        #return self._parent.concat_like(items, **concat_kws)
+        # s = pd.concat({k:v._series for k,v in items}, **concat_kws)
+        # return self._parent.new_like(s)
+        return self._parent.concat(items, concat_kws=concat_kws, **kwargs)
 
     @gcached()
     def access(self):
-        return self._get_access(self._items)
+        return self._get_access()
 
     def __getitem__(self, idx):
         return self._items[idx]
@@ -560,11 +573,11 @@ class Spinodals(_BaseStability):
                  build_phases,
                  ref=None,
                  build_kws=None,
-                 nphases_max=None,
-                 inplace=False,
+                 inplace=True,
                  # append=False,
                  force=False,
                  as_dict=True,
+                 unstack=None,
                  **kwargs):
 
         if inplace and hasattr(self, '_items') and not force:
@@ -591,10 +604,14 @@ class Spinodals(_BaseStability):
                                 idx=idx,
                                 build_phases=build_phases,
                                 build_kws=build_kws,
-                                nphases_max=nphases_max,
                                 **kwargs)
             out[idx] = s
             info[idx] = r
+
+
+        if unstack is None:
+            unstack = self._parent._xarray_unstack
+        self.set_access_kws(unstack=unstack)
 
         if inplace:
             self._items = out
@@ -621,7 +638,6 @@ class Binodals(_BaseStability):
                  ref=None,
                  build_phases=None,
                  build_kws=None,
-                 nphases_max=None,
                  **kwargs):
 
         if None in [lnzA, lnzB] and spinodals is None:
@@ -636,7 +652,6 @@ class Binodals(_BaseStability):
                                  lnzB=lnzB,
                                  build_phases=build_phases,
                                  build_kws=build_kws,
-                                 nphases_max=nphases_max,
                                  **kwargs)
 
     def __call__(self,
@@ -645,12 +660,12 @@ class Binodals(_BaseStability):
                  spinodals=None,
                  ref=None,
                  build_kws=None,
-                 nphases_max=None,
-                 inplace=False,
+                 inplace=True,
                  # append=False,
                  # append_kws=None,
                  force=False,
                  as_dict=True,
+                 unstack=None,
                  **kwargs):
 
         if inplace and hasattr(self, '_items') and not force:
@@ -683,12 +698,15 @@ class Binodals(_BaseStability):
                                  spinodals=spinodals,
                                  build_phases=build_phases,
                                  build_kws=build_kws,
-                                 nphases_max=nphases_max,
                                  **kwargs)
             out[idx] = s
             info[idx] = r
             index[idx] = ids
 
+
+        if unstack is None:
+            unstack = self._parent._xarray_unstack
+        self.set_access_kws(unstack=unstack)
 
         # either build output or inplace
         if inplace:

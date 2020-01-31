@@ -470,7 +470,6 @@ class FreeEnergylnPi(object):
 # class to add FreeEnergylnPi to Phases
 import xarray as xr
 from .core import Phases, CollectionPhases
-
 CollectionPhases.register_listaccessor('wlnPi')
 
 
@@ -616,30 +615,45 @@ class wlnPiVec(object):
         """
 
         delta_w = self.dwx
+        #stack = {'sample': list(set(delta_w.coords) - {'phase', 'phase_nebr'})}
+        #delta_w = self.dwx.stack(stack)
 
         #reindex so that has idx in phase
         reindex = delta_w.indexes['phase'].union(pd.Index([idx], name='phase'))
         delta_w = delta_w.reindex(phase=reindex, phase_nebr=reindex)
-        has_idx = np.isinf(delta_w.sel(phase=idx, phase_nebr=idx))
 
-
-        # nebrs
-        index_nebr = delta_w.indexes['phase_nebr']
+        # much simpler
         if idx_nebr is None:
-            nebrs = index_nebr.drop(idx)
+            delta_w = delta_w.sel(phase=idx)
         else:
             if not isinstance(idx_nebr, list):
                 idx_nebr = [idx_nebr]
-            nebrs = [_x for _x in idx_nebr if _x in index_nebr and _x != idx]
+            if idx not in idx_nebr:
+                idx_nebr.append(idx)
+            nebrs = delta_w.indexes['phase_nebr'].intersection(nebrs)
+            delta_w.sel(phase=idx, phase_nebr=nebrs)
 
-        if len(nebrs) == 0:
-            out = (delta_w.sel(phase=idx, phase_nebr=idx) * np.nan).fillna(np.inf)
-        else:
-            out = delta_w.sel(phase=idx, phase_nebr=nebrs).min('phase_nebr')
-
-        out.loc[has_idx & out.isnull()] = np.inf
-        out.loc[~has_idx] = 0.0
+        out = delta_w.min('phase_nebr').fillna(0.0)
         return out
+
+        # has_idx = np.isinf(delta_w.sel(phase=idx, phase_nebr=idx))
+        # # nebrs
+        # index_nebr = delta_w.indexes['phase_nebr']
+        # if idx_nebr is None:
+        #     nebrs = index_nebr.drop(idx)
+        # else:
+        #     if not isinstance(idx_nebr, list):
+        #         idx_nebr = [idx_nebr]
+        #     nebrs = [_x for _x in idx_nebr if _x in index_nebr and _x != idx]
+
+        # if len(nebrs) == 0:
+        #     out = (delta_w.sel(phase=idx, phase_nebr=idx) * np.nan).fillna(np.inf)
+        # else:
+        #     out = delta_w.sel(phase=idx, phase_nebr=nebrs).min('phase_nebr')
+
+        # out.loc[has_idx & out.isnull()] = np.inf
+        # out.loc[~has_idx] = 0.0
+        # return out.unstack('sample')
 
 
     def get_dw(self, idx, idx_nebr=None):
@@ -675,7 +689,7 @@ class wlnPiVec_single(wlnPiVec):
 
         if idx not in index:
             return 0.0
-        if idx_nebr is None:
+        elif idx_nebr is None:
             nebrs = index.drop(idx)
         else:
             if not isinstance(idx_nebr, list):
