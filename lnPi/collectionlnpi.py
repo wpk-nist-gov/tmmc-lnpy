@@ -8,13 +8,11 @@ import pandas as pd
 import xarray as xr
 
 from .core import MaskedlnPi
-from .extensions import AccessorMixin, ListAccessorMixin
+from .extensions import AccessorMixin
 from .cached_decorators import gcached
 
-from .utils import (
-    labels_to_masks, masks_to_labels, masks_change_convention,
-    get_tqdm_build as get_tqdm, parallel_map_build as parallel_map)
-
+from .utils import (labels_to_masks, masks_to_labels, get_tqdm_build as
+                    get_tqdm, parallel_map_build as parallel_map)
 
 
 class SeriesWrapper(AccessorMixin):
@@ -40,13 +38,13 @@ class SeriesWrapper(AccessorMixin):
         self._series = series
         self._cache = {}
 
-
     def _verify_series(self, series):
         if self._verify:
             for d in series:
                 if not issubclass(type(d), self._base_class):
                     raise ValueError('all elements must be of type {}'.format(
                         self._base_class))
+
     @property
     def series(self):
         return self._series
@@ -80,8 +78,7 @@ class SeriesWrapper(AccessorMixin):
         return self._series.name
 
     def copy(self):
-        return self.__class__(data=self.s,
-                              base_class=self._base_class)
+        return self.__class__(data=self.s, base_class=self._base_class)
 
     def new_like(self, data=None, index=None, **kwargs):
         return self.__class__(data=data,
@@ -101,6 +98,12 @@ class SeriesWrapper(AccessorMixin):
     def __getitem__(self, key):
         return self._wrapped_pandas_method('__getitem__', wrap=True, key=key)
 
+
+    def xs(self, key, axis=0, level=None, drop_level=False, wrap=True):
+        return self._wrapped_pandas_method('xs', wrap=wrap,
+                                           key=key, axis=axis, level=level, drop_level=drop_level)
+
+
     def __setitem__(self, idx, values):
         self._series[idx] = values
 
@@ -113,7 +116,11 @@ class SeriesWrapper(AccessorMixin):
     def __len__(self):
         return len(self.s)
 
-    def append(self, to_append, ignore_index=False, verify_integrity=False, inplace=False):
+    def append(self,
+               to_append,
+               ignore_index=False,
+               verify_integrity=True,
+               inplace=False):
         if isinstance(to_append, self.__class__):
             to_append = to_append.series
 
@@ -137,8 +144,12 @@ class SeriesWrapper(AccessorMixin):
                                            convert_dtype=convert_dtype,
                                            args=args,
                                            **kwds)
+
     def sort_index(self, wrap=True, *args, **kwargs):
-        return self._wrapped_pandas_method('sort_index', wrap=wrap, *args, **kwargs)
+        return self._wrapped_pandas_method('sort_index',
+                                           wrap=wrap,
+                                           *args,
+                                           **kwargs)
 
     def groupby(self,
                 by=None,
@@ -188,8 +199,6 @@ class SeriesWrapper(AccessorMixin):
         by = allbut(self.index.names, *drop)
         return self.groupby(by=by, **kwargs)
 
-
-
     @classmethod
     def _concat_to_series(cls, objs, **concat_kws):
         from collections.abc import Sequence, Mapping
@@ -216,11 +225,9 @@ class SeriesWrapper(AccessorMixin):
             raise ValueError('bad input type {}'.format(type(first)))
         return pd.concat(objs, **concat_kws)
 
-
     def concat_like(self, objs, **concat_kws):
         s = self._concat_to_series(objs, **concat_kws)
         return self.new_like(s)
-
 
     @classmethod
     def concat(cls, objs, concat_kws=None, *args, **kwargs):
@@ -228,35 +235,6 @@ class SeriesWrapper(AccessorMixin):
             concat_kws = {}
         s = cls._concat_to_series(objs, **concat_kws)
         return cls(s, *args, **kwargs)
-        # from collections.abc import Sequence, Mapping
-        # if isinstance(objs, Sequence):
-        #     first = objs[0]
-        #     if isinstance(first, cls):
-        #         objs = (x._series for x in objs)
-        # elif isinstance(objs, Mapping):
-        #     out = {}
-        #     remap = None
-        #     for k in objs:
-        #         v = objs[k]
-        #         if remap is None:
-        #             if isinstance(v, cls):
-        #                 remap = True
-        #             else:
-        #                 remap = False
-        #         if remap:
-        #             out[k] = v._series
-        #         else:
-        #             out[k] = v
-        #     objs = out
-        # else:
-        #     raise ValueError('bad input type {}'.format(type(first)))
-
-        # if concat_kws is None:
-        #     concat_kws = {}
-
-        # s = pd.concat(objs, **concat_kws)
-        # return cls(s, *args, **kwargs)
-
 
 
 
@@ -321,21 +299,18 @@ class _iLocIndexer(object):
         self._parent._series.iloc[idx] = values
 
 
-
 @SeriesWrapper.decorate_accessor('query')
 class _Query(object):
     def __init__(self, parent):
         self._parent = parent
-        self._frame  = self._parent.index.to_frame().reset_index(drop=True)
+        self._frame = self._parent.index.to_frame().reset_index(drop=True)
 
     def __call__(self, expr, **kwargs):
         idx = self._frame.query(expr, **kwargs).index
         return self._parent.iloc[idx]
 
 
-
-
-class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
+class CollectionlnPi(SeriesWrapper):
     _concat_dim = 'sample'
     _concat_coords = 'different'
     _use_joblib = True
@@ -378,7 +353,6 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
                                     xarray_output=self._xarray_output,
                                     unstack=self._xarray_unstack)
 
-
     def _verify_series(self, series):
         super(CollectionlnPi, self)._verify_series(series)
         if self._verify:
@@ -388,19 +362,17 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
                     state_kws = lnpi.state_kws
                 assert lnpi.state_kws == state_kws
 
-
     # repr
     @gcached()
     def _lnz_series(self):
         return self._series.apply(lambda x: x.lnz)
 
     def __repr__(self):
-        return '<class {}>\n{}'.format(self.__class__.__name__, repr(self._lnz_series))
+        return '<class {}>\n{}'.format(self.__class__.__name__,
+                                       repr(self._lnz_series))
 
     def __str__(self):
         return str(self._lnz_series)
-
-
 
     @property
     def state_kws(self):
@@ -410,7 +382,6 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
     def nlnz(self):
         """number of unique lnzs"""
         return len(self.index.droplevel('phase').drop_duplicates())
-
 
     def _get_lnz(self, component=None, iloc=0, zloc=None):
         """
@@ -425,7 +396,6 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
         if component is not None:
             lnz = lnz[component]
         return lnz
-
 
     def _get_level(self, level='phase'):
         """
@@ -489,12 +459,17 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
         index = pd.MultiIndex.from_frame(df)
         return cls(data=items, index=index, *args, **kwargs)
 
-
     @classmethod
-    def from_builder(cls, lnzs, build_phases,
-                     ref=None, build_phases_kws=None, nmax=None,
-                     concat_kws=None, base_class=MaskedlnPi,
-                     *args, **kwargs):
+    def from_builder(cls,
+                     lnzs,
+                     build_phases,
+                     ref=None,
+                     build_phases_kws=None,
+                     nmax=None,
+                     concat_kws=None,
+                     base_class=MaskedlnPi,
+                     *args,
+                     **kwargs):
         """
         build collection from scalar builder
 
@@ -516,7 +491,11 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
             build_phases_kws = {}
         build_phases_kws = dict(build_phases_kws, phases_factory='None')
         seq = get_tqdm(lnzs, desc='build')
-        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_phases_kws)
+        L = parallel_map(build_phases,
+                         seq,
+                         ref=ref,
+                         nmax=nmax,
+                         **build_phases_kws)
         # return cls.concat(L, verify=verify, concat_kws=concat_kws, base_class=base_class,
         #                   *args, **kwargs)
 
@@ -525,9 +504,11 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
         for data, idx in L:
             items += data
             index += list(idx)
-        return cls.from_list(items, index, base_class=base_class, *args, **kwargs)
-
-
+        return cls.from_list(items,
+                             index,
+                             base_class=base_class,
+                             *args,
+                             **kwargs)
 
     ################################################################################
     # dataarray io
@@ -569,12 +550,10 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
         # index = pd.MultiIndex.from_frame(pd.DataFrame(indexes))
         data = np.stack(labels)
 
-
-
         out = (
             xr.DataArray(
                 data,
-                dims=self.xgce.dims_rec + self.xgce.dims_n,
+                dims=self.xge.dims_rec + self.xge.dims_n,
                 name='labels',
             )
             .assign_coords(
@@ -582,7 +561,7 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
                     self._concat_dim: index,
                     **self.state_kws
                 })
-            .assign_attrs(**self.xgce._standard_attrs)
+            .assign_attrs(**self.xge._standard_attrs)
         ) #yapf: disable
 
         if reset_index:
@@ -654,7 +633,6 @@ class CollectionlnPi(ListAccessorMixin, SeriesWrapper):
             **kwargs) # yapf: disable
 
 
-
 ################################################################################
 # Accessors for ColleectionlnPi
 @SeriesWrapper.decorate_accessor('zloc')
@@ -691,7 +669,7 @@ class _LocIndexer_unstack(object):
     def _get_loc_idx(self, idx):
         index = self._index
         if isinstance(idx, pd.MultiIndex):
-            # names in idx and 
+            # names in idx and
             drop = list(self._index_names - set(idx.names))
             index = index.droplevel(drop)
             # reorder idx
@@ -711,3 +689,38 @@ class _LocIndexer_unstack(object):
         return out
 
 
+
+
+
+# play around with sample index
+# lnz_0 = np.random.rand(20)
+
+# L = []
+# for z in lnz_0:
+#     repeat = np.random.randint(1, 4)
+#     L += [(z, i) for i in range(repeat)]
+
+# # example dataset
+# idx = pd.MultiIndex.from_tuples(L, names=['lnz_0','phase'])
+# s = pd.Series(range(len(L)), index=idx)
+
+# def get_sample_index(s):
+#     # get mapping from row values to sample
+#     idx = s.index
+#     idx_less_phase = idx.droplevel('phase')
+#     idx_less_phase_unique = idx_less_phase.drop_duplicates()
+
+#     mapping = pd.Series(range(len(idx_less_phase_unique)), idx_less_phase_unique)
+
+#     # # sample values
+#     # samples = mapping.loc[idx_less_phase].values
+
+#     # make new index
+#     idx_samp = (
+#     idx
+#     .to_frame()
+#     .assign(sample=mapping.loc[idx_less_phase].values)
+#     .set_index(['sample'] + idx.names)
+#     .index
+#     )
+#     return idx_samp

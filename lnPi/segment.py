@@ -5,7 +5,7 @@ routines to segment lnPi
  2. segment lnPi about these peaks
  3. determine free energy difference between segments
     a. Merge based on low free energy difference
- 4. combination of 1-3.  
+ 4. combination of 1-3.
 """
 
 import itertools
@@ -13,17 +13,19 @@ from collections import Iterable
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
-from scipy import ndimage as ndi
 from skimage import feature, morphology, segmentation
 import bottleneck
 
 from .cached_decorators import gcached
-from .utils import (mask_change_convention, masks_change_convention,
-                    labels_to_masks, masks_to_labels)
+from .utils import labels_to_masks
 
 import warnings
-from .core import Phases
+from .collectionlnpi import CollectionlnPi
+
+from .utils import (parallel_map_func_starargs, get_tqdm_calc as get_tqdm,
+                    masks_change_convention)
 
 
 def peak_local_max_adaptive(data,
@@ -42,7 +44,8 @@ def peak_local_max_adaptive(data,
     ----------
     data : image to analyze
     mask : mask array of same shape as data, optional
-        True means include, False=exclude.  Note that this parameter is called `lables` in `peaks_local_max`
+        True means include, False=exclude.  Note that this parameter is called
+        `lables` in `peaks_local_max`
     min_distance : int or iterable (Default 15)
         min_distance parameter to self.peak_local_max.
         if min_distance is iterable, if num_phase>num_phase_max, try next
@@ -52,7 +55,8 @@ def peak_local_max_adaptive(data,
         max number of maxima to find.
     indeces : bool, default=True
         if True, return indicies of peaks.
-        if False, return array of ints of shape `data.shape` with peaks marked by value > 0.
+        if False, return array of ints of shape `data.shape` with peaks
+        marked by value > 0.
     errors : {'ignore','raise','warn'}, default='warn'
         - If raise, raise exception if npeaks > num_peaks_max
         - If ignore, return all found maxima
@@ -467,13 +471,6 @@ class FreeEnergylnPi(object):
         return masks, w_tran, w_min
 
 
-# class to add FreeEnergylnPi to Phases
-import xarray as xr
-from .core import Phases, CollectionPhases
-CollectionPhases.register_listaccessor('wlnPi')
-
-
-@Phases.decorate_accessor('wlnPi')
 class wlnPi(FreeEnergylnPi):
     def __init__(self, phases):
         self._phases = phases
@@ -489,13 +486,13 @@ class wlnPi(FreeEnergylnPi):
 
         delta_w = self.w_tran - self.w_min
 
-        xgce = self._phases[0].xgce
+        xge = self._phases[0].xge
 
         dim_phase = self._phases._concat_dim
         dims = [dim_phase, dim_phase + '_nebr']
 
         coords = dict(zip(dims, [self._phases.index.values] * 2))
-        coords = dict(xgce.coords_state, **coords)
+        coords = dict(xge.coords_state, **coords)
         return xr.DataArray(delta_w, dims=dims, coords=coords)
 
     def get_delta_w(self, idx, idx_nebr=None):
@@ -537,21 +534,15 @@ class wlnPi(FreeEnergylnPi):
         return dw
 
 
-
-
 def _get_delta_w(index, w):
-    return (
-        pd.DataFrame(w.delta_w,
-                     index=index,
-                     columns=index.get_level_values('phase').rename('phase_nebr'))
-        .stack()
-    )
+    return (pd.DataFrame(
+        w.delta_w,
+        index=index,
+        columns=index.get_level_values('phase').rename('phase_nebr')).stack())
 
-from .serieswrapper import CollectionlnPi
-from .utils import allbut, parallel_map_func_starargs
-from .utils import get_tqdm_calc as get_tqdm
+
 @CollectionlnPi.decorate_accessor('wlnPi')
-class wlnPiVec(object):
+class wlnPivec(object):
     def __init__(self, parent):
         self._parent = parent
         self._use_joblib = getattr(self._parent, '_use_joblib', False)
@@ -559,7 +550,7 @@ class wlnPiVec(object):
     @gcached()
     def _items(self):
         indexes = []
-        ws      = []
+        ws = []
 
         # s = self._parent._series
         # for meta, phases in s.groupby(allbut(s.index.names, 'phase')):
@@ -583,8 +574,13 @@ class wlnPiVec(object):
     @gcached()
     def dw(self):
         """Series representation of delta_w"""
-        seq = get_tqdm(zip(self._indexes, self._ws), total=len(self._ws), desc='wlnPi')
-        out = parallel_map_func_starargs(_get_delta_w, items=seq, use_joblib=self._use_joblib, total=len(self._ws))
+        seq = get_tqdm(zip(self._indexes, self._ws),
+                       total=len(self._ws),
+                       desc='wlnPi')
+        out = parallel_map_func_starargs(_get_delta_w,
+                                         items=seq,
+                                         use_joblib=self._use_joblib,
+                                         total=len(self._ws))
         out = pd.concat(out).rename('delta_w')
         return out
 
@@ -655,14 +651,12 @@ class wlnPiVec(object):
         # out.loc[~has_idx] = 0.0
         # return out.unstack('sample')
 
-
     def get_dw(self, idx, idx_nebr=None):
         return self.get_dwx(idx, idx_nebr).to_series()
 
 
-
 @CollectionlnPi.decorate_accessor('wlnPi_single')
-class wlnPiVec_single(wlnPiVec):
+class wlnPi_single(wlnPivec):
     """
     stripped down version for single phase grouping
     """
@@ -670,13 +664,14 @@ class wlnPiVec_single(wlnPiVec):
     def dwx(self):
         index = list(self._parent.index.get_level_values('phase'))
         masks = [x.mask for x in self._parent]
-        w = FreeEnergylnPi(data=self._parent.iloc[0].data, masks=masks, convention=False)
+        w = FreeEnergylnPi(data=self._parent.iloc[0].data,
+                           masks=masks,
+                           convention=False)
 
         dw = w.w_tran - w.w_min
         dims = ['phase', 'phase_nebr']
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
-
 
     @gcached()
     def dw(self):
@@ -701,7 +696,6 @@ class wlnPiVec_single(wlnPiVec):
         return dw.sel(phase=idx, phase_nebr=nebrs).min('phase_nebr').values
 
 
-
 class PhaseCreator(object):
     """
     Helper class to create phases
@@ -713,7 +707,7 @@ class PhaseCreator(object):
                  segmenter=None,
                  segment_kws=None,
                  tag_phases=None,
-                 phases_factory=Phases,
+                 phases_factory=CollectionlnPi.from_list,
                  FreeEnergylnPi_kws=None,
                  merge_kws=None):
         """
@@ -849,10 +843,10 @@ class PhaseCreator(object):
                     index, lnpis = self._merge_phase_ids(ref, index, lnpis)
 
             else:
-                index = None
+                index = list(range(len(lnpis)))
         else:
             lnpis = [ref]
-            index = None
+            index = [0]
 
         if phases_factory is None:
             phases_factory = self.phases_factory
@@ -961,20 +955,3 @@ from functools import lru_cache
 @lru_cache(maxsize=10)
 def get_default_PhaseCreator(nmax):
     return PhaseCreator(nmax=nmax)
-
-
-# #@lru_cache(maxsize=10)
-# def distance_matrix(mask):
-#     import scipy.ndimage as ndi
-
-#     mask = np.asarray(mask)
-
-#     # first have to pad mask
-#     padded = np.pad(mask, ((0,1),)*mask.ndim, mode='constant', constant_values=0)
-
-#     # now calulate distance
-#     dist = ndi.distance_transform_edt(padded)
-
-#     # remove padding
-#     dist = dist[(slice(None, -1),)*mask.ndim]
-#     return dist

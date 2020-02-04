@@ -146,10 +146,6 @@ class AccessorMixin(object):
 ################################################################################
 # List access
 
-def deep_cache(func):
-    func.__dict__['_deep_cache'] = True
-    return func
-
 
 class _CallableListResultsCache(object):
     """

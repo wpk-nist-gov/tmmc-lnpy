@@ -33,6 +33,10 @@ from .options import OPTIONS
 def get_tqdm(seq, len_min, leave=None, **kwargs):
 
     n = kwargs.get('total', None)
+
+    if isinstance(len_min, str):
+        len_min=OPTIONS[len_min]
+
     if n is None:
         n = len(seq)
     if _HAS_TQDM and OPTIONS['tqdm_use'] and n >= len_min:
@@ -42,8 +46,8 @@ def get_tqdm(seq, len_min, leave=None, **kwargs):
     return seq
 
 
-get_tqdm_calc = partial(get_tqdm, len_min=OPTIONS['tqdm_len_calc'])
-get_tqdm_build = partial(get_tqdm, len_min=OPTIONS['tqdm_len_build'])
+get_tqdm_calc = partial(get_tqdm, len_min='tqdm_len_calc')
+get_tqdm_build = partial(get_tqdm, len_min='tqdm_len_build')
 
 # def get_tqdm_calc(seq, len_min=None, leave=None, **kwargs):
 #     if len_min is None:

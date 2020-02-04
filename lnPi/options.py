@@ -66,7 +66,7 @@ class set_options(object):
     - `joblib_len_build` : min lenght to use parallel in build
     You can use ``set_options`` either as a context manager:
     >>> with xr.set_options(use_tqdm=True, tqdm_min_len_calc=50):
-    ...     c.xgce.betaOmega()
+    ...     c.xge.betaOmega()
     Or to set global options:
     >>> xr.set_options(tqdm_min_len_calc=50)
     """
