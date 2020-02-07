@@ -1,23 +1,14 @@
 from __future__ import print_function, absolute_import, division
 
-from collections import Iterable
-from functools import partial
 
 import numpy as np
-import xarray as xr
 import pandas as pd
-
 from scipy.ndimage import filters
 
-from .cached_decorators import gcached, cached_clear
-from .utils import labels_to_masks, masks_to_labels, masks_change_convention
-from .utils import get_tqdm_build as get_tqdm
-from .utils import parallel_map_build as parallel_map
+from .cached_decorators import gcached
+from .utils import labels_to_masks, masks_change_convention
 
-from .extensions import AccessorMixin#, ListAccessorMixin
-from .extensions import decorate_listproperty, decorate_listaccessor
-
-#from .lnpicollections import BaseCollectionlnPi, Phases, FlatCollectionlnPi, CollectionPhases
+from .extensions import AccessorMixin
 
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
@@ -114,9 +105,6 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def _clear_cache(self):
         self._cache = {}
 
-    def assign_phase(self, phase):
-        self._optinfo['state_kws']['phase'] = phase
-
     ##################################################
     #properties
     @property
@@ -142,17 +130,29 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
         #out.update(**self.state_kws)
         return out
 
-    @property
-    def _lnpi_tot(self):
-        return self.filled()
+    def _lnpi_tot(self, fill_value=None):
+        return self.filled(fill_value)
 
-    @property
-    def _lnpi_0_tot(self):
-        return self.data.ravel()[0]
+    def _pi_params(self, fill_value=None):
+        lnpi = self._lnpi_tot(fill_value)
+
+        lnpi_local_max = lnpi.max()
+        pi = np.exp(lnpi - lnpi_local_max)
+        pi_sum = pi.sum()
+        pi_norm = pi / pi_sum
+
+        lnpi_zero = self.data.ravel()[0] - lnpi_local_max
+
+        return pi_norm, pi_sum, lnpi_zero
 
     @property
     def _lnz_tot(self):
         return self.lnz
+
+    # @property
+    # def _lnpi_0_tot(self):
+    #     return self.data.ravel()[0]
+
 
     @property
     def lnz(self):
@@ -577,3 +577,6 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
                                           check_features=check_features,
                                           **kwargs)
         return self.list_from_masks(masks, convention=False)
+
+
+

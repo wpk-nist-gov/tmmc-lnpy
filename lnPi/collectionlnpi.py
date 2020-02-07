@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from .core import MaskedlnPi
 from .extensions import AccessorMixin
 from .cached_decorators import gcached
 
@@ -40,10 +39,13 @@ class SeriesWrapper(AccessorMixin):
 
     def _verify_series(self, series):
         if self._verify:
+            base_class = self._base_class
+            if isinstance(base_class, str) and base_class.lower()=='first':
+                base_class = type(series.iloc[0])
             for d in series:
-                if not issubclass(type(d), self._base_class):
+                if not issubclass(type(d), base_class):
                     raise ValueError('all elements must be of type {}'.format(
-                        self._base_class))
+                        base_class))
 
     @property
     def series(self):
@@ -316,6 +318,8 @@ class CollectionlnPi(SeriesWrapper):
     _use_joblib = True
     _xarray_output = True
     _xarray_unstack = True
+    _xarray_dot_kws = {'optimize': 'optimal'}
+    _use_cache = True
 
     def __init__(self,
                  data,
@@ -412,17 +416,47 @@ class CollectionlnPi(SeriesWrapper):
     def _nrec(self):
         return len(self._series)
 
-    @property
-    def _lnpi_tot(self):
-        return np.stack([x.filled() for x in self])
+    def _lnpi_tot(self, fill_value=None):
+        # old method
+        # return np.stack([x.filled() for x in self])
 
-    @property
-    def _lnpi_0_tot(self):
-        return np.array([x.data.ravel()[0] for x in self])
+        # new method
+        # this is no faster than the original
+        # but makes clear where the time is being spent
+        first = self.iloc[0]
+        n = len(self)
+        out = np.empty((n,)+ first.shape, dtype=first.dtype)
+        seq = get_tqdm((x.filled(fill_value) for x in self), total=n)
+        for i, x in enumerate(seq):
+            out[i, ...] = x
+        return out
+
+
+    # @property
+    # def _lnpi_0_tot(self):
+    #     return np.array([x.data.ravel()[0] for x in self])
 
     @property
     def _lnz_tot(self):
         return np.stack([x.lnz for x in self])
+
+
+    def _pi_params(self, fill_value=None):
+        first = self.iloc[0]
+        n = len(self)
+
+        pi_norm = np.empty((n,) + first.shape, dtype=first.dtype)
+        pi_sum = np.empty(n, dtype=first.dtype)
+        lnpi_zero = np.empty(n, dtype=first.dtype)
+
+        seq = get_tqdm((x._pi_params(fill_value) for x in self), total=n, desc='pi_norm')
+
+        for i, (_pi_norm, _pi_sum, _lnpi_zero) in enumerate(seq):
+            pi_norm[i,...] = _pi_norm
+            pi_sum[i,...] = _pi_sum
+            lnpi_zero[i,...] = _lnpi_zero
+        return pi_norm, pi_sum, lnpi_zero
+
 
     def wrap_list_results(self, items):
         if self._xarray_output:
@@ -467,7 +501,7 @@ class CollectionlnPi(SeriesWrapper):
                      build_phases_kws=None,
                      nmax=None,
                      concat_kws=None,
-                     base_class=MaskedlnPi,
+                     base_class='first',
                      *args,
                      **kwargs):
         """
@@ -529,25 +563,6 @@ class CollectionlnPi(SeriesWrapper):
 
         index = indexes[0].append(indexes[1:])
 
-        # df = self._series.reset_index(name='lnpi')
-        # for meta, g in df.groupby(df.columns.drop(['phase', 'lnpi']).tolist()):
-
-        #     indexes.append(g.drop(['phase', 'lnpi'], axis=1).iloc[0])
-
-        #     features = []
-        #     masks = []
-        #     for _, gg in g.iterrows():
-        #         phase = gg['phase']
-        #         features.append(phase)
-        #         masks.append(gg['lnpi'].mask)
-
-        #     features = np.array(features) + 1
-        #     labels.append(
-        #         masks_to_labels(masks,
-        #                         features=features,
-        #                         convention=False,
-        #                         dtype=dtype))
-        # index = pd.MultiIndex.from_frame(pd.DataFrame(indexes))
         data = np.stack(labels)
 
         out = (

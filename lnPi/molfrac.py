@@ -28,10 +28,27 @@ def _initial_bracket_molfrac(target,
     if build_kws is None:
         build_kws = {}
 
-    selector = dict(phase=phase_id, component=component)
 
-    s = C.xge.molfrac.sel(**selector).to_series().dropna()
+    if isinstance('phase_id', str) and phase_id.lower() == 'none':
+        # select stable phase
+        skip_phase_id = True
+        def getter(x):
+            v = x.xge.molfrac.sel(component=component)
+            if len(x) == 1:
+                return v.isel(phase=0)
+            else:
+                return (
+                    v
+                    .where(x.xge.mask_stable)
+                    .max('phase')
+                )
+    else:
+        skip_phase_id = False
+        def getter(x):
+            return x.xge.molfrac.sel(component=component, phase=phase_id)
 
+
+    s = getter(C).to_series().dropna()
 
     # get left bound
     left = None
@@ -50,8 +67,8 @@ def _initial_bracket_molfrac(target,
             new_lnz -= dlnz_
             dlnz_ *= dfac
             p = build_phases(new_lnz, ref=ref, **build_kws)
-            if phase_id in p._get_level('phase') and \
-               p.xge.molfrac.sel(**selector).values < target:
+            if (skip_phase_id or phase_id in p._get_level('phase')) and \
+               getter(p).values < target:
                 left = p
                 break
         ntry_left = i
@@ -76,7 +93,7 @@ def _initial_bracket_molfrac(target,
         for i in range(ntry):
             new_lnz += dlnz_
             p = build_phases(new_lnz, ref=ref, **build_kws)
-            if phase_id not in p._get_level('phase'):
+            if (not skip_phase_id) and (phase_id not in p._get_level('phase')):
                 # went to far
                 new_lnz -= dlnz_
                 # reset to half dlnz
@@ -144,20 +161,41 @@ def _solve_lnz_molfrac(target,
 
     a, b = sorted([x for x in (left, right)])
 
+
+    if isinstance('phase_id', str) and phase_id.lower() == 'none':
+        # select stable phase
+        skip_phase_id = True
+        def getter(x):
+            v = x.xge.molfrac.sel(component=component)
+            if len(x) == 1:
+                return v.isel(phase=0)
+            else:
+                return (
+                    v
+                    .where(x.xge.mask_stable)
+                    .max('phase')
+                )
+    else:
+        skip_phase_id = False
+        def getter(x):
+            return x.xge.molfrac.sel(component=component, phase=phase_id)
+
+
     def f(x):
         p = build_phases(x, ref=ref, **build_kws)
         f.lnpi = p
 
         # by not using the ListAccessor,
         # can parralelize
-        if phase_id in p._get_level('phase'):
-            mf = (
-                p.s.xs(phase_id, level='phase').iloc[0]
-                .xge
-                .molfrac
-                .sel(component=component)
-                .values
-            )
+        if skip_phase_id or phase_id in p._get_level('phase'):
+            mf = getter(p).values
+            # mf = (
+            #     p.s.xs(phase_id, level='phase').iloc[0]
+            #     .xge
+            #     .molfrac
+            #     .sel(component=component)
+            #     .values
+            # )
         else:
             mf = np.inf
 

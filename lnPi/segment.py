@@ -336,7 +336,7 @@ class FreeEnergylnPi(object):
     def _w_min(self):
         return -np.array([self._data[msk].max() for msk in self._masks])
 
-    @gcached()
+    @property
     def w_min(self):
         return self._w_min.reshape(-1, 1)
 
@@ -547,8 +547,7 @@ class wlnPivec(object):
         self._parent = parent
         self._use_joblib = getattr(self._parent, '_use_joblib', False)
 
-    @gcached()
-    def _items(self):
+    def _get_items_ws(self):
         indexes = []
         ws = []
 
@@ -563,24 +562,19 @@ class wlnPivec(object):
                                convention=False))
         return indexes, ws
 
-    @property
-    def _indexes(self):
-        return self._items[0]
-
-    @property
-    def _ws(self):
-        return self._items[1]
-
     @gcached()
     def dw(self):
         """Series representation of delta_w"""
-        seq = get_tqdm(zip(self._indexes, self._ws),
-                       total=len(self._ws),
+
+        indexes, ws = self._get_items_ws()
+
+        seq = get_tqdm(zip(indexes, ws),
+                       total=len(ws),
                        desc='wlnPi')
         out = parallel_map_func_starargs(_get_delta_w,
                                          items=seq,
                                          use_joblib=self._use_joblib,
-                                         total=len(self._ws))
+                                         total=len(ws))
         out = pd.concat(out).rename('delta_w')
         return out
 

@@ -18,7 +18,21 @@ def gcached(key=None, prop=True):
     return wrapper
 
 
-def cached(key=None):
+def gcached_use_cache(key=None, prop=True):
+    """
+    same as gcached, but only cache func/prop if
+    has attribute self._use_cache and self._use_cache is True
+    """
+    def wrapper(func):
+        if prop:
+            wrapped = property(cached(key, check_use_cache=True)(func))
+        else:
+            wrapped = cached_func(key, check_use_cache=True)(func)
+        return wrapped
+    return wrapper
+
+
+def cached(key=None, check_use_cache=False):
     """Decorator to cache a property within a class
 
     Requires the Class to have a cache dict called ``_cache``.
@@ -56,31 +70,29 @@ def cached(key=None):
             _key = func.__name__
         else:
             _key = key
-        # if len(args) == 0:
-        #     key = func.__name__
-        # elif len(args) == 1:
-        #     key = args[0]
-        # else:
-        #     raise ValueError('key must be single valued or None')
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            try:
-                return self._cache[_key]
-            except AttributeError:
-                self._cache = dict()
-            except KeyError:
-                pass
+            if (not check_use_cache) or \
+               (getattr(self, '_use_cache', False)):
+                try:
+                    return self._cache[_key]
+                except AttributeError:
+                    self._cache = dict()
+                except KeyError:
+                    pass
 
-            self._cache[_key] = ret = func(self, *args, **kwargs)
-            return ret
-
+                self._cache[_key] = ret = func(self, *args, **kwargs)
+                return ret
+            else:
+                return func(self, *args, **kwargs)
         return wrapper
+
 
     return cached_lookup
 
 
-def cached_func(key=None):
+def cached_func(key=None, check_use_cache=False):
     """Decorator to cache a function within a class
 
     Requires the Class to have a cache dict called ``_cache``.
@@ -124,21 +136,24 @@ def cached_func(key=None):
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            key_func = (_key, args, frozenset(kwargs.items()))
+            if (not check_use_cache) or \
+               (getattr(self, '_use_cache', False)):
+                key_func = (_key, args, frozenset(kwargs.items()))
 
-            try:
-                return self._cache[key_func]
-            except TypeError:
-                # this means that key_func is bad hash
+                try:
+                    return self._cache[key_func]
+                except TypeError:
+                    # this means that key_func is bad hash
+                    return func(self, *args, **kwargs)
+                except AttributeError:
+                    self._cache = dict()
+                except KeyError:
+                    pass
+
+                self._cache[key_func] = ret = func(self, *args, **kwargs)
+                return ret
+            else:
                 return func(self, *args, **kwargs)
-            except AttributeError:
-                self._cache = dict()
-            except KeyError:
-                pass
-
-            self._cache[key_func] = ret = func(self, *args, **kwargs)
-            return ret
-
 
         return wrapper
 
@@ -196,11 +211,12 @@ def cached_clear(*keys):
                         pass
 
                 # functions
-                keys_tuples = [k for k in self._cache if isinstance(k, tuple) and k[0] in keys]
+                keys_tuples = [
+                    keys for k in self._cache
+                    if isinstance(k, tuple) and
+                    k[0] in keys]
                 for name in keys_tuples:
                     del self._cache[name]
-
-
             return func(self, *args, **kwargs)
         return wrapper
 
