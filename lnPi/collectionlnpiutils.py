@@ -181,10 +181,19 @@ def get_lnz_max(edge_distance_min,
     lnz_left = lnz_right = None
     n_left = n_right = None
 
+
+    def getter(p):
+        v = p.xge.edge_distance(ref)
+        if not p._xarray_unstack:
+            v = v.unstack(p._concat_dim)
+        return v.min('phase')
+
+
     # if have C, try to use it
     if C is not None:
         # see if bound contained in C
-        s = C.xge.edge_distance(ref).min('phase').to_series()
+
+        s = getter(C).to_series()
 
         # left
         ss = s[s > edge_distance_min]
@@ -208,8 +217,7 @@ def get_lnz_max(edge_distance_min,
         for i in range(ntry):
             lnz_left -= dlnz_loc
             p = build_phases(lnz_left, ref=ref, **build_kws)
-            if p.xge.edge_distance(ref).min(
-                    'phase').values >= edge_distance_min:
+            if getter(p).values >= edge_distance_min:
                 left = p
                 n_left = i
                 break
@@ -229,8 +237,7 @@ def get_lnz_max(edge_distance_min,
             lnz_right += dlnz_loc
             p = build_phases(lnz_right, ref=ref, **build_kws)
 
-            if p.xge.edge_distance(ref).min(
-                    'phase').values < edge_distance_min:
+            if getter(p).values < edge_distance_min:
                 right = p
                 n_right = i
                 break
@@ -242,7 +249,7 @@ def get_lnz_max(edge_distance_min,
 
     # not do bisection
     P = [left, right]
-    Y = [x.xge.edge_distance(ref).min('phase').values for x in P]
+    Y = [getter(x).values for x in P]
 
 
     for i in range(ntry):
@@ -252,7 +259,7 @@ def get_lnz_max(edge_distance_min,
             break
         lnz_mid = 0.5 * (lnz[0] + lnz[1])
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
-        y_mid = mid.xge.edge_distance(ref).min('phase').values
+        y_mid = getter(mid).values
 
         if y_mid >= edge_distance_min:
             index = 0

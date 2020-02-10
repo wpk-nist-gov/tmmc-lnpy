@@ -6,6 +6,7 @@ TQDM_USE = 'tqdm_use'
 TQDM_LEN_CALC = 'tqdm_len_calc'
 TQDM_LEN_BUILD = 'tqdm_len_build'
 TQDM_LEAVE = 'tqdm_leave'
+TQDM_BAR = 'tqdm_bar'
 
 JOBLIB_USE = 'joblib_use'
 JOBLIB_N_JOBS = 'joblib_n_jobs'
@@ -20,6 +21,7 @@ OPTIONS = {
     TQDM_LEN_CALC : 100,
     TQDM_LEN_BUILD : 500,
     TQDM_LEAVE : False,
+    TQDM_BAR : 'default',
 
     JOBLIB_USE : True,
     JOBLIB_N_JOBS : -1,
@@ -39,7 +41,8 @@ _VALIDATORS = {
     TQDM_LEN_CALC : _isint,
     TQDM_LEN_BUILD : _isint,
     TQDM_LEAVE : _isbool,
-
+    TQDM_BAR : lambda x: x in ['default','text','notebook'],
+    
     JOBLIB_USE : _isbool,
     JOBLIB_N_JOBS : _isint,
     JOBLIB_BACKEND: _isstr,

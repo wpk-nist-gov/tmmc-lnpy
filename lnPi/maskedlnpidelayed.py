@@ -26,34 +26,30 @@ def _get_shift(shape, dlnz, dtype):
     return shift
 
 @lru_cache(maxsize=20)
-def _get_data(self, dlnz):
+def _get_data(base, dlnz):
     if all((x==0 for x in dlnz)):
-        return self._data
+        return base._data
     else:
-        return _get_shift(self.shape, dlnz, self._data.dtype) + self._data
+        return _get_shift(base.shape, dlnz, base._data.dtype) + base._data
 
 @lru_cache(maxsize=20)
-def _get_maskedarray(self, dlnz):
-    return np.ma.MaskedArray(_get_data(self, dlnz), mask=self._mask, fill_value=self._fill_value)
+def _get_maskedarray(base, self, dlnz):
+    return np.ma.MaskedArray(_get_data(base, dlnz), mask=self._mask, fill_value=base._fill_value)
 
 @lru_cache(maxsize=20)
-def _get_filled(self, dlnz, fill_value=None):
-    return _get_maskedarray(self, dlnz).filled(fill_value)
+def _get_filled(base, self, dlnz, fill_value=None):
+    return _get_maskedarray(base, self, dlnz).filled(fill_value)
 
 
-class _MaskedlnPiDelayedBase(object):
-    def __init__(self, lnz, data, mask=None,
-                 state_kws=None, extra_kws=None, fill_value=np.nan,
-                 copy_data=False, copy_mask=False):
+class _MaskedlnPiDelayedData(object):
+    def __init__(self, lnz, data,
+                 state_kws=None, extra_kws=None,
+                 fill_value=np.nan,
+                 copy_data=False):
 
         lnz = np.atleast_1d(lnz)
         data = np.array(data, copy=copy_data)
         assert data.ndim == len(lnz)
-        if mask is None:
-            mask = np.full(data.shape, fill_value=False, dtype=np.bool)
-        else:
-            mask = np.array(mask, copy=copy_mask, dtype=np.bool)
-        assert mask.shape == data.shape
 
         if state_kws is None:
             state_kws = {}
@@ -61,57 +57,124 @@ class _MaskedlnPiDelayedBase(object):
             extra_kws = {}
 
         self._data = data
-        self._mask = mask
+        # make data read only
+        self._data.flags.writeable = False
 
         self._state_kws = state_kws
         self._extra_kws = extra_kws
 
         self._lnz = lnz
-        self._lnz_data = lnz_data
         self._fill_value = fill_value
-        self._dlnz = tuple(self._lnz - self._lnz_data)
 
+    @property
+    def shape(self):
+        return self._data.shape
 
+    def new_like(self, lnz=None, data=None, copy_data=False):
+        if lnz is None:
+            lnz = self._lnz
+        if data is None:
+            data = self._data
 
+        return self.__class__(lnz=lnz, data=data, copy_data=copy_data,
+                              state_kws=self._state_kws,
+                              extra_kws=self._extra_kws,
+                              fill_value=self._fill_value)
+    def pad(self,
+            axes=None,
+            ffill=True,
+            bfill=False,
+            limit=None):
+        """
+        pad nan values in underlying data to values
 
+        Parameters
+        ----------
+        ffill : bool, default=True
+            do forward filling
+        bfill : bool, default=False
+            do back filling
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+        inplace : bool, default=False
+
+        Returns
+        -------
+        out : lnPi
+            padded object
+        """
+        from .utils import ffill, bfill
+        import bottleneck
+
+        if axes is None:
+            axes = range(self._data.ndim)
+
+        data = self._data
+        datas = []
+
+        if ffill:
+            datas += [ffill(data, axis=axis, limit=limit) for axis in axes]
+        if bfill:
+            datas += [bfill(data, axis=axis, limit=limit) for axis in axes]
+
+        if len(datas) > 0:
+            data = bottleneck.nanmean(datas, axis=0)
+
+        new = self.new_like(data=data)
+        return new
+
+    def zeromax(self, mask=False):
+        """
+        shift so that lnpi.max() == 0 on reference
+        """
+
+        data = self._data - np.ma.MaskedArray(self._data, mask).max()
+        return self.new_like(data=data)
 
 
 
 class MaskedlnPiDelayed(AccessorMixin):
 
-    def __init__(self, lnz, lnz_data, data, mask=None,
+    _DataClass = _MaskedlnPiDelayedData
+
+
+
+    def __init__(self, lnz, base, mask=None, copy_mask=False):
+        lnz = np.atleast_1d(lnz)
+        assert lnz.shape == base._lnz.shape
+
+        if mask is None:
+            mask = np.full(base._data.shape, fill_value=False, dtype=np.bool)
+        else:
+            mask = np.array(mask, copy=copy_mask, dtype=np.bool)
+        assert mask.shape == base._data.shape
+
+        self._mask = mask
+        # make mask read-only
+        self._mask.flags.writeable = False
+
+        self._base = base
+        self._lnz = lnz
+        self._dlnz = tuple(self._lnz - self._base._lnz)
+
+
+    @classmethod
+    def from_data(cls, lnz, lnz_data, data, mask=None,
                  state_kws=None, extra_kws=None, fill_value=np.nan,
                  copy_data=False, copy_mask=False):
 
-        lnz = np.atleast_1d(lnz)
-        lnz_data = np.atleast_1d(lnz_data)
-        assert lnz.shape == lnz_data.shape
-
-        data = np.array(data, copy=copy_data)
-        assert data.ndim == len(lnz)
-
-        if mask is None:
-            mask = np.full(data.shape, fill_value=False, dtype=np.bool)
-        else:
-            mask = np.array(mask, copy=copy_mask, dtype=np.bool)
-        assert mask.shape == data.shape
+        base = cls._DataClass(lnz=lnz, data=data, state_kws=state_kws,
+                              extra_kws=extra_kws, fill_value=fill_value,
+                              copy_data=copy_data)
+        return cls(lnz=lnz, base=base, mask=mask, copy_mask=copy_mask)
 
 
-        if state_kws is None:
-            state_kws = {}
-        if extra_kws is None:
-            extra_kws = {}
-
-        self._data = data
-        self._mask = mask
-
-        self._state_kws = state_kws
-        self._extra_kws = extra_kws
-
-        self._lnz = lnz
-        self._lnz_data = lnz_data
-        self._fill_value = fill_value
-        self._dlnz = tuple(self._lnz - self._lnz_data)
+    @property
+    def _data(self):
+        return self._base._data
 
     @property
     def dtype(self):
@@ -122,22 +185,22 @@ class MaskedlnPiDelayed(AccessorMixin):
 
     @property
     def state_kws(self):
-        return self._state_kws
+        return self._base._state_kws
 
     @property
     def extra_kws(self):
-        return self._extra_kws
+        return self._base._extra_kws
 
     @property
     def ma(self):
-        return _get_maskedarray(self, self._dlnz)
+        return _get_maskedarray(self._base, self, self._dlnz)
 
     def filled(self, fill_value=None):
-        return _get_filled(self, self._dlnz, fill_value)
+        return _get_filled(self._base, self, self._dlnz, fill_value)
 
     @property
     def data(self):
-        return _get_data(self, self._dlnz)
+        return _get_data(self._base, self._dlnz)
 
     @property
     def mask(self):
@@ -174,7 +237,7 @@ class MaskedlnPiDelayed(AccessorMixin):
         return '<lnPi(lnz={})>'.format(self._lnz)
 
     def __str__(self):
-        repr(self)
+        return repr(self)
 
     def _index_dict(self, phase=None):
         out = {'lnz_{}'.format(i): v for i, v in enumerate(self.lnz)}
@@ -226,24 +289,18 @@ class MaskedlnPiDelayed(AccessorMixin):
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
 
 
-    def new_like(self, lnz=None, data=None, mask=None,
-                 copy_data=False, copy_mask=False):
+    def new_like(self, lnz=None, base=None, mask=None, copy_mask=False):
 
         if lnz is None:
             lnz = self._lnz
-        if data is None:
-            data = self._data
+        if base is None:
+            base = self._base
         if mask is None:
             mask = self._mask
 
         return self.__class__(lnz=lnz,
-                              lnz_data=self._lnz_data,
-                              data=data,
+                              base=base,
                               mask=mask,
-                              state_kws=self._state_kws,
-                              extra_kws=self._extra_kws,
-                              fill_value=self._fill_value,
-                              copy_data=copy_data,
                               copy_mask=copy_mask)
 
     def pad(self,
@@ -272,38 +329,20 @@ class MaskedlnPiDelayed(AccessorMixin):
         out : lnPi
             padded object
         """
-        from .utils import ffill, bfill
-        import bottleneck
 
-        if axes is None:
-            axes = range(self.ndim)
-
-        data = self._data
-        datas = []
-
-        if ffill:
-            datas += [ffill(data, axis=axis, limit=limit) for axis in axes]
-        if bfill:
-            datas += [bfill(data, axis=axis, limit=limit) for axis in axes]
-
-        if len(datas) > 0:
-            data = bottleneck.nanmean(datas, axis=0)
-
-        new = self.new_like(data=data)
-        return new
+        base = self._base.pad(axes=axes, ffill=ffill, bfill=bfill, limit=limit)
+        return self.new_like(base=base)
 
     def zeromax(self):
         """
         shift so that lnpi.max() == 0 on reference
         """
 
-        data = self._data - np.ma.MaskedArray(self._data, mask=self._mask).max()
-        return self.new_like(data=data)
-
+        base = self._base.zeromax(mask=self._mask)
+        return self.new_like(base=base)
 
     def reweight(self, lnz):
         return self.new_like(lnz=lnz)
-
 
     def or_mask(self, mask, **kwargs):
         """
@@ -356,7 +395,7 @@ class MaskedlnPiDelayed(AccessorMixin):
 
         da = (pd.read_csv(path, sep=sep, names=names,
                           **csv_kws).set_index(names[:-1])['lnpi'].to_xarray())
-        return cls(data=da.values,
+        return cls.from_data(data=da.values,
                    mask=da.isnull().values,
                    lnz=lnz,
                    lnz_data=lnz,
@@ -400,7 +439,7 @@ class MaskedlnPiDelayed(AccessorMixin):
 
         # any overrides
         kwargs = dict(kws, **kwargs)
-        return cls(**kwargs)
+        return cls.from_data(**kwargs)
 
     def list_from_masks(self, masks, convention='image'):
         """

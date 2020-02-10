@@ -5,8 +5,9 @@ import xarray as xr
 import pandas as pd
 
 from .cached_decorators import gcached_use_cache as gcached
-from .core import MaskedlnPi
-from .core2 import MaskedlnPiDelayed
+
+from .maskedlnpi import MaskedlnPi
+from .maskedlnpidelayed import MaskedlnPiDelayed
 from .collectionlnpi import CollectionlnPi
 
 from functools import wraps, lru_cache
@@ -683,6 +684,7 @@ class xrlnPi(object):
 
 
 @MaskedlnPi.decorate_accessor('xce')
+@MaskedlnPiDelayed.decorate_accessor('xce')
 class TMCanonical(object):
     """
     Canonical ensemble properties
@@ -826,8 +828,8 @@ class TMCanonical(object):
         return -self.betaOmega_n(lnpi_zero)
 
     @xr_name(r'$p({\bf n},V,T)$')
-    def pressure(self):
-        return self.betapV.pipe(lambda x: x / (x.beta * x.volume))
+    def pressure(self, lnpi_zero=None):
+        return self.betapV(lnpi_zero).pipe(lambda x: x / (x.beta * x.volume))
 
     def table(self, keys=None, default_keys=['betamu','betapV','PE_n','betaF_n'], dim_to_suffix=None):
         out = []

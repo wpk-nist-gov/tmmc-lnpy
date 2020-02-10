@@ -22,13 +22,27 @@ if _HAS_TQDM:
     try:
         from IPython import get_ipython
         if get_ipython().has_trait('kernel'):
-            tqdm = _tqdm.tqdm_notebook
+            tqdm_default = _tqdm.tqdm_notebook
         else:
-            tqdm = _tqdm.tqdm
+            tqdm_default = _tqdm.tqdm
     except:
-        tqdm = _tqdm.tqdm
+        tqdm_default = _tqdm.tqdm
 
 from .options import OPTIONS
+
+
+def tqdm(*args, **kwargs):
+    opt = OPTIONS['tqdm_bar']
+    if opt == 'text':
+        func = _tqdm.tqdm
+    elif opt == 'notebook':
+        func = _tqdm.tqdm_notebook
+    else:
+        func = tqdm_default
+
+    return func(*args, **kwargs)
+
+
 
 def get_tqdm(seq, len_min, leave=None, **kwargs):
 

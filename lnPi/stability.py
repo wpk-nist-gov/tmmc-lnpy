@@ -6,7 +6,6 @@ import itertools
 import numpy as np
 from scipy import optimize
 
-#from .core import CollectionPhases
 from .collectionlnpi import CollectionlnPi
 from .cached_decorators import gcached
 
