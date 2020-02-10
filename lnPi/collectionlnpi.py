@@ -411,6 +411,9 @@ class CollectionlnPi(SeriesWrapper):
             index = index.levels[level_idx]
         return index
 
+    def get_index_level(self, level='phase'):
+        return self._get_level(level=level)
+
     #@gcached()
     @property
     def _nrec(self):
