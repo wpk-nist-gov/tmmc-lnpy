@@ -423,21 +423,91 @@ class xrlnPi(object):
     def dens_tot(self):
         return self.ntot.pipe(lambda x: x / x['volume'])
 
-    def argmax(self, *args, **kwargs):
-        return np.array(
-            [x.local_argmax(*args, **kwargs) for x in self._parent])
-
-
     def max(self, *args, **kwargs):
         return self.lnpi().max(self.dims_n)
+
+
+    # def argmax(self, *args, **kwargs):
+    #     return np.array(
+    #         [x.local_argmax(*args, **kwargs) for x in self._parent])
+
+
+    # @xr_name('distance from upper edge')
+    # def edge_distance(self, ref, *args, **kwargs):
+    #     """distance from endpoint"""
+
+    #     return xr.DataArray([x.edge_distance(ref) for x in self._parent],
+    #                         dims=self.dims_rec,
+    #                         coords=self._rec_coords)
+
+
+    @gcached(prop=False)
+    def _argmax_indexer(self):
+        x = self.pi_norm.values
+        xx = x.reshape(x.shape[0], -1)
+        idx_flat = xx.argmax(-1)
+        indexer = np.unravel_index(idx_flat, x.shape[1:])
+        return indexer
+
+    @gcached(prop=False)
+    def argmax(self):
+        return np.array(self._argmax_indexer()).T
+
 
     @xr_name('distance from upper edge')
     def edge_distance(self, ref, *args, **kwargs):
         """distance from endpoint"""
 
-        return xr.DataArray([x.edge_distance(ref) for x in self._parent],
+        out = ref.edge_distance_matrix[self._argmax_indexer()]
+
+        return xr.DataArray(out,
                             dims=self.dims_rec,
                             coords=self._rec_coords)
+
+    def lnpi_max(self, fill_value=None):
+
+        idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
+        return xr.DataArray(
+            self.lnpi(fill_value).values[idx],
+            dims=self.dims_rec,
+            coords=self._rec_coords)
+
+    def pi_norm_max(self):
+        idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
+        return xr.DataArray(
+            self.pi_norm.values[idx],
+            dims=self.dims_rec,
+            coords=self._rec_coords)
+
+
+    @xr_name('distance from edge of cut value')
+    def edge_distance_val(self, ref, val=None, max_frac=None, *args, **kwargs):
+        """
+        calulate min distance from where self.pi_norm > val to edge
+
+        Parameters
+        ----------
+        ref : MaskedlnPi object
+
+        val : float
+
+        max_frac : bool, optional
+        if not None, val = max_frac * self.pi_norm.max(self.dims_n)
+        """
+
+        if max_frac is not None:
+            assert max_frac < 1.0
+            val = self.pi_norm_max() * max_frac
+        else:
+            assert val is not None
+
+        e = xr.DataArray(ref.edge_distance_matrix, dims=self.dims_n)
+        mask = self.pi_norm > val
+        return e.where(mask).min(self.dims_n)
+
+    
+
+
 
     @gcached(prop=False)
     @xr_name(r'$\beta \Omega(\mu,V,T)$', standard_name='grand_potential')
@@ -598,7 +668,7 @@ class xrlnPi(object):
         if mask_stable:
             # mask_stable inserts nan in non-stable
             mask_stable = self.mask_stable
-            if hasattr(self._x,'_unstack') and not self._x._unstack:
+            if not self._xarray_unstack:
                 out = out.where(mask_stable, drop=True)
             else:
                 phase = out.phase
@@ -606,7 +676,7 @@ class xrlnPi(object):
                     out
                     .where(mask_stable)
                     .max('phase')
-                    .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
+                    .assign_coords(phase=lambda x: phase[mask_stable.argmax('phase')])
                 )
 
 

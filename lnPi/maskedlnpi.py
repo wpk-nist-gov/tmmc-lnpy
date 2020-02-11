@@ -190,15 +190,15 @@ class MaskedlnPi(np.ma.MaskedArray, AccessorMixin):
     def __str__(self):
         return 'MaskedlnPi(lnz={})'.format(str(self.lnz))
 
-    @gcached(prop=False)
+    #@gcached(prop=False)
     def local_argmax(self, *args, **kwargs):
         return np.unravel_index(self.argmax(*args, **kwargs), self.shape)
 
-    @gcached(prop=False)
+    #@gcached(prop=False)
     def local_max(self, *args, **kwargs):
         return self[self.local_argmax(*args, **kwargs)]
 
-    @gcached(prop=False)
+    #@gcached(prop=False)
     def local_maxmask(self, *args, **kwargs):
         return self == self.local_max(*args, **kwargs)
 
