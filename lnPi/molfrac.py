@@ -29,7 +29,7 @@ def _initial_bracket_molfrac(target,
         build_kws = {}
 
 
-    if isinstance('phase_id', str) and phase_id.lower() == 'none':
+    if isinstance(phase_id, str) and phase_id.lower() == 'none':
         # select stable phase
         skip_phase_id = True
         def getter(x):
@@ -98,7 +98,7 @@ def _initial_bracket_molfrac(target,
                 new_lnz -= dlnz_
                 # reset to half dlnz
                 dlnz_ = dlnz_ * 0.5
-            elif p.xge.dens.sel(**selector).values > target:
+            elif getter(p).values > target:
                 right = p
                 break
             else:
@@ -162,7 +162,7 @@ def _solve_lnz_molfrac(target,
     a, b = sorted([x for x in (left, right)])
 
 
-    if isinstance('phase_id', str) and phase_id.lower() == 'none':
+    if isinstance(phase_id, str) and phase_id.lower() == 'none':
         # select stable phase
         skip_phase_id = True
         def getter(x):

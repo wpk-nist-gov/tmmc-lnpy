@@ -598,16 +598,16 @@ class xrlnPi(object):
         if mask_stable:
             # mask_stable inserts nan in non-stable
             mask_stable = self.mask_stable
-            # if hasattr(self._x,'_unstack') and not self._x._unstack:
-            #     out = out.where(mask_stable, drop=True)
-            # else:
-            phase = out.phase
-            out = (
-                out
-                .where(mask_stable)
-                .max('phase')
-                .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
-            )
+            if hasattr(self._x,'_unstack') and not self._x._unstack:
+                out = out.where(mask_stable, drop=True)
+            else:
+                phase = out.phase
+                out = (
+                    out
+                    .where(mask_stable)
+                    .max('phase')
+                    .assign(phase=lambda x: phase[mask_stable.argmax('phase')])
+                )
 
 
         if dim_to_suffix is not None:
