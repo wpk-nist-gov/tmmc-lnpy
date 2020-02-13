@@ -562,18 +562,26 @@ def limited_collection(build_phases, dlnz,
         collection_kws = {}
 
 
-    get_collection = partial(
-        CollectionlnPi.from_builder,
-        build_phases=build_phases,
-        build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
-        **collection_kws
-    )
+    # get_collection = partial(
+    #     CollectionlnPi.from_builder,
+    #     build_phases=build_phases,
+    #     build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+    #     **collection_kws
+    # )
 
     # limit lnz
     c_course = None
     lnz_min, lnz_max = lnzs[0], lnzs[-1]
     if edge_distance_min is not None or dens_min is not None:
-        c_course = get_collection(lnzs[::course_step])
+        #c_course = get_collection(lnzs[::course_step])
+        c_course = CollectionlnPi.from_builder(
+            lnzs[::course_step],
+            build_phases=build_phases,
+            build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+            **collection_kws
+        )
+
+
 
         if dens_min is not None:
             try:
@@ -598,7 +606,13 @@ def limited_collection(build_phases, dlnz,
 
 
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
-    c = get_collection(lnzs)
+    c = CollectionlnPi.from_builder(
+        lnzs,
+        build_phases=build_phases,
+        build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+        **collection_kws
+    )
+
 
     if c_course is None:
         c_course = c

@@ -449,6 +449,72 @@ class xrlnPi(object):
         indexer = np.unravel_index(idx_flat, x.shape[1:])
         return indexer
 
+
+    @gcached()
+    def _argmax_indexer_dict(self):
+        return {k : xr.DataArray(v, dims=self._parent._concat_dim)
+                for k, v in zip(self.dims_n, self._argmax_indexer()) }
+
+    @gcached()
+    def _sample_indexer_dict(self):
+        return {self._parent._concat_dim :
+                xr.DataArray(range(len(self._parent)), dims=self._parent._concat_dim)}
+
+    @property
+    def _sample_argmax_indexer_dict(self):
+        return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)
+
+
+    def lnpi_max(self, fill_value=None, add_n_coords=True):
+        out = (
+            self.lnpi(fill_value)
+            .isel(**self._sample_argmax_indexer_dict)
+        )
+
+        # NOTE : This assumes each n value corresponds to index
+        # alternatively, could put through filter like
+        # coords = {k : out[k].isel(**{k : v}) for k, v in self._argmax_index_dict.items()}
+
+        if add_n_coords:
+            out = out.assign_coords(**self._argmax_indexer_dict)
+
+        return out
+
+    def pi_norm_max(self, add_n_coords=True):
+        out = (
+            self.pi_norm
+            .isel(**self._sample_argmax_indexer_dict)
+        )
+        if add_n_coords:
+            out = out.assign_coords(**self._argmax_indexer_dict)
+        return out
+
+    # def lnpi_max(self, fill_value=None, add_n_coords=True):
+
+    #     idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
+    #     out = xr.DataArray(
+    #         self.lnpi(fill_value).values[idx],
+    #         dims=self.dims_rec,
+    #         coords=self._rec_coords)
+
+    #     if add_n_coords:
+    #         out = out.assign_coords(**self._argmax_indexer_dict)
+
+    #     return out
+
+
+    # def pi_norm_max(self, add_n_coords=True):
+    #     idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
+    #     out = xr.DataArray(
+    #         self.pi_norm.values[idx],
+    #         dims=self.dims_rec,
+    #         coords=self._rec_coords)
+
+    #     if add_n_coords:
+    #         out = out.assign_coords(**self._argmax_indexer_dict)
+    #     return out
+
+
     @gcached(prop=False)
     def argmax(self):
         return np.array(self._argmax_indexer()).T
@@ -463,21 +529,6 @@ class xrlnPi(object):
         return xr.DataArray(out,
                             dims=self.dims_rec,
                             coords=self._rec_coords)
-
-    def lnpi_max(self, fill_value=None):
-
-        idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
-        return xr.DataArray(
-            self.lnpi(fill_value).values[idx],
-            dims=self.dims_rec,
-            coords=self._rec_coords)
-
-    def pi_norm_max(self):
-        idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
-        return xr.DataArray(
-            self.pi_norm.values[idx],
-            dims=self.dims_rec,
-            coords=self._rec_coords)
 
 
     @xr_name('distance from edge of cut value')
@@ -497,16 +548,13 @@ class xrlnPi(object):
 
         if max_frac is not None:
             assert max_frac < 1.0
-            val = self.pi_norm_max() * max_frac
+            val = self.pi_norm_max(add_n_coords=False) * max_frac
         else:
             assert val is not None
 
         e = xr.DataArray(ref.edge_distance_matrix, dims=self.dims_n)
         mask = self.pi_norm > val
         return e.where(mask).min(self.dims_n)
-
-    
-
 
 
     @gcached(prop=False)

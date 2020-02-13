@@ -23,7 +23,7 @@ class SeriesWrapper(AccessorMixin):
                  index=None,
                  dtype=None,
                  name=None,
-                 base_class=None):
+                 base_class='first'):
 
         if isinstance(data, self.__class__):
             x = data
@@ -360,11 +360,17 @@ class CollectionlnPi(SeriesWrapper):
     def _verify_series(self, series):
         super(CollectionlnPi, self)._verify_series(series)
         if self._verify:
-            state_kws = None
+            first = series.iloc[0]
+            state_kws = first.state_kws
+            shape = first.shape
+            #_base  = first._base
+
             for lnpi in series:
-                if state_kws is None:
-                    state_kws = lnpi.state_kws
                 assert lnpi.state_kws == state_kws
+                assert lnpi.shape == shape
+                # would like to do this, but
+                # fails for parallel builds
+                #assert lnpi._base is _base
 
     # repr
     @gcached()
@@ -386,6 +392,29 @@ class CollectionlnPi(SeriesWrapper):
     def nlnz(self):
         """number of unique lnzs"""
         return len(self.index.droplevel('phase').drop_duplicates())
+
+
+    @gcached()
+    def index_frame(self):
+        """
+        DataFrame of values for each sample
+
+        includes a column 'lnz_index' which is the unique lnz values
+        regardless of phase
+        """
+        sample_frame = (
+            self.index.droplevel('phase').drop_duplicates().to_frame().assign(lnz_sample=lambda x: np.arange(len(x)))
+            ['lnz_sample']
+        )
+        index_frame = (
+            self.index.to_frame()
+            .reset_index('phase', drop=True)
+            [['phase']]
+            .assign(lnz_index=lambda x: sample_frame[x.index])
+            .reset_index()
+        )
+        return index_frame
+
 
     def _get_lnz(self, component=None, iloc=0, zloc=None):
         """
