@@ -530,7 +530,7 @@ class CollectionlnPi(SeriesWrapper):
                      lnzs,
                      build_phases,
                      ref=None,
-                     build_phases_kws=None,
+                     build_kws=None,
                      nmax=None,
                      concat_kws=None,
                      base_class='first',
@@ -547,21 +547,21 @@ class CollectionlnPi(SeriesWrapper):
             lnpi_phases to reweight to get list of lnpi's
         build_phases : callable
             Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
-        build_phases_kws : optional
+        build_kws : optional
             optional arguments to `build_phases`
         Returns
         -------
         out : Collection object
         """
-        if build_phases_kws is None:
-            build_phases_kws = {}
-        build_phases_kws = dict(build_phases_kws, phases_factory='None')
+        if build_kws is None:
+            build_kws = {}
+        build_kws = dict(build_kws, phases_factory='None')
         seq = get_tqdm(lnzs, desc='build')
         L = parallel_map(build_phases,
                          seq,
                          ref=ref,
                          nmax=nmax,
-                         **build_phases_kws)
+                         **build_kws)
         # return cls.concat(L, verify=verify, concat_kws=concat_kws, base_class=base_class,
         #                   *args, **kwargs)
 
@@ -653,6 +653,7 @@ class CollectionlnPi(SeriesWrapper):
 
     @classmethod
     def from_dataarray(cls,
+
                        ref,
                        da,
                        grouper='sample',
@@ -683,7 +684,7 @@ class CollectionlnPi(SeriesWrapper):
 ################################################################################
 # Accessors for ColleectionlnPi
 @SeriesWrapper.decorate_accessor('zloc')
-class _LocIndexer_unstack(object):
+class _LocIndexer_unstack_zloc(object):
     """positional indexer for everything but phase"""
     def __init__(self, parent, level=['phase']):
         self._parent = parent
@@ -703,7 +704,7 @@ class _LocIndexer_unstack(object):
 
 
 @SeriesWrapper.decorate_accessor('mloc')
-class _LocIndexer_unstack(object):
+class _LocIndexer_unstack_mloc(object):
     """indexer with pandas index"""
     def __init__(self, parent, level=['phase']):
         self._parent = parent

@@ -524,7 +524,7 @@ def limited_collection(build_phases, dlnz,
                        course_step=None,
                        edge_distance_min=None, dens_min=None,
                        lnz_min_kws=None, lnz_max_kws=None,
-                       ref=None, build_phases_kws=None, build_stability_kws=None, nmax=None,
+                       ref=None, build_kws=None, build_stability_kws=None, nmax=None,
                        xarray_output=True, collection_kws=None, limit_course=False):
     """
     build a CollectionlnPi over a range of lnz values
@@ -565,7 +565,7 @@ def limited_collection(build_phases, dlnz,
     # get_collection = partial(
     #     CollectionlnPi.from_builder,
     #     build_phases=build_phases,
-    #     build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+    #     build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
     #     **collection_kws
     # )
 
@@ -577,7 +577,7 @@ def limited_collection(build_phases, dlnz,
         c_course = CollectionlnPi.from_builder(
             lnzs[::course_step],
             build_phases=build_phases,
-            build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+            build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
             **collection_kws
         )
 
@@ -588,7 +588,7 @@ def limited_collection(build_phases, dlnz,
                 if lnz_min_kws is None:
                     lnz_min_kws = {}
                 p_min, o = get_lnz_min(dens_min, c_course, build_phases,
-                                       build_kws=build_phases_kws, **lnz_min_kws)
+                                       build_kws=build_kws, **lnz_min_kws)
                 if o.converged:
                     lnz_min = p_min.iloc[0].lnz[build_phases.index] - dlnz
             except:
@@ -599,7 +599,7 @@ def limited_collection(build_phases, dlnz,
                 if lnz_max_kws is None:
                     lnz_max_kws = {}
                 p_max, o = get_lnz_max(edge_distance_min, build_phases,
-                                       build_kws=build_phases_kws, C=c_course, **lnz_max_kws)
+                                       build_kws=build_kws, C=c_course, **lnz_max_kws)
                 lnz_max = p_max.iloc[0].lnz[build_phases.index]
             except:
                 pass
@@ -609,7 +609,7 @@ def limited_collection(build_phases, dlnz,
     c = CollectionlnPi.from_builder(
         lnzs,
         build_phases=build_phases,
-        build_phases_kws=build_phases_kws, nmax=nmax, xarray_output=xarray_output,
+        build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
         **collection_kws
     )
 
