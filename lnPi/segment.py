@@ -620,33 +620,21 @@ class wlnPivec(object):
                 idx_nebr = [idx_nebr]
             if idx not in idx_nebr:
                 idx_nebr.append(idx)
-            nebrs = delta_w.indexes['phase_nebr'].intersection(nebrs)
-            delta_w.sel(phase=idx, phase_nebr=nebrs)
+            nebrs = delta_w.indexes['phase_nebr'].intersection(idx_nebr)
+            delta_w = delta_w.sel(phase=idx, phase_nebr=nebrs)
 
         out = delta_w.min('phase_nebr').fillna(0.0)
         return out
 
-        # has_idx = np.isinf(delta_w.sel(phase=idx, phase_nebr=idx))
-        # # nebrs
-        # index_nebr = delta_w.indexes['phase_nebr']
-        # if idx_nebr is None:
-        #     nebrs = index_nebr.drop(idx)
-        # else:
-        #     if not isinstance(idx_nebr, list):
-        #         idx_nebr = [idx_nebr]
-        #     nebrs = [_x for _x in idx_nebr if _x in index_nebr and _x != idx]
-
-        # if len(nebrs) == 0:
-        #     out = (delta_w.sel(phase=idx, phase_nebr=idx) * np.nan).fillna(np.inf)
-        # else:
-        #     out = delta_w.sel(phase=idx, phase_nebr=nebrs).min('phase_nebr')
-
-        # out.loc[has_idx & out.isnull()] = np.inf
-        # out.loc[~has_idx] = 0.0
-        # return out.unstack('sample')
-
     def get_dw(self, idx, idx_nebr=None):
         return self.get_dwx(idx, idx_nebr).to_series()
+
+    # def get_dw2(self, idx, idx_nebr=None):
+    #     dw = self.dw
+
+        # reindex across stuff:
+
+
 
 
 @CollectionlnPi.decorate_accessor('wlnPi_single')
