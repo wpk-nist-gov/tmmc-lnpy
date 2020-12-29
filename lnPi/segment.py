@@ -18,6 +18,8 @@ import xarray as xr
 from skimage import feature, morphology, segmentation
 import bottleneck
 
+
+
 from .cached_decorators import gcached
 from .utils import labels_to_masks
 
@@ -87,7 +89,8 @@ def peak_local_max_adaptive(data,
                                      labels=mask,
                                      threshold_abs=threshold_abs,
                                      threshold_rel=threshold_rel,
-                                     indices=True,
+                                     # this option removed in future
+                                     # indices=True,
                                      **kwargs)
 
         n = len(idx)
@@ -209,7 +212,7 @@ class Segmenter(object):
         if connectivity is None:
             connectivity = data.ndim
         kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
-        return morphology.watershed(data, markers=markers, mask=mask, **kwargs)
+        return segmentation.watershed(data, markers=markers, mask=mask, **kwargs)
 
     def segment_lnpi(self,
                      lnpi,

@@ -25,7 +25,7 @@ OPTIONS = {
 
     JOBLIB_USE : True,
     JOBLIB_N_JOBS : -1,
-    JOBLIB_BACKEND : 'multiprocessing',
+    JOBLIB_BACKEND : None,
     JOBLIB_KWS : {},
     JOBLIB_LEN_CALC : 200,
     JOBLIB_LEN_BUILD : 500,
@@ -36,6 +36,8 @@ _isbool = lambda x: isinstance(x, bool)
 _isint  = lambda x: isinstance(x, int)
 _isstr  = lambda x: isinstance(x, str)
 
+_isstr_or_None = lambda x: isinstance(x, str) or x is None
+
 _VALIDATORS = {
     TQDM_USE : _isbool,
     TQDM_LEN_CALC : _isint,
@@ -45,7 +47,7 @@ _VALIDATORS = {
     
     JOBLIB_USE : _isbool,
     JOBLIB_N_JOBS : _isint,
-    JOBLIB_BACKEND: _isstr,
+    JOBLIB_BACKEND: _isstr_or_None,
     JOBLIB_KWS : lambda x: isinstance(x, dict),
     JOBLIB_LEN_CALC : _isint,
     JOBLIB_LEN_BUILD : _isint

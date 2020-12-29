@@ -22,7 +22,7 @@ if _HAS_TQDM:
     try:
         from IPython import get_ipython
         if get_ipython().has_trait('kernel'):
-            tqdm_default = _tqdm.tqdm_notebook
+            tqdm_default = _tqdm.notebookfs
         else:
             tqdm_default = _tqdm.tqdm
     except:
