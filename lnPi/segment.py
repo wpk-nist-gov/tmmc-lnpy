@@ -249,7 +249,7 @@ class FreeEnergylnPi(object):
 
     here we define the free energy w = betaW = -ln(Pi)
 
-    NOTE : this class used the image convension that
+    NOTE : this class used the image convention that
     mask == True indicates that the region includes the feature.
     This is oposite the masked array convension, where mask==True implies that region is masked out.
     """

@@ -431,7 +431,9 @@ class MaskedlnPiDelayed(AccessorMixin):
             if 'lnz' in k:
                 lnz.append(val)
             else:
-                state_kws[k] = val * 1
+                if val.ndim == 0:
+                    val = val[()]
+                state_kws[k] = val
         kws['lnz'] = lnz
         kws['state_kws'] = state_kws
 

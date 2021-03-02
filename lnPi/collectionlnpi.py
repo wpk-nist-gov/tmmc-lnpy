@@ -160,7 +160,7 @@ class SeriesWrapper(AccessorMixin):
                 as_index=True,
                 sort=True,
                 group_keys=True,
-                squeeze=False,
+                # squeeze=False,
                 observed=False,
                 wrap=False,
                 **kwargs):
@@ -183,7 +183,7 @@ class SeriesWrapper(AccessorMixin):
                                as_index=as_index,
                                sort=sort,
                                group_keys=group_keys,
-                               squeeze=squeeze,
+                               # squeeze=squeeze,
                                observed=observed,
                                **kwargs)
         if wrap:
