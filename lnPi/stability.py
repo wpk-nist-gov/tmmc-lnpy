@@ -240,8 +240,8 @@ def _refine_bracket_spinodal_right(left,
     idx_nebr  : {idx_nebr}
     left lnz   : {left._get_lnz()}
     right lnz  : {right._get_lnz()}
-    doneleft  : {doneleft}
-    doneright : {doneright}
+    doneleft  : {doneLeft}
+    doneright : {doneRight}
     """)
 
 
