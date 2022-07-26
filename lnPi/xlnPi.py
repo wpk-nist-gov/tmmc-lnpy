@@ -327,6 +327,22 @@ class xrlnPi(object):
         pi = self.pi_norm
         return np.log(xr.where(pi > 0, pi, np.nan))
 
+
+
+    def _get_prop_from_extra_kws(self, prop):
+        if isinstance(prop, str):
+            p = self._parent
+            if hasattr(self._parent, '_series'):
+                p = p.iloc[0]
+
+            if prop not in p.extra_kws:
+                raise ValueError(f'{prop} not found in extra_kws')
+            else:
+                prop = p.extra_kws.get(prop, None)
+
+        return prop
+
+
     def mean_pi(self, x, *args, **kwargs):
         """
         sum(Pi * x)
@@ -335,11 +351,21 @@ class xrlnPi(object):
 
         f(self, *args, **kwargs)
 
+        if x is not an xr.DataArray, try to convert it to one.
         """
         if callable(x):
             x = x(self, *args, **kwargs)
+        else:
+            x = self._get_prop_from_extra_kws(x)
+
+        if not isinstance(x, xr.DataArray):
+            x = xr.DataArray(x, dims=self.dims_n)
 
         return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)
+
+
+    def 
+
 
     def var_pi(self, x, y=None, *args, **kwargs):
         """
