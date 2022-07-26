@@ -364,7 +364,6 @@ class xrlnPi(object):
         return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)
 
 
-    def 
 
 
     def var_pi(self, x, y=None, *args, **kwargs):
