@@ -25,10 +25,10 @@ if _HAS_TQDM:
         from IPython import get_ipython
 
         if get_ipython().has_trait("kernel"):
-            tqdm_default = _tqdm.notebook
+            from tqdm.notebook import tqdm as tqdm_default
         else:
             tqdm_default = _tqdm.tqdm
-    except Exception:
+    except ImportError:
         tqdm_default = _tqdm.tqdm
 
 from .options import OPTIONS
