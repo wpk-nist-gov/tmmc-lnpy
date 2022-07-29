@@ -24,7 +24,8 @@ if _HAS_TQDM:
     try:
         from IPython import get_ipython
 
-        if get_ipython().has_trait("kernel"):
+        p = get_ipython()
+        if p is not None and p.has_trait("kernel"):
             from tqdm.notebook import tqdm as tqdm_default
         else:
             tqdm_default = _tqdm.tqdm
