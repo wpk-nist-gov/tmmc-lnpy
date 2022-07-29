@@ -3,7 +3,6 @@ routines to define a cached class without needing to subclass Cached class
 """
 from __future__ import absolute_import
 
-# from builtins import object
 from functools import wraps
 
 __all__ = ["cached", "cached_func", "cached_clear", "gcached"]

@@ -73,9 +73,6 @@ def _CachedAccessorWrapper(name, accessor, single_create=False):
         return _CachedAccessorCleared(name, accessor)
 
 
-# from operator import attrgetter
-
-
 class AccessorMixin(object):
     @classmethod
     def _register_accessor(cls, name, accessor, single_create=False):
