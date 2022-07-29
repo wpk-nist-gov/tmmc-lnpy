@@ -44,7 +44,7 @@ _VALIDATORS = {
     TQDM_LEN_BUILD : _isint,
     TQDM_LEAVE : _isbool,
     TQDM_BAR : lambda x: x in ['default','text','notebook'],
-    
+
     JOBLIB_USE : _isbool,
     JOBLIB_N_JOBS : _isint,
     JOBLIB_BACKEND: _isstr_or_None,
@@ -100,4 +100,3 @@ class set_options(object):
 
     def __exit__(self, type, value, traceback):
         self._apply_update(self.old)
-
