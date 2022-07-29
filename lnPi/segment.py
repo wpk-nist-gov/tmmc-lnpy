@@ -775,10 +775,20 @@ class PhaseCreator(object):
         merge_phase_ids=True,
         phases_factory=None,
         phase_kws=None,
+        segment_kws=None,
+        FreeEnergylnPi_kws=None,
+        merge_kws=None,
     ):
         """
         build phase
         """
+
+        def _combine_kws(class_kws, passed_kws, **default_kws):
+            if class_kws is None:
+                class_kws = {}
+            if passed_kws is None:
+                passed_kws = {}
+            return dict(class_kws, **default_kws, **passed_kws)
 
         if ref is None:
             if self.ref is None:
@@ -797,24 +807,34 @@ class PhaseCreator(object):
         if nmax_peak is None:
             nmax_peak = nmax * 2
 
+        connectivity_kws = {}
+        if connectivity is not None:
+            connectivity_kws["connectivity"] = connectivity
+
         if nmax > 1:
             # labels
-            kws = dict(self.segment_kws, num_peaks_max=nmax_peak)
-            if connectivity is not None:
-                kws["connectivity"] = connectivity
-            labels = self.segmenter.segment_lnpi(lnpi=ref, **kws)
+            segment_kws = _combine_kws(
+                self.segment_kws,
+                segment_kws,
+                num_peaks_max=nmax_peak,
+                **connectivity_kws
+            )
+            labels = self.segmenter.segment_lnpi(lnpi=ref, **segment_kws)
 
             # wlnpi
-            kws = dict(self.FreeEnergylnPi_kws)
-            if connectivity is not None:
-                kws["connectivity"] = connectivity
-            wlnpi = FreeEnergylnPi.from_labels(data=ref.data, labels=labels, **kws)
+            FreeEnergylnPi_kws = _combine_kws(
+                self.FreeEnergylnPi_kws, FreeEnergylnPi_kws, **connectivity_kws
+            )
+            wlnpi = FreeEnergylnPi.from_labels(
+                data=ref.data, labels=labels, **FreeEnergylnPi_kws
+            )
 
             # merge
-            kws = dict(self.merge_kws, nfeature_max=nmax)
-            if efac is not None:
-                kws["efac"] = efac
-            masks, wtran, wmin = wlnpi.merge_regions(**kws)
+            other_kws = {} if efac is None else {"efac": efac}
+            merge_kws = _combine_kws(
+                self.merge_kws, merge_kws, nfeature_max=nmax, **other_kws
+            )
+            masks, wtran, wmin = wlnpi.merge_regions(**merge_kws)
 
             # list of lnpi
             lnpis = ref.list_from_masks(masks, convention=False)
