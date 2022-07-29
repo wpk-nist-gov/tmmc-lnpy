@@ -347,6 +347,23 @@ class xrlnPi(object):
 
         return prop
 
+    def _array_or_callable_to_xarray(self, x, allow_extra_kws=True, *args, **kwargs):
+
+        if callable(x):
+            x = x(self, *args, **kwargs)
+        elif allow_extra_kws:
+            x = self._get_prop_from_extra_kws(x)
+
+        if not isinstance(x, xr.DataArray):
+            x = xr.DataArray(x, dims=self.dims_n)
+
+        return x
+
+    def _mean_pi(self, x, *args, **kwargs):
+
+        return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)
+
+    @xr_name()
     def mean_pi(self, x, *args, **kwargs):
         """
         sum(Pi * x)
@@ -357,15 +374,44 @@ class xrlnPi(object):
 
         if x is not an xr.DataArray, try to convert it to one.
         """
-        if callable(x):
-            x = x(self, *args, **kwargs)
-        else:
-            x = self._get_prop_from_extra_kws(x)
+        x = self._array_or_callable_to_xarray(x, *args, **kwargs)
+        return self._mean_pi(x, *args, **kwargs)
 
-        if not isinstance(x, xr.DataArray):
-            x = xr.DataArray(x, dims=self.dims_n)
+    def _central_moment_bar(
+        self,
+        x,
+        y=None,
+        xmom=2,
+        ymom=None,
+        xmom_dim="xmom",
+        ymom_dim="ymom",
+        *args,
+        **kwargs,
+    ):
+        """
+        calculate central moments of the form sum(Pi * (\bar{x} - <\bar{x}>) ** n)
 
-        return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)
+        Note that if you pass in the
+
+        """
+
+        def _get_dx(xx, mom, mom_dim):
+            xx = self._array_or_callable_to_xarray(xx, *args, **kwargs)
+            if isinstance(mom, int):
+                mom = [mom]
+
+            mom = xr.DataArray(mom, dims=mom_dim, coords={mom_dim: mom})
+
+            return (xx - self._mean_pi(xx)) ** mom
+
+        dx = _get_dx(x, xmom, xmom_dim)
+
+        if y is not None:
+            dy = _get_dx(y, ymom, ymom_dim)
+
+            dx = dx * dy
+
+        return self._mean_pi(dx)
 
     def var_pi(self, x, y=None, *args, **kwargs):
         """
@@ -395,13 +441,13 @@ class xrlnPi(object):
         # return self.mean_pi((x - x_mean) * (y - y_mean))
 
         # this cuts down on memory usage
-        xx = x - self.mean_pi(x)
+        xx = x - self._mean_pi(x)
         if y is None:
             yy = xx
         else:
             if callable(y):
                 y = y(self, *args, **kwargs)
-            yy = y - self.mean_pi(y)
+            yy = y - self._mean_pi(y)
 
         return xr.dot(self.pi_norm, xx, yy, dims=self.dims_n, **self._xarray_dot_kws)
 
@@ -412,12 +458,12 @@ class xrlnPi(object):
     @xr_name(r"${\bf n}(\mu,V,T)$")
     def nvec(self):
         """average number of particles of each component"""
-        return self.mean_pi(self.ncoords)
+        return self._mean_pi(self.ncoords)
 
     @gcached()
     @xr_name(r"$n(\mu,V,T)$")
     def ntot(self):
-        return self.mean_pi(self.ncoords_tot)
+        return self._mean_pi(self.ncoords_tot)
 
     @property
     @xr_name(r"${\bf x}(\mu,V,T)$")
@@ -617,7 +663,7 @@ class xrlnPi(object):
             raise AttributeError('must set "PE" in "extra_kws" of MaskedlnPi')
         else:
             PE = xr.DataArray(PE, dims=self.dims_n)
-        return self.mean_pi(PE)
+        return self._mean_pi(PE)
 
     @xr_name(r"$\beta F(\mu,V,T)$", standard_name="helmholtz_free_energy")
     def betaF_alt(self, betaF_can, correction=True):
@@ -632,7 +678,7 @@ class xrlnPi(object):
         if correction:
             betaF_can = betaF_can + self.lnpi_norm
         # return (self.pi_norm * betaF_can).sum(self.dims_n)
-        return self.mean_pi(betaF_can)
+        return self._mean_pi(betaF_can)
 
     ################################################################################
     # Other properties
@@ -705,7 +751,14 @@ class xrlnPi(object):
 
         if keys is None:
             keys = []
+
+        if default_keys is None:
+            default_keys = []
+
         keys = keys + default_keys
+
+        if not keys:
+            raise ValueError("must specify some keys or default_keys to use")
 
         for key in keys:
             try:
