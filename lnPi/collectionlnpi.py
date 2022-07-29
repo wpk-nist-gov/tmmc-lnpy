@@ -1,29 +1,27 @@
 """
 Alternative to ListIndex.  Will wrap stuff in Series
 """
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-from .extensions import AccessorMixin
 from .cached_decorators import gcached
-
-from .utils import (labels_to_masks, masks_to_labels, get_tqdm_build as
-                    get_tqdm, parallel_map_build as parallel_map)
+from .extensions import AccessorMixin
+from .utils import get_tqdm_build as get_tqdm
+from .utils import labels_to_masks, masks_to_labels
+from .utils import parallel_map_build as parallel_map
 
 
 class SeriesWrapper(AccessorMixin):
     """
     wrap object in series
     """
-    def __init__(self,
-                 data=None,
-                 index=None,
-                 dtype=None,
-                 name=None,
-                 base_class='first'):
+
+    def __init__(
+        self, data=None, index=None, dtype=None, name=None, base_class="first"
+    ):
 
         if isinstance(data, self.__class__):
             x = data
@@ -40,12 +38,13 @@ class SeriesWrapper(AccessorMixin):
     def _verify_series(self, series):
         if self._verify:
             base_class = self._base_class
-            if isinstance(base_class, str) and base_class.lower()=='first':
+            if isinstance(base_class, str) and base_class.lower() == "first":
                 base_class = type(series.iloc[0])
             for d in series:
                 if not issubclass(type(d), base_class):
-                    raise ValueError('all elements must be of type {}'.format(
-                        base_class))
+                    raise ValueError(
+                        "all elements must be of type {}".format(base_class)
+                    )
 
     @property
     def series(self):
@@ -83,12 +82,14 @@ class SeriesWrapper(AccessorMixin):
         return self.__class__(data=self.s, base_class=self._base_class)
 
     def new_like(self, data=None, index=None, **kwargs):
-        return self.__class__(data=data,
-                              index=index,
-                              dtype=self.s.dtype,
-                              name=self.s.name,
-                              base_class=self._base_class,
-                              **kwargs)
+        return self.__class__(
+            data=data,
+            index=index,
+            dtype=self.s.dtype,
+            name=self.s.name,
+            base_class=self._base_class,
+            **kwargs
+        )
 
     def _wrapped_pandas_method(self, mtd, wrap=False, *args, **kwargs):
         """Wrap a generic pandas method to ensure it returns a GeoSeries"""
@@ -98,19 +99,18 @@ class SeriesWrapper(AccessorMixin):
         return val
 
     def __getitem__(self, key):
-        return self._wrapped_pandas_method('__getitem__', wrap=True, key=key)
-
+        return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)
 
     def xs(self, key, axis=0, level=None, drop_level=False, wrap=True):
-        return self._wrapped_pandas_method('xs', wrap=wrap,
-                                           key=key, axis=axis, level=level, drop_level=drop_level)
-
+        return self._wrapped_pandas_method(
+            "xs", wrap=wrap, key=key, axis=axis, level=level, drop_level=drop_level
+        )
 
     def __setitem__(self, idx, values):
         self._series[idx] = values
 
     def __repr__(self):
-        return '<class {}>\n{}'.format(self.__class__.__name__, repr(self.s))
+        return "<class {}>\n{}".format(self.__class__.__name__, repr(self.s))
 
     def __str__(self):
         return str(self.s)
@@ -118,17 +118,15 @@ class SeriesWrapper(AccessorMixin):
     def __len__(self):
         return len(self.s)
 
-    def append(self,
-               to_append,
-               ignore_index=False,
-               verify_integrity=True,
-               inplace=False):
+    def append(
+        self, to_append, ignore_index=False, verify_integrity=True, inplace=False
+    ):
         if isinstance(to_append, self.__class__):
             to_append = to_append.series
 
-        s = self._series.append(to_append,
-                                ignore_index=ignore_index,
-                                verify_integrity=verify_integrity)
+        s = self._series.append(
+            to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
+        )
 
         if inplace:
             self.series = s
@@ -140,30 +138,31 @@ class SeriesWrapper(AccessorMixin):
 
     def apply(self, func, convert_dtype=True, args=(), wrap=False, **kwds):
 
-        return self._wrapped_pandas_method('apply',
-                                           wrap=wrap,
-                                           func=func,
-                                           convert_dtype=convert_dtype,
-                                           args=args,
-                                           **kwds)
+        return self._wrapped_pandas_method(
+            "apply",
+            wrap=wrap,
+            func=func,
+            convert_dtype=convert_dtype,
+            args=args,
+            **kwds
+        )
 
     def sort_index(self, wrap=True, *args, **kwargs):
-        return self._wrapped_pandas_method('sort_index',
-                                           wrap=wrap,
-                                           *args,
-                                           **kwargs)
+        return self._wrapped_pandas_method("sort_index", wrap=wrap, *args, **kwargs)
 
-    def groupby(self,
-                by=None,
-                axis=0,
-                level=None,
-                as_index=True,
-                sort=True,
-                group_keys=True,
-                # squeeze=False,
-                observed=False,
-                wrap=False,
-                **kwargs):
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=True,
+        # squeeze=False,
+        observed=False,
+        wrap=False,
+        **kwargs
+    ):
         """
         wrapper around groupby.
 
@@ -177,15 +176,17 @@ class SeriesWrapper(AccessorMixin):
         `pandas.Series.groupby` documentation
         """
 
-        group = self.s.groupby(by=by,
-                               axis=axis,
-                               level=level,
-                               as_index=as_index,
-                               sort=sort,
-                               group_keys=group_keys,
-                               # squeeze=squeeze,
-                               observed=observed,
-                               **kwargs)
+        group = self.s.groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            # squeeze=squeeze,
+            observed=observed,
+            **kwargs
+        )
         if wrap:
             return _Groupby(self, group)
         else:
@@ -196,6 +197,7 @@ class SeriesWrapper(AccessorMixin):
         groupby all but columns in drop
         """
         from .utils import allbut
+
         if not isinstance(drop, list):
             drop = [drop]
         by = allbut(self.index.names, *drop)
@@ -203,7 +205,8 @@ class SeriesWrapper(AccessorMixin):
 
     @classmethod
     def _concat_to_series(cls, objs, **concat_kws):
-        from collections.abc import Sequence, Mapping
+        from collections.abc import Mapping, Sequence
+
         if isinstance(objs, Sequence):
             first = objs[0]
             if isinstance(first, cls):
@@ -224,7 +227,7 @@ class SeriesWrapper(AccessorMixin):
                     out[k] = v
             objs = out
         else:
-            raise ValueError('bad input type {}'.format(type(first)))
+            raise ValueError("bad input type {}".format(type(first)))
         return pd.concat(objs, **concat_kws)
 
     def concat_like(self, objs, **concat_kws):
@@ -237,7 +240,6 @@ class SeriesWrapper(AccessorMixin):
             concat_kws = {}
         s = cls._concat_to_series(objs, **concat_kws)
         return cls(s, *args, **kwargs)
-
 
 
 # Accessors
@@ -266,10 +268,10 @@ class _Groupby(object):
             else:
                 return self._parent.new_like(out)
         else:
-            raise AttributeError('no attribute {} in groupby'.format(attr))
+            raise AttributeError("no attribute {} in groupby".format(attr))
 
 
-@SeriesWrapper.decorate_accessor('loc')
+@SeriesWrapper.decorate_accessor("loc")
 class _LocIndexer(object):
     def __init__(self, parent):
         self._parent = parent
@@ -285,7 +287,7 @@ class _LocIndexer(object):
         self._parent._series.loc[idx] = values
 
 
-@SeriesWrapper.decorate_accessor('iloc')
+@SeriesWrapper.decorate_accessor("iloc")
 class _iLocIndexer(object):
     def __init__(self, parent):
         self._parent = parent
@@ -301,7 +303,7 @@ class _iLocIndexer(object):
         self._parent._series.iloc[idx] = values
 
 
-@SeriesWrapper.decorate_accessor('query')
+@SeriesWrapper.decorate_accessor("query")
 class _Query(object):
     def __init__(self, parent):
         self._parent = parent
@@ -313,23 +315,25 @@ class _Query(object):
 
 
 class CollectionlnPi(SeriesWrapper):
-    _concat_dim = 'sample'
-    _concat_coords = 'different'
+    _concat_dim = "sample"
+    _concat_coords = "different"
     _use_joblib = True
     _xarray_output = True
     _xarray_unstack = True
-    _xarray_dot_kws = {'optimize': 'optimal'}
+    _xarray_dot_kws = {"optimize": "optimal"}
     _use_cache = True
 
-    def __init__(self,
-                 data,
-                 index=None,
-                 xarray_output=True,
-                 concat_dim=None,
-                 concat_coords=None,
-                 unstack=True,
-                 *args,
-                 **kwargs):
+    def __init__(
+        self,
+        data,
+        index=None,
+        xarray_output=True,
+        concat_dim=None,
+        concat_coords=None,
+        unstack=True,
+        *args,
+        **kwargs
+    ):
 
         if concat_dim is not None:
             self._concat_dim = concat_dim
@@ -340,22 +344,20 @@ class CollectionlnPi(SeriesWrapper):
         if unstack is not None:
             self._xarray_unstack = unstack
 
-        super(CollectionlnPi, self).__init__(data=data,
-                                             index=index,
-                                             *args,
-                                             **kwargs)
+        super(CollectionlnPi, self).__init__(data=data, index=index, *args, **kwargs)
 
         # update index name:
-        #self._series.index.name = self._concat_dim
+        # self._series.index.name = self._concat_dim
 
     def new_like(self, data=None, index=None):
-        return super(CollectionlnPi,
-                     self).new_like(data=data,
-                                    index=index,
-                                    concat_dim=self._concat_dim,
-                                    concat_coords=self._concat_coords,
-                                    xarray_output=self._xarray_output,
-                                    unstack=self._xarray_unstack)
+        return super(CollectionlnPi, self).new_like(
+            data=data,
+            index=index,
+            concat_dim=self._concat_dim,
+            concat_coords=self._concat_coords,
+            xarray_output=self._xarray_output,
+            unstack=self._xarray_unstack,
+        )
 
     def _verify_series(self, series):
         super(CollectionlnPi, self)._verify_series(series)
@@ -363,14 +365,14 @@ class CollectionlnPi(SeriesWrapper):
             first = series.iloc[0]
             state_kws = first.state_kws
             shape = first.shape
-            #_base  = first._base
+            # _base  = first._base
 
             for lnpi in series:
                 assert lnpi.state_kws == state_kws
                 assert lnpi.shape == shape
                 # would like to do this, but
                 # fails for parallel builds
-                #assert lnpi._base is _base
+                # assert lnpi._base is _base
 
     # repr
     @gcached()
@@ -378,8 +380,7 @@ class CollectionlnPi(SeriesWrapper):
         return self._series.apply(lambda x: x.lnz)
 
     def __repr__(self):
-        return '<class {}>\n{}'.format(self.__class__.__name__,
-                                       repr(self._lnz_series))
+        return "<class {}>\n{}".format(self.__class__.__name__, repr(self._lnz_series))
 
     def __str__(self):
         return str(self._lnz_series)
@@ -391,8 +392,7 @@ class CollectionlnPi(SeriesWrapper):
     @property
     def nlnz(self):
         """number of unique lnzs"""
-        return len(self.index.droplevel('phase').drop_duplicates())
-
+        return len(self.index.droplevel("phase").drop_duplicates())
 
     @gcached()
     def index_frame(self):
@@ -403,22 +403,22 @@ class CollectionlnPi(SeriesWrapper):
         regardless of phase
         """
         sample_frame = (
-            self.index.droplevel('phase').drop_duplicates().to_frame().assign(lnz_sample=lambda x: np.arange(len(x)))
-            ['lnz_sample']
+            self.index.droplevel("phase")
+            .drop_duplicates()
+            .to_frame()
+            .assign(lnz_sample=lambda x: np.arange(len(x)))["lnz_sample"]
         )
         index_frame = (
             self.index.to_frame()
-            .reset_index('phase', drop=True)
-            [['phase']]
+            .reset_index("phase", drop=True)[["phase"]]
             .assign(lnz_index=lambda x: sample_frame[x.index])
             .reset_index()
         )
         return index_frame
 
-
     def _get_lnz(self, component=None, iloc=0, zloc=None):
         """
-        helper function to 
+        helper function to
         returns self.iloc[idx].lnz[component]
         """
         if zloc is not None:
@@ -430,7 +430,7 @@ class CollectionlnPi(SeriesWrapper):
             lnz = lnz[component]
         return lnz
 
-    def _get_level(self, level='phase'):
+    def _get_level(self, level="phase"):
         """
         return level values from index
         """
@@ -440,10 +440,10 @@ class CollectionlnPi(SeriesWrapper):
             index = index.levels[level_idx]
         return index
 
-    def get_index_level(self, level='phase'):
+    def get_index_level(self, level="phase"):
         return self._get_level(level=level)
 
-    #@gcached()
+    # @gcached()
     @property
     def _nrec(self):
         return len(self._series)
@@ -457,12 +457,11 @@ class CollectionlnPi(SeriesWrapper):
         # but makes clear where the time is being spent
         first = self.iloc[0]
         n = len(self)
-        out = np.empty((n,)+ first.shape, dtype=first.dtype)
+        out = np.empty((n,) + first.shape, dtype=first.dtype)
         seq = get_tqdm((x.filled(fill_value) for x in self), total=n)
         for i, x in enumerate(seq):
             out[i, ...] = x
         return out
-
 
     # @property
     # def _lnpi_0_tot(self):
@@ -472,7 +471,6 @@ class CollectionlnPi(SeriesWrapper):
     def _lnz_tot(self):
         return np.stack([x.lnz for x in self])
 
-
     def _pi_params(self, fill_value=None):
         first = self.iloc[0]
         n = len(self)
@@ -481,22 +479,21 @@ class CollectionlnPi(SeriesWrapper):
         pi_sum = np.empty(n, dtype=first.dtype)
         lnpi_zero = np.empty(n, dtype=first.dtype)
 
-        seq = get_tqdm((x._pi_params(fill_value) for x in self), total=n, desc='pi_norm')
+        seq = get_tqdm(
+            (x._pi_params(fill_value) for x in self), total=n, desc="pi_norm"
+        )
 
         for i, (_pi_norm, _pi_sum, _lnpi_zero) in enumerate(seq):
-            pi_norm[i,...] = _pi_norm
-            pi_sum[i,...] = _pi_sum
-            lnpi_zero[i,...] = _lnpi_zero
+            pi_norm[i, ...] = _pi_norm
+            pi_sum[i, ...] = _pi_sum
+            lnpi_zero[i, ...] = _lnpi_zero
         return pi_norm, pi_sum, lnpi_zero
-
 
     def wrap_list_results(self, items):
         if self._xarray_output:
             x = items[0]
             if isinstance(x, xr.DataArray):
-                return (xr.concat(items,
-                                  self.index,
-                                  coords=self._concat_coords))
+                return xr.concat(items, self.index, coords=self._concat_coords)
             # else try to make array
         else:
             return items
@@ -521,21 +518,24 @@ class CollectionlnPi(SeriesWrapper):
         output : class instance
         """
         df = pd.DataFrame(
-            [lnpi._index_dict(phase) for lnpi, phase in zip(items, index)])
+            [lnpi._index_dict(phase) for lnpi, phase in zip(items, index)]
+        )
         index = pd.MultiIndex.from_frame(df)
         return cls(data=items, index=index, *args, **kwargs)
 
     @classmethod
-    def from_builder(cls,
-                     lnzs,
-                     build_phases,
-                     ref=None,
-                     build_kws=None,
-                     nmax=None,
-                     concat_kws=None,
-                     base_class='first',
-                     *args,
-                     **kwargs):
+    def from_builder(
+        cls,
+        lnzs,
+        build_phases,
+        ref=None,
+        build_kws=None,
+        nmax=None,
+        concat_kws=None,
+        base_class="first",
+        *args,
+        **kwargs
+    ):
         """
         build collection from scalar builder
 
@@ -555,13 +555,9 @@ class CollectionlnPi(SeriesWrapper):
         """
         if build_kws is None:
             build_kws = {}
-        build_kws = dict(build_kws, phases_factory='None')
-        seq = get_tqdm(lnzs, desc='build')
-        L = parallel_map(build_phases,
-                         seq,
-                         ref=ref,
-                         nmax=nmax,
-                         **build_kws)
+        build_kws = dict(build_kws, phases_factory="None")
+        seq = get_tqdm(lnzs, desc="build")
+        L = parallel_map(build_phases, seq, ref=ref, nmax=nmax, **build_kws)
         # return cls.concat(L, verify=verify, concat_kws=concat_kws, base_class=base_class,
         #                   *args, **kwargs)
 
@@ -570,11 +566,7 @@ class CollectionlnPi(SeriesWrapper):
         for data, idx in L:
             items += data
             index += list(idx)
-        return cls.from_list(items,
-                             index,
-                             base_class=base_class,
-                             *args,
-                             **kwargs)
+        return cls.from_list(items, index, base_class=base_class, *args, **kwargs)
 
     ################################################################################
     # dataarray io
@@ -582,16 +574,14 @@ class CollectionlnPi(SeriesWrapper):
         labels = []
         indexes = []
 
-        for meta, g in self.groupby_allbut('phase'):
+        for meta, g in self.groupby_allbut("phase"):
             indexes.append(g.index[[0]])
 
-            features = np.array(g.index.get_level_values('phase')) + 1
+            features = np.array(g.index.get_level_values("phase")) + 1
             masks = [x.mask for x in g]
             labels.append(
-                masks_to_labels(masks,
-                                features=features,
-                                convention=False,
-                                dtype=dtype))
+                masks_to_labels(masks, features=features, convention=False, dtype=dtype)
+            )
 
         index = indexes[0].append(indexes[1:])
 
@@ -601,15 +591,11 @@ class CollectionlnPi(SeriesWrapper):
             xr.DataArray(
                 data,
                 dims=self.xge.dims_rec + self.xge.dims_n,
-                name='labels',
+                name="labels",
             )
-            .assign_coords(
-                **{
-                    self._concat_dim: index,
-                    **self.state_kws
-                })
+            .assign_coords(**{self._concat_dim: index, **self.state_kws})
             .assign_attrs(**self.xge._standard_attrs)
-        ) #yapf: disable
+        )  # yapf: disable
 
         if reset_index:
             out = out.reset_index(self._concat_dim)
@@ -617,15 +603,17 @@ class CollectionlnPi(SeriesWrapper):
         return out
 
     @classmethod
-    def from_labels(cls,
-                    ref,
-                    labels,
-                    lnzs,
-                    features=None,
-                    include_boundary=False,
-                    labels_kws=None,
-                    check_features=True,
-                    **kwargs):
+    def from_labels(
+        cls,
+        ref,
+        labels,
+        lnzs,
+        features=None,
+        include_boundary=False,
+        labels_kws=None,
+        check_features=True,
+        **kwargs
+    ):
 
         if labels_kws is None:
             labels_kws = {}
@@ -643,7 +631,8 @@ class CollectionlnPi(SeriesWrapper):
                 include_boundary=include_boundary,
                 convention=False,
                 check_features=check_features,
-                **labels_kws)
+                **labels_kws
+            )
 
             index = list(np.array(features_tmp) - 1)
             items += lnpi.list_from_masks(masks, convention=False)
@@ -652,22 +641,23 @@ class CollectionlnPi(SeriesWrapper):
         return cls.from_list(items=items, index=indexes, **kwargs)
 
     @classmethod
-    def from_dataarray(cls,
-
-                       ref,
-                       da,
-                       grouper='sample',
-                       include_boundary=False,
-                       labels_kws=None,
-                       features=None,
-                       check_features=True,
-                       **kwargs):
+    def from_dataarray(
+        cls,
+        ref,
+        da,
+        grouper="sample",
+        include_boundary=False,
+        labels_kws=None,
+        features=None,
+        check_features=True,
+        **kwargs
+    ):
 
         labels = []
         lnzs = []
 
         for i, g in da.groupby(grouper):
-            lnzs.append(np.array([g.coords[k] for k in da.attrs['dims_lnz']]))
+            lnzs.append(np.array([g.coords[k] for k in da.attrs["dims_lnz"]]))
             labels.append(g.values)
 
         return cls.from_labels(
@@ -678,15 +668,17 @@ class CollectionlnPi(SeriesWrapper):
             features=features,
             include_boundary=include_boundary,
             check_features=check_features,
-            **kwargs) # yapf: disable
+            **kwargs
+        )  # yapf: disable
 
 
 ################################################################################
 # Accessors for ColleectionlnPi
-@SeriesWrapper.decorate_accessor('zloc')
+@SeriesWrapper.decorate_accessor("zloc")
 class _LocIndexer_unstack_zloc(object):
     """positional indexer for everything but phase"""
-    def __init__(self, parent, level=['phase']):
+
+    def __init__(self, parent, level=["phase"]):
         self._parent = parent
         self._level = level
         self._loc = self._parent._series.unstack(self._level).iloc
@@ -703,10 +695,11 @@ class _LocIndexer_unstack_zloc(object):
         return out
 
 
-@SeriesWrapper.decorate_accessor('mloc')
+@SeriesWrapper.decorate_accessor("mloc")
 class _LocIndexer_unstack_mloc(object):
     """indexer with pandas index"""
-    def __init__(self, parent, level=['phase']):
+
+    def __init__(self, parent, level=["phase"]):
         self._parent = parent
         self._level = level
         self._index = self._parent.index
@@ -735,9 +728,6 @@ class _LocIndexer_unstack_mloc(object):
         if isinstance(out, pd.Series):
             out = self._parent.new_like(out)
         return out
-
-
-
 
 
 # play around with sample index

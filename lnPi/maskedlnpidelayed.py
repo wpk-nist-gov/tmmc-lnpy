@@ -1,22 +1,23 @@
 from __future__ import absolute_import
 
-import numpy as np
-import pandas as pd
-from scipy.ndimage import filters
-
-from .cached_decorators import gcached
-from .utils import labels_to_masks, masks_change_convention
-
-from .extensions import AccessorMixin
-
-
 ################################################################################
 # Delayed
 from functools import lru_cache
 
+import numpy as np
+import pandas as pd
+
+from .cached_decorators import gcached
+from .extensions import AccessorMixin
+from .utils import labels_to_masks, masks_change_convention
+
+# from scipy.ndimage import filters
+
+
 @lru_cache(maxsize=20)
 def _get_n_ranges(shape, dtype):
     return [np.arange(s, dtype=dtype) for s in shape]
+
 
 @lru_cache(maxsize=20)
 def _get_shift(shape, dlnz, dtype):
@@ -25,16 +26,21 @@ def _get_shift(shape, dlnz, dtype):
         shift = np.add.outer(shift, nr * m)
     return shift
 
+
 @lru_cache(maxsize=20)
 def _get_data(base, dlnz):
-    if all((x==0 for x in dlnz)):
+    if all((x == 0 for x in dlnz)):
         return base._data
     else:
         return _get_shift(base.shape, dlnz, base._data.dtype) + base._data
 
+
 @lru_cache(maxsize=20)
 def _get_maskedarray(base, self, dlnz):
-    return np.ma.MaskedArray(_get_data(base, dlnz), mask=self._mask, fill_value=base._fill_value)
+    return np.ma.MaskedArray(
+        _get_data(base, dlnz), mask=self._mask, fill_value=base._fill_value
+    )
+
 
 @lru_cache(maxsize=20)
 def _get_filled(base, self, dlnz, fill_value=None):
@@ -42,10 +48,15 @@ def _get_filled(base, self, dlnz, fill_value=None):
 
 
 class _MaskedlnPiDelayedData(object):
-    def __init__(self, lnz, data,
-                 state_kws=None, extra_kws=None,
-                 fill_value=np.nan,
-                 copy_data=False):
+    def __init__(
+        self,
+        lnz,
+        data,
+        state_kws=None,
+        extra_kws=None,
+        fill_value=np.nan,
+        copy_data=False,
+    ):
 
         lnz = np.atleast_1d(lnz)
         data = np.array(data, copy=copy_data)
@@ -76,15 +87,16 @@ class _MaskedlnPiDelayedData(object):
         if data is None:
             data = self._data
 
-        return self.__class__(lnz=lnz, data=data, copy_data=copy_data,
-                              state_kws=self._state_kws,
-                              extra_kws=self._extra_kws,
-                              fill_value=self._fill_value)
-    def pad(self,
-            axes=None,
-            ffill=True,
-            bfill=False,
-            limit=None):
+        return self.__class__(
+            lnz=lnz,
+            data=data,
+            copy_data=copy_data,
+            state_kws=self._state_kws,
+            extra_kws=self._extra_kws,
+            fill_value=self._fill_value,
+        )
+
+    def pad(self, axes=None, ffill=True, bfill=False, limit=None):
         """
         pad nan values in underlying data to values
 
@@ -106,8 +118,9 @@ class _MaskedlnPiDelayedData(object):
         out : lnPi
             padded object
         """
-        from .utils import ffill, bfill
         import bottleneck
+
+        from .utils import bfill, ffill
 
         if axes is None:
             axes = range(self._data.ndim)
@@ -135,21 +148,18 @@ class _MaskedlnPiDelayedData(object):
         return self.new_like(data=data)
 
 
-
 class MaskedlnPiDelayed(AccessorMixin):
 
     _DataClass = _MaskedlnPiDelayedData
-
-
 
     def __init__(self, lnz, base, mask=None, copy_mask=False):
         lnz = np.atleast_1d(lnz)
         assert lnz.shape == base._lnz.shape
 
         if mask is None:
-            mask = np.full(base._data.shape, fill_value=False, dtype=np.bool)
+            mask = np.full(base._data.shape, fill_value=False, dtype=bool)
         else:
-            mask = np.array(mask, copy=copy_mask, dtype=np.bool)
+            mask = np.array(mask, copy=copy_mask, dtype=bool)
         assert mask.shape == base._data.shape
 
         self._mask = mask
@@ -160,17 +170,29 @@ class MaskedlnPiDelayed(AccessorMixin):
         self._lnz = lnz
         self._dlnz = tuple(self._lnz - self._base._lnz)
 
-
     @classmethod
-    def from_data(cls, lnz, lnz_data, data, mask=None,
-                 state_kws=None, extra_kws=None, fill_value=np.nan,
-                 copy_data=False, copy_mask=False):
+    def from_data(
+        cls,
+        lnz,
+        lnz_data,
+        data,
+        mask=None,
+        state_kws=None,
+        extra_kws=None,
+        fill_value=np.nan,
+        copy_data=False,
+        copy_mask=False,
+    ):
 
-        base = cls._DataClass(lnz=lnz, data=data, state_kws=state_kws,
-                              extra_kws=extra_kws, fill_value=fill_value,
-                              copy_data=copy_data)
+        base = cls._DataClass(
+            lnz=lnz,
+            data=data,
+            state_kws=state_kws,
+            extra_kws=extra_kws,
+            fill_value=fill_value,
+            copy_data=copy_data,
+        )
         return cls(lnz=lnz, base=base, mask=mask, copy_mask=copy_mask)
-
 
     @property
     def _data(self):
@@ -227,25 +249,24 @@ class MaskedlnPiDelayed(AccessorMixin):
 
     @property
     def volume(self):
-        return self.state_kws.get('volume', None)
+        return self.state_kws.get("volume", None)
 
     @property
     def beta(self):
-        return self.state_kws.get('beta', None)
+        return self.state_kws.get("beta", None)
 
     def __repr__(self):
-        return '<lnPi(lnz={})>'.format(self._lnz)
+        return "<lnPi(lnz={})>".format(self._lnz)
 
     def __str__(self):
         return repr(self)
 
     def _index_dict(self, phase=None):
-        out = {'lnz_{}'.format(i): v for i, v in enumerate(self.lnz)}
+        out = {"lnz_{}".format(i): v for i, v in enumerate(self.lnz)}
         if phase is not None:
-            out['phase'] = phase
-        #out.update(**self.state_kws)
+            out["phase"] = phase
+        # out.update(**self.state_kws)
         return out
-
 
     # Parameters for xlnPi
     def _lnpi_tot(self, fill_value=None):
@@ -267,15 +288,15 @@ class MaskedlnPiDelayed(AccessorMixin):
     def _lnz_tot(self):
         return self.lnz
 
-    #@gcached(prop=False)
+    # @gcached(prop=False)
     def local_argmax(self, *args, **kwargs):
         return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)
 
-    #@gcached(prop=False)
+    # @gcached(prop=False)
     def local_max(self, *args, **kwargs):
         return self.ma[self.local_argmax(*args, **kwargs)]
 
-    #@gcached(prop=False)
+    # @gcached(prop=False)
     def local_maxmask(self, *args, **kwargs):
         return self.ma == self.local_max(*args, **kwargs)
 
@@ -283,11 +304,11 @@ class MaskedlnPiDelayed(AccessorMixin):
     def edge_distance_matrix(self):
         """matrix of distance from upper bound"""
         from .utils import distance_matrix
+
         return distance_matrix(~self.mask)
 
     def edge_distance(self, ref, *args, **kwargs):
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
-
 
     def new_like(self, lnz=None, base=None, mask=None, copy_mask=False):
 
@@ -298,16 +319,9 @@ class MaskedlnPiDelayed(AccessorMixin):
         if mask is None:
             mask = self._mask
 
-        return self.__class__(lnz=lnz,
-                              base=base,
-                              mask=mask,
-                              copy_mask=copy_mask)
+        return self.__class__(lnz=lnz, base=base, mask=mask, copy_mask=copy_mask)
 
-    def pad(self,
-            axes=None,
-            ffill=True,
-            bfill=False,
-            limit=None):
+    def pad(self, axes=None, ffill=True, bfill=False, limit=None):
         """
         pad nan values in underlying data to values
 
@@ -348,7 +362,7 @@ class MaskedlnPiDelayed(AccessorMixin):
         """
         new object with logical or of self.mask and mask
         """
-        return self.new_like(mask=(mask|self.mask))
+        return self.new_like(mask=(mask | self.mask))
 
     def and_mask(self, mask, **kwargs):
         """
@@ -357,14 +371,9 @@ class MaskedlnPiDelayed(AccessorMixin):
         return self.copy_shallow(mask=(mask & self.mask))
 
     @classmethod
-    def from_table(cls,
-                   path,
-                   lnz,
-                   state_kws=None,
-                   sep='\s+',
-                   names=None,
-                   csv_kws=None,
-                   **kwargs):
+    def from_table(
+        cls, path, lnz, state_kws=None, sep=r"\s+", names=None, csv_kws=None, **kwargs
+    ):
         """
         Create lnPi object from text file table with columns [n_0,...,n_ndim, lnpi]
 
@@ -388,19 +397,24 @@ class MaskedlnPiDelayed(AccessorMixin):
         ndim = len(lnz)
 
         if names is None:
-            names = ['n_{}'.format(i) for i in range(ndim)] + ['lnpi']
+            names = ["n_{}".format(i) for i in range(ndim)] + ["lnpi"]
 
         if csv_kws is None:
             csv_kws = {}
 
-        da = (pd.read_csv(path, sep=sep, names=names,
-                          **csv_kws).set_index(names[:-1])['lnpi'].to_xarray())
-        return cls.from_data(data=da.values,
-                   mask=da.isnull().values,
-                   lnz=lnz,
-                   lnz_data=lnz,
-                   state_kws=state_kws,
-                   **kwargs)
+        da = (
+            pd.read_csv(path, sep=sep, names=names, **csv_kws)
+            .set_index(names[:-1])["lnpi"]
+            .to_xarray()
+        )
+        return cls.from_data(
+            data=da.values,
+            mask=da.isnull().values,
+            lnz=lnz,
+            lnz_data=lnz,
+            state_kws=state_kws,
+            **kwargs
+        )
 
     @classmethod
     def from_dataarray(cls, da, state_as_attrs=None, **kwargs):
@@ -409,15 +423,15 @@ class MaskedlnPiDelayed(AccessorMixin):
         """
 
         kws = {}
-        kws['data'] = da.values
-        if 'mask' in da.coords:
-            kws['mask'] = da.mask.values
+        kws["data"] = da.values
+        if "mask" in da.coords:
+            kws["mask"] = da.mask.values
         else:
-            kws['mask'] = da.isnull().values
+            kws["mask"] = da.isnull().values
 
         # where are state variables
         if state_as_attrs is None:
-            state_as_attrs = bool(da.attrs.get('state_as_attrs', False))
+            state_as_attrs = bool(da.attrs.get("state_as_attrs", False))
         if state_as_attrs:
             # state variables from attrs
             c = da.attrs
@@ -426,24 +440,24 @@ class MaskedlnPiDelayed(AccessorMixin):
 
         lnz = []
         state_kws = {}
-        for k in da.attrs['dims_state']:
+        for k in da.attrs["dims_state"]:
             val = np.array(c[k])
-            if 'lnz' in k:
+            if "lnz" in k:
                 lnz.append(val)
             else:
                 if val.ndim == 0:
                     val = val[()]
                 state_kws[k] = val
-        kws['lnz'] = lnz
-        kws['state_kws'] = state_kws
+        kws["lnz"] = lnz
+        kws["state_kws"] = state_kws
 
-        kws['lnz_data'] = lnz
+        kws["lnz_data"] = lnz
 
         # any overrides
         kwargs = dict(kws, **kwargs)
         return cls.from_data(**kwargs)
 
-    def list_from_masks(self, masks, convention='image'):
+    def list_from_masks(self, masks, convention="image"):
         """
         create list of lnpis corresponding to masks[i]
 
@@ -460,30 +474,27 @@ class MaskedlnPiDelayed(AccessorMixin):
         """
 
         return [
-            self.or_mask(m)
-            for m in masks_change_convention(masks, convention, False)
+            self.or_mask(m) for m in masks_change_convention(masks, convention, False)
         ]
 
-    def list_from_labels(self,
-                         labels,
-                         features=None,
-                         include_boundary=False,
-                         check_features=True,
-                         **kwargs):
+    def list_from_labels(
+        self,
+        labels,
+        features=None,
+        include_boundary=False,
+        check_features=True,
+        **kwargs
+    ):
         """
         create list of lnpis corresponding to labels
         """
 
-        masks, features = labels_to_masks(labels=labels,
-                                          features=features,
-                                          include_boundary=include_boundary,
-                                          convention=False,
-                                          check_features=check_features,
-                                          **kwargs)
+        masks, features = labels_to_masks(
+            labels=labels,
+            features=features,
+            include_boundary=include_boundary,
+            convention=False,
+            check_features=check_features,
+            **kwargs
+        )
         return self.list_from_masks(masks, convention=False)
-
-
-
-
-
-

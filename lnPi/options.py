@@ -2,55 +2,52 @@
 define optional paremeters
 """
 
-TQDM_USE = 'tqdm_use'
-TQDM_LEN_CALC = 'tqdm_len_calc'
-TQDM_LEN_BUILD = 'tqdm_len_build'
-TQDM_LEAVE = 'tqdm_leave'
-TQDM_BAR = 'tqdm_bar'
+TQDM_USE = "tqdm_use"
+TQDM_LEN_CALC = "tqdm_len_calc"
+TQDM_LEN_BUILD = "tqdm_len_build"
+TQDM_LEAVE = "tqdm_leave"
+TQDM_BAR = "tqdm_bar"
 
-JOBLIB_USE = 'joblib_use'
-JOBLIB_N_JOBS = 'joblib_n_jobs'
-JOBLIB_BACKEND = 'joblib_backend'
-JOBLIB_KWS = 'joblib_kws'
-JOBLIB_LEN_CALC = 'joblib_len_calc'
-JOBLIB_LEN_BUILD = 'joblib_len_build'
+JOBLIB_USE = "joblib_use"
+JOBLIB_N_JOBS = "joblib_n_jobs"
+JOBLIB_BACKEND = "joblib_backend"
+JOBLIB_KWS = "joblib_kws"
+JOBLIB_LEN_CALC = "joblib_len_calc"
+JOBLIB_LEN_BUILD = "joblib_len_build"
 
 
 OPTIONS = {
-    TQDM_USE : True,
-    TQDM_LEN_CALC : 100,
-    TQDM_LEN_BUILD : 500,
-    TQDM_LEAVE : False,
-    TQDM_BAR : 'default',
-
-    JOBLIB_USE : True,
-    JOBLIB_N_JOBS : -1,
-    JOBLIB_BACKEND : None,
-    JOBLIB_KWS : {},
-    JOBLIB_LEN_CALC : 200,
-    JOBLIB_LEN_BUILD : 500,
-
+    TQDM_USE: True,
+    TQDM_LEN_CALC: 100,
+    TQDM_LEN_BUILD: 500,
+    TQDM_LEAVE: False,
+    TQDM_BAR: "default",
+    JOBLIB_USE: True,
+    JOBLIB_N_JOBS: -1,
+    JOBLIB_BACKEND: None,
+    JOBLIB_KWS: {},
+    JOBLIB_LEN_CALC: 200,
+    JOBLIB_LEN_BUILD: 500,
 }
 
 _isbool = lambda x: isinstance(x, bool)
-_isint  = lambda x: isinstance(x, int)
-_isstr  = lambda x: isinstance(x, str)
+_isint = lambda x: isinstance(x, int)
+_isstr = lambda x: isinstance(x, str)
 
 _isstr_or_None = lambda x: isinstance(x, str) or x is None
 
 _VALIDATORS = {
-    TQDM_USE : _isbool,
-    TQDM_LEN_CALC : _isint,
-    TQDM_LEN_BUILD : _isint,
-    TQDM_LEAVE : _isbool,
-    TQDM_BAR : lambda x: x in ['default','text','notebook'],
-
-    JOBLIB_USE : _isbool,
-    JOBLIB_N_JOBS : _isint,
+    TQDM_USE: _isbool,
+    TQDM_LEN_CALC: _isint,
+    TQDM_LEN_BUILD: _isint,
+    TQDM_LEAVE: _isbool,
+    TQDM_BAR: lambda x: x in ["default", "text", "notebook"],
+    JOBLIB_USE: _isbool,
+    JOBLIB_N_JOBS: _isint,
     JOBLIB_BACKEND: _isstr_or_None,
-    JOBLIB_KWS : lambda x: isinstance(x, dict),
-    JOBLIB_LEN_CALC : _isint,
-    JOBLIB_LEN_BUILD : _isint
+    JOBLIB_KWS: lambda x: isinstance(x, dict),
+    JOBLIB_LEN_CALC: _isint,
+    JOBLIB_LEN_BUILD: _isint,
 }
 
 _SETTERS = {}

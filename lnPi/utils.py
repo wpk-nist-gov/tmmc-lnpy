@@ -5,15 +5,17 @@ utility functions
 from functools import partial
 
 import numpy as np
-import pandas as pd
+
+# import pandas as pd
 import xarray as xr
 from scipy import ndimage as ndi
 from skimage import segmentation
 
-#--------------------------------------------------
+# --------------------------------------------------
 # TQDM stuff
 try:
     import tqdm as _tqdm
+
     _HAS_TQDM = True
 except ImportError:
     _HAS_TQDM = False
@@ -21,21 +23,22 @@ except ImportError:
 if _HAS_TQDM:
     try:
         from IPython import get_ipython
-        if get_ipython().has_trait('kernel'):
+
+        if get_ipython().has_trait("kernel"):
             tqdm_default = _tqdm.notebook
         else:
             tqdm_default = _tqdm.tqdm
-    except:
+    except Exception:
         tqdm_default = _tqdm.tqdm
 
 from .options import OPTIONS
 
 
 def tqdm(*args, **kwargs):
-    opt = OPTIONS['tqdm_bar']
-    if opt == 'text':
+    opt = OPTIONS["tqdm_bar"]
+    if opt == "text":
         func = _tqdm.tqdm
-    elif opt == 'notebook':
+    elif opt == "notebook":
         func = _tqdm.tqdm_notebook
     else:
         func = tqdm_default
@@ -43,25 +46,24 @@ def tqdm(*args, **kwargs):
     return func(*args, **kwargs)
 
 
-
 def get_tqdm(seq, len_min, leave=None, **kwargs):
 
-    n = kwargs.get('total', None)
+    n = kwargs.get("total", None)
 
     if isinstance(len_min, str):
-        len_min=OPTIONS[len_min]
+        len_min = OPTIONS[len_min]
 
     if n is None:
         n = len(seq)
-    if _HAS_TQDM and OPTIONS['tqdm_use'] and n >= len_min:
+    if _HAS_TQDM and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
-            leave = OPTIONS['tqdm_leave']
+            leave = OPTIONS["tqdm_leave"]
         seq = tqdm(seq, leave=leave, **kwargs)
     return seq
 
 
-get_tqdm_calc = partial(get_tqdm, len_min='tqdm_len_calc')
-get_tqdm_build = partial(get_tqdm, len_min='tqdm_len_build')
+get_tqdm_calc = partial(get_tqdm, len_min="tqdm_len_calc")
+get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
 
 # def get_tqdm_calc(seq, len_min=None, leave=None, **kwargs):
 #     if len_min is None:
@@ -75,11 +77,11 @@ get_tqdm_build = partial(get_tqdm, len_min='tqdm_len_build')
 #     return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
 
 
-
 # --------------------------------------------------
 # JOBLIB stuff
 try:
     from joblib import Parallel, delayed
+
     _HAS_JOBLIB = True
 except ImportError:
     _HAS_JOBLIB = False
@@ -87,37 +89,55 @@ except ImportError:
 
 from operator import attrgetter
 
+
 def parallel_map_build(func, items, *args, **kwargs):
-    if _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_build']:
-        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
-                        backend=OPTIONS['joblib_backend'],
-                        **OPTIONS['joblib_kws'])(
-                            delayed(func)(x, *args, **kwargs)
-                            for x in items)
+    if (
+        _HAS_JOBLIB
+        and OPTIONS["joblib_use"]
+        and len(items) >= OPTIONS["joblib_len_build"]
+    ):
+        return Parallel(
+            n_jobs=OPTIONS["joblib_n_jobs"],
+            backend=OPTIONS["joblib_backend"],
+            **OPTIONS["joblib_kws"]
+        )(delayed(func)(x, *args, **kwargs) for x in items)
     else:
         return [func(x, *args, **kwargs) for x in items]
+
 
 def _func_call(x, *args, **kwargs):
     return x(*args, **kwargs)
 
+
 def parallel_map_call(items, use_joblib, *args, **kwargs):
-    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_calc']:
-        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
-                        backend=OPTIONS['joblib_backend'],
-                        **OPTIONS['joblib_kws'])(
-                            delayed(_func_call)(x, *args, **kwargs)
-                            for x in items)
+    if (
+        use_joblib
+        and _HAS_JOBLIB
+        and OPTIONS["joblib_use"]
+        and len(items) >= OPTIONS["joblib_len_calc"]
+    ):
+        return Parallel(
+            n_jobs=OPTIONS["joblib_n_jobs"],
+            backend=OPTIONS["joblib_backend"],
+            **OPTIONS["joblib_kws"]
+        )(delayed(_func_call)(x, *args, **kwargs) for x in items)
     else:
         return [x(*args, **kwargs) for x in items]
 
+
 def parallel_map_attr(attr, use_joblib, items):
     func = attrgetter(attr)
-    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and len(items) >= OPTIONS['joblib_len_calc']:
-        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
-                        backend=OPTIONS['joblib_backend'],
-                        **OPTIONS['joblib_kws'])(
-                            delayed(func)(x)
-                            for x in items)
+    if (
+        use_joblib
+        and _HAS_JOBLIB
+        and OPTIONS["joblib_use"]
+        and len(items) >= OPTIONS["joblib_len_calc"]
+    ):
+        return Parallel(
+            n_jobs=OPTIONS["joblib_n_jobs"],
+            backend=OPTIONS["joblib_backend"],
+            **OPTIONS["joblib_kws"]
+        )(delayed(func)(x) for x in items)
     else:
         return [func(x) for x in items]
 
@@ -127,76 +147,68 @@ def parallel_map_func_starargs(func, use_joblib, items, total=None):
     if total is None:
         total = len(items)
 
-    if use_joblib and _HAS_JOBLIB and OPTIONS['joblib_use'] and total >= OPTIONS['joblib_len_calc']:
-        return Parallel(n_jobs=OPTIONS['joblib_n_jobs'],
-                        backend=OPTIONS['joblib_backend'],
-                        **OPTIONS['joblib_kws'])(
-                            delayed(func)(*x)
-                            for x in items)
+    if (
+        use_joblib
+        and _HAS_JOBLIB
+        and OPTIONS["joblib_use"]
+        and total >= OPTIONS["joblib_len_calc"]
+    ):
+        return Parallel(
+            n_jobs=OPTIONS["joblib_n_jobs"],
+            backend=OPTIONS["joblib_backend"],
+            **OPTIONS["joblib_kws"]
+        )(delayed(func)(*x) for x in items)
     else:
         return [func(*x) for x in items]
 
 
-
-
-
-
-#----------------------------------------
+# ----------------------------------------
 # pandas stuff
 def allbut(levels, *names):
     names = set(names)
     return [item for item in levels if item not in names]
 
 
-#----------------------------------------
+# ----------------------------------------
 # xarray utils
-def dim_to_suffix_dataarray(da, dim, join='_'):
+def dim_to_suffix_dataarray(da, dim, join="_"):
     if dim in da.dims:
-        return (
-            da
-            .assign_coords(**{dim : lambda x: ['{}{}{}'.format(x.name, join, c) for c in x[dim].values]})
-            .to_dataset(dim=dim)
-        )
+        return da.assign_coords(
+            **{dim: lambda x: ["{}{}{}".format(x.name, join, c) for c in x[dim].values]}
+        ).to_dataset(dim=dim)
     else:
         return da.to_dataset()
 
-def dim_to_suffix_dataset(table, dim, join='_'):
+
+def dim_to_suffix_dataset(table, dim, join="_"):
     out = table
     for k in out:
         if dim in out[k].dims:
-            out = (
-                out
-                .drop(k)
-                .update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
-            )
+            out = out.drop(k).update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
     return out
 
 
-def dim_to_suffix(ds, dim='component', join='_'):
+def dim_to_suffix(ds, dim="component", join="_"):
     if isinstance(ds, xr.DataArray):
         f = dim_to_suffix_dataarray
     elif isinstance(ds, xr.Dataset):
         f = dim_to_suffix_dataset
     else:
-        raise ValueError('ds must be `DataArray` or `Dataset`')
+        raise ValueError("ds must be `DataArray` or `Dataset`")
     return f(ds, dim=dim, join=join)
 
 
-
-
 def _convention_to_bool(convention):
-    if convention == 'image':
+    if convention == "image":
         convention = True
-    elif convention == 'masked':
+    elif convention == "masked":
         convention = False
     else:
         assert convention in [True, False]
     return convention
 
 
-def mask_change_convention(mask,
-                           convention_in='image',
-                           convention_out='masked'):
+def mask_change_convention(mask, convention_in="image", convention_out="masked"):
     """
     convert an array from one convensiton to another
 
@@ -213,9 +225,7 @@ def mask_change_convention(mask,
     return mask
 
 
-def masks_change_convention(masks,
-                            convention_in='image',
-                            convention_out='masked'):
+def masks_change_convention(masks, convention_in="image", convention_out="masked"):
     """
     convert convension of list of masks
     """
@@ -231,12 +241,14 @@ def masks_change_convention(masks,
 ##################################################
 # labels/masks utilities
 ##################################################
-def labels_to_masks(labels,
-                    features=None,
-                    include_boundary=False,
-                    convention='image',
-                    check_features=True,
-                    **kwargs):
+def labels_to_masks(
+    labels,
+    features=None,
+    include_boundary=False,
+    convention="image",
+    check_features=True,
+    **kwargs
+):
     """
     convert labels array to list of masks
 
@@ -267,7 +279,7 @@ def labels_to_masks(labels,
     """
 
     if include_boundary:
-        kwargs = dict(dict(mode='outer', connectivity=labels.ndim), **kwargs)
+        kwargs = dict(dict(mode="outer", connectivity=labels.ndim), **kwargs)
     if features is None:
         features = [i for i in np.unique(labels) if i > 0]
     elif check_features:
@@ -288,11 +300,7 @@ def labels_to_masks(labels,
     return output, features
 
 
-def masks_to_labels(masks,
-                    features=None,
-                    convention='image',
-                    dtype=np.int,
-                    **kwargs):
+def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwargs):
     """
     convert list of masks to labels
 
@@ -317,8 +325,7 @@ def masks_to_labels(masks,
     else:
         assert len(features) == len(masks)
 
-    labels = np.full(masks[0].shape, fill_value=0,
-                     dtype=dtype)
+    labels = np.full(masks[0].shape, fill_value=0, dtype=dtype)
 
     masks = masks_change_convention(masks, convention, True)
 
@@ -327,19 +334,17 @@ def masks_to_labels(masks,
     return labels
 
 
-
-
-
-
 def ffill(arr, axis=-1, limit=None):
     import bottleneck
+
     _limit = limit if limit is not None else arr.shape[axis]
     return bottleneck.push(arr, n=_limit, axis=axis)
 
 
 def bfill(arr, axis=-1, limit=None):
-    '''inverse of ffill'''
+    """inverse of ffill"""
     import bottleneck
+
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
@@ -351,7 +356,7 @@ def bfill(arr, axis=-1, limit=None):
 
 
 ##################################################
-#calculations
+# calculations
 ##################################################
 
 
@@ -390,7 +395,7 @@ def get_lnz_iter(lnz, x):
 
 
 ##################################################
-#utilities
+# utilities
 ##################################################
 
 
@@ -420,9 +425,7 @@ def sort_lnPis(input, comp=0):
     return output
 
 
-
-
-def distance_matrix(mask, convention='image'):
+def distance_matrix(mask, convention="image"):
     """
     create matrix of distances from elements of mask
     to nearest background point
@@ -440,16 +443,14 @@ def distance_matrix(mask, convention='image'):
         distance from possible feature elements to background
     """
 
-
-    mask = np.asarray(mask, dtype=np.bool)
+    mask = np.asarray(mask, dtype=bool)
     mask = masks_change_convention(mask, convention_in=convention, convention_out=True)
-    
+
     # pad mask
     # add padding to end of matrix in each dimension
     ndim = mask.ndim
-    pad_width = ((0, 1),)* ndim
-    mask = np.pad(mask, pad_width=pad_width,
-                  mode='constant', constant_values=False)
+    pad_width = ((0, 1),) * ndim
+    mask = np.pad(mask, pad_width=pad_width, mode="constant", constant_values=False)
 
     # distance filter
     dist = ndi.distance_transform_edt(mask)

@@ -2,25 +2,28 @@
 Set of helper utilities to work with single component system
 """
 
+# from functools import partial
+
 import numpy as np
 from scipy.optimize import brentq
 
-from functools import partial
 from .collectionlnpi import CollectionlnPi
 
 
-def get_lnz_min(target,
-                C,
-                build_phases,
-                phase_id=0,
-                component=None,
-                dlnz=0.5,
-                dfac=1.0,
-                ref=None,
-                build_kws=None,
-                ntry=20,
-                solve_kws=None,
-                full_output=True):
+def get_lnz_min(
+    target,
+    C,
+    build_phases,
+    phase_id=0,
+    component=None,
+    dlnz=0.5,
+    dfac=1.0,
+    ref=None,
+    build_kws=None,
+    ntry=20,
+    solve_kws=None,
+    full_output=True,
+):
     """
     solve for target density
 
@@ -58,13 +61,15 @@ def get_lnz_min(target,
     solution_parameters : optional
     """
 
-    if phase_id is not None and phase_id not in C.index.get_level_values('phase'):
-        raise ValueError('no phase {}'.format(phase_id))
+    if phase_id is not None and phase_id not in C.index.get_level_values("phase"):
+        raise ValueError("no phase {}".format(phase_id))
 
     lnz_idx = build_phases.index
-    if isinstance(component, str) and component.lower() == 'none':
+    if isinstance(component, str) and component.lower() == "none":
+
         def getter_comp(x):
             return x.xge.dens_tot
+
     else:
         if component is None:
             component = lnz_idx
@@ -73,12 +78,14 @@ def get_lnz_min(target,
             return x.xge.dens.sel(component=component)
 
     if phase_id is None:
+
         def getter(x):
-            return getter_comp(x).min('phase')
+            return getter_comp(x).min("phase")
+
     else:
+
         def getter(x):
             return getter_comp(x).sel(phase=phase_id)
-
 
     s = getter(C).to_series().dropna()
     # builder
@@ -96,14 +103,13 @@ def get_lnz_min(target,
         for i in range(ntry):
             new_lnz -= dlnz_left
             p = build_phases(new_lnz, ref=ref, **build_kws)
-            if phase_id in p._get_level('phase') and \
-               getter(p).values < target:
+            if phase_id in p._get_level("phase") and getter(p).values < target:
                 left = p
                 break
             dlnz_left *= dfac
 
     if left is None:
-        raise RuntimeError('could not find left bounds')
+        raise RuntimeError("could not find left bounds")
 
     # right bracket
     right = None
@@ -118,19 +124,19 @@ def get_lnz_min(target,
             new_lnz += dlnz_right
             p = build_phases(new_lnz, ref=ref, **build_kws)
 
-            if phase_id not in p._get_level('phase'):
+            if phase_id not in p._get_level("phase"):
                 # went to far
                 new_lnz -= dlnz_right
                 # reset to half dlnz
                 dlnz_right = dlnz_right * 0.5
-            elif getter(p).values  > target:
+            elif getter(p).values > target:
                 right = p
                 break
             else:
                 dlnz_right *= dfac
 
     if right is None:
-        raise RuntimeError('could not find right bounds')
+        raise RuntimeError("could not find right bounds")
 
     def f(x):
         lnz_new = x
@@ -150,17 +156,19 @@ def get_lnz_min(target,
         return f.lnpi
 
 
-def get_lnz_max(edge_distance_min,
-                build_phases,
-                ref=None,
-                lnz_start=None,
-                C=None,
-                dlnz=0.5,
-                dfac=1.0,
-                threshold_abs=1e-4,
-                ntry=50,
-                build_kws=None,
-                full_output=True):
+def get_lnz_max(
+    edge_distance_min,
+    build_phases,
+    ref=None,
+    lnz_start=None,
+    C=None,
+    dlnz=0.5,
+    dfac=1.0,
+    threshold_abs=1e-4,
+    ntry=50,
+    build_kws=None,
+    full_output=True,
+):
     """
     find max lnz by bisection
     """
@@ -181,13 +189,11 @@ def get_lnz_max(edge_distance_min,
     lnz_left = lnz_right = None
     n_left = n_right = None
 
-
     def getter(p):
         v = p.xge.edge_distance(ref)
         if not p._xarray_unstack:
             v = v.unstack(p._concat_dim)
-        return v.min('phase')
-
+        return v.min("phase")
 
     # if have C, try to use it
     if C is not None:
@@ -225,7 +231,7 @@ def get_lnz_max(edge_distance_min,
             dlnz_loc *= dfac
 
     if left is None:
-        raise RuntimeError('could not find left bound')
+        raise RuntimeError("could not find left bound")
 
     # if right not set, try to find it
     if right is None:
@@ -245,12 +251,11 @@ def get_lnz_max(edge_distance_min,
             dlnz_loc *= dfac
 
     if right is None:
-        raise RuntimeError('could not find right bound')
+        raise RuntimeError("could not find right bound")
 
     # not do bisection
     P = [left, right]
     Y = [getter(x).values for x in P]
-
 
     for i in range(ntry):
         lnz = [x._get_lnz(lnz_idx) for x in P]
@@ -271,17 +276,15 @@ def get_lnz_max(edge_distance_min,
 
     left, right = P
     if full_output:
-        info = dict(ntry=i,
-                    ntry_left=n_left,
-                    ntry_right=n_right,
-                    precision=delta)
+        info = dict(ntry=i, ntry_left=n_left, ntry_right=n_right, precision=delta)
         return left, info
     else:
         return left
 
 
 class _BaseLimit(object):
-    _bound_side = None # -1 for lower bound, +1 for upper bound
+    _bound_side = None  # -1 for lower bound, +1 for upper bound
+
     def __init__(self, parent):
         self._parent = parent
 
@@ -290,8 +293,7 @@ class _BaseLimit(object):
         return self._parent
 
     def __call__(self, *args, **kwargs):
-        raise NotImplementedError('to be implemented in subclass')
-
+        raise NotImplementedError("to be implemented in subclass")
 
     @property
     def lnz_idx(self):
@@ -308,7 +310,7 @@ class _BaseLimit(object):
     @access.setter
     def access(self, val):
         if not isinstance(val, CollectionlnPi):
-            raise ValueError('access should be CollectionlnPi')
+            raise ValueError("access should be CollectionlnPi")
         self._access = val
 
     def _get_bound(self, sign, access=None, lnz_idx=None):
@@ -321,12 +323,13 @@ class _BaseLimit(object):
         else:
             return sign * np.inf
 
-
     def get_bounds(self, access=None, lnz_idx=None):
-        return np.array([self._get_bound(sign=sign,
-                                         access=access,
-                                         lnz_idx=lnz_idx)
-                         for sign in [-1, +1]])
+        return np.array(
+            [
+                self._get_bound(sign=sign, access=access, lnz_idx=lnz_idx)
+                for sign in [-1, +1]
+            ]
+        )
 
     @property
     def bounds(self):
@@ -340,7 +343,6 @@ class _BaseLimit(object):
     def set_bounds(self, access=None, lnz_idx=None):
         self.bounds = self.get_bounds(access=access, lnz_idx=lnz_idx)
 
-
     @property
     def lb(self):
         return self.bounds[0]
@@ -348,7 +350,6 @@ class _BaseLimit(object):
     @property
     def ub(self):
         return self.bounds[1]
-
 
     @property
     def lnz_list(self):
@@ -367,22 +368,28 @@ class _BaseLimit(object):
         self._lnz_list = self.get_lnz_list(lnz, lnz_idx)
 
 
-
-@CollectionlnPi.decorate_accessor('bounds_lower', single_create=True)
+@CollectionlnPi.decorate_accessor("bounds_lower", single_create=True)
 class LowerBounds(_BaseLimit):
 
     _bound_side = -1
 
+    def __call__(
+        self,
+        dens_min,
+        build_phases,
+        phase_id=0,
+        component=None,
+        dlnz=0.5,
+        dfac=1.0,
+        ref=None,
+        build_kws=None,
+        ntry=20,
+        solve_kws=None,
+        inplace=True,
+        force=False,
+    ):
 
-    def __call__(self, dens_min, build_phases,
-                 phase_id=0, component=None,
-                 dlnz=0.5, dfac=1.0,
-                 ref=None, build_kws=None,
-                 ntry=20, solve_kws=None,
-                 inplace=True, force=False):
-
-
-        if hasattr(self, '_access') and not force:
+        if hasattr(self, "_access") and not force:
             p = self.access
             info = self._info
             lnz_idx = self.lnz_idx
@@ -390,13 +397,19 @@ class LowerBounds(_BaseLimit):
 
         else:
             lnz_idx = build_phases.index
-            p, info = get_lnz_min(target=dens_min,
-                                  C=self._parent,
-                                  build_phases=build_phases,
-                                  phase_id=phase_id, component=component,
-                                  dlnz=dlnz, dfac=1.0,
-                                  ref=ref, build_kws=build_kws,
-                                  ntry=ntry, solve_kws=solve_kws)
+            p, info = get_lnz_min(
+                target=dens_min,
+                C=self._parent,
+                build_phases=build_phases,
+                phase_id=phase_id,
+                component=component,
+                dlnz=dlnz,
+                dfac=1.0,
+                ref=ref,
+                build_kws=build_kws,
+                ntry=ntry,
+                solve_kws=solve_kws,
+            )
 
             bounds = self.get_bounds(p, lnz_idx)
 
@@ -410,19 +423,26 @@ class LowerBounds(_BaseLimit):
             return bounds, p, lnz_idx, info
 
 
-@CollectionlnPi.decorate_accessor('bounds_upper', single_create=True)
+@CollectionlnPi.decorate_accessor("bounds_upper", single_create=True)
 class UpperBounds(_BaseLimit):
     _bound_side = +1
 
-    def __call__(self, edge_distance_min, build_phases,
-                 ref=None, lnz_start=None,
-                 dlnz=0.5, dfac=1.0,
-                 threshold_abs=1e-4, ntry=20,
-                 build_kws=None,
-                 inplace=True, force=False):
+    def __call__(
+        self,
+        edge_distance_min,
+        build_phases,
+        ref=None,
+        lnz_start=None,
+        dlnz=0.5,
+        dfac=1.0,
+        threshold_abs=1e-4,
+        ntry=20,
+        build_kws=None,
+        inplace=True,
+        force=False,
+    ):
 
-
-        if hasattr(self, '_access') and not force:
+        if hasattr(self, "_access") and not force:
             p = self.access
             info = self._info
             lnz_idx = self.lnz_idx
@@ -430,15 +450,19 @@ class UpperBounds(_BaseLimit):
 
         else:
             lnz_idx = build_phases.index
-            p, info = get_lnz_max(edge_distance_min=edge_distance_min,
-                                  C=self._parent,
-                                  build_phases=build_phases,
-                                  lnz_start=None,
-                                  dlnz=dlnz, dfac=1.0,
-                                  threshold_abs=threshold_abs,
-                                  ntry=ntry,
-                                  ref=ref, build_kws=build_kws,
-                                  full_output=True)
+            p, info = get_lnz_max(
+                edge_distance_min=edge_distance_min,
+                C=self._parent,
+                build_phases=build_phases,
+                lnz_start=None,
+                dlnz=dlnz,
+                dfac=1.0,
+                threshold_abs=threshold_abs,
+                ntry=ntry,
+                ref=ref,
+                build_kws=build_kws,
+                full_output=True,
+            )
             bounds = self.get_bounds(p, lnz_idx)
 
         if inplace:
@@ -451,16 +475,17 @@ class UpperBounds(_BaseLimit):
             return bounds, p, lnz_idx, info
 
 
-
-
-
-def build_grid(x=None,
-               dx=None,
-               x_range=None,
-               x0=None, offsets=None,
-               even_grid=False, digits=None,
-               unique=True,
-               outlier=False):
+def build_grid(
+    x=None,
+    dx=None,
+    x_range=None,
+    x0=None,
+    offsets=None,
+    even_grid=False,
+    digits=None,
+    unique=True,
+    outlier=False,
+):
     """
     build a grid of values
 
@@ -496,8 +521,7 @@ def build_grid(x=None,
         if x_range is None:
             x_range = x0 + np.array(offsets)
         assert len(x_range) == 2
-        x = np.arange(x_range[0], x_range[1] + dx*0.5, dx)
-
+        x = np.arange(x_range[0], x_range[1] + dx * 0.5, dx)
 
     if not outlier:
         lb, ub = x.min(), x.max()
@@ -517,23 +541,33 @@ def build_grid(x=None,
     return x
 
 
-def limited_collection(build_phases, dlnz,
-                       lnz_range=None,
-                       offsets=None,
-                       digits=None, even_grid=True,
-                       course_step=None,
-                       edge_distance_min=None, dens_min=None,
-                       lnz_min_kws=None, lnz_max_kws=None,
-                       ref=None, build_kws=None, build_stability_kws=None, nmax=None,
-                       xarray_output=True, collection_kws=None, limit_course=False):
+def limited_collection(
+    build_phases,
+    dlnz,
+    lnz_range=None,
+    offsets=None,
+    digits=None,
+    even_grid=True,
+    course_step=None,
+    edge_distance_min=None,
+    dens_min=None,
+    lnz_min_kws=None,
+    lnz_max_kws=None,
+    ref=None,
+    build_kws=None,
+    build_stability_kws=None,
+    nmax=None,
+    xarray_output=True,
+    collection_kws=None,
+    limit_course=False,
+):
     """
     build a CollectionlnPi over a range of lnz values
 
     Parameters
     ----------
-    build_phases : 
+    build_phases :
     """
-
 
     if lnz_range is None:
         if ref is None:
@@ -561,7 +595,6 @@ def limited_collection(build_phases, dlnz,
     if collection_kws is None:
         collection_kws = {}
 
-
     # get_collection = partial(
     #     CollectionlnPi.from_builder,
     #     build_phases=build_phases,
@@ -573,58 +606,58 @@ def limited_collection(build_phases, dlnz,
     c_course = None
     lnz_min, lnz_max = lnzs[0], lnzs[-1]
     if edge_distance_min is not None or dens_min is not None:
-        #c_course = get_collection(lnzs[::course_step])
+        # c_course = get_collection(lnzs[::course_step])
         c_course = CollectionlnPi.from_builder(
             lnzs[::course_step],
             build_phases=build_phases,
-            build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
-            **collection_kws
+            build_kws=build_kws,
+            nmax=nmax,
+            xarray_output=xarray_output,
+            **collection_kws,
         )
-
-
 
         if dens_min is not None:
             try:
                 if lnz_min_kws is None:
                     lnz_min_kws = {}
-                p_min, o = get_lnz_min(dens_min, c_course, build_phases,
-                                       build_kws=build_kws, **lnz_min_kws)
+                p_min, o = get_lnz_min(
+                    dens_min, c_course, build_phases, build_kws=build_kws, **lnz_min_kws
+                )
                 if o.converged:
                     lnz_min = p_min.iloc[0].lnz[build_phases.index] - dlnz
-            except:
+            except Exception:
                 pass
 
         if edge_distance_min is not None:
             try:
                 if lnz_max_kws is None:
                     lnz_max_kws = {}
-                p_max, o = get_lnz_max(edge_distance_min, build_phases,
-                                       build_kws=build_kws, C=c_course, **lnz_max_kws)
+                p_max, o = get_lnz_max(
+                    edge_distance_min,
+                    build_phases,
+                    build_kws=build_kws,
+                    C=c_course,
+                    **lnz_max_kws,
+                )
                 lnz_max = p_max.iloc[0].lnz[build_phases.index]
-            except:
+            except Exception:
                 pass
-
 
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
     c = CollectionlnPi.from_builder(
         lnzs,
         build_phases=build_phases,
-        build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
-        **collection_kws
+        build_kws=build_kws,
+        nmax=nmax,
+        xarray_output=xarray_output,
+        **collection_kws,
     )
-
 
     if c_course is None:
         c_course = c
     elif limit_course:
-        slnz = 'lnz_{}'.format(build_phases.index)
-        q = f'{slnz} >= {lnz_min} and {slnz} <= {lnz_max}'
+        slnz = "lnz_{}".format(build_phases.index)
+        q = f"{slnz} >= {lnz_min} and {slnz} <= {lnz_max}"
         c_course = c_course.query(q)
 
     return c_course, c
-
-
-
-
-
-

@@ -9,36 +9,32 @@ routines to segment lnPi
 """
 
 import itertools
-from collections import Iterable
+import warnings
+from collections.abc import Iterable
 
+import bottleneck
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 from skimage import feature, morphology, segmentation
-import bottleneck
-
-
 
 from .cached_decorators import gcached
-from .utils import labels_to_masks
-
-import warnings
 from .collectionlnpi import CollectionlnPi
+from .utils import get_tqdm_calc as get_tqdm
+from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
-from .utils import (parallel_map_func_starargs, get_tqdm_calc as get_tqdm,
-                    masks_change_convention)
 
-
-def peak_local_max_adaptive(data,
-                            mask=None,
-                            min_distance=[5, 10, 15, 20, 25],
-                            threshold_rel=0.00,
-                            threshold_abs=0.2,
-                            num_peaks_max=None,
-                            indices=True,
-                            errors='warn',
-                            **kwargs):
+def peak_local_max_adaptive(
+    data,
+    mask=None,
+    min_distance=[5, 10, 15, 20, 25],
+    threshold_rel=0.00,
+    threshold_abs=0.2,
+    num_peaks_max=None,
+    indices=True,
+    errors="warn",
+    **kwargs
+):
     """
     find local max with fall backs min_distance and filter
 
@@ -72,7 +68,7 @@ def peak_local_max_adaptive(data,
     out :
     - if indices is True, tuple of ndarrays
         indices of where local max
-   """
+    """
 
     if num_peaks_max is None:
         num_peaks_max = np.inf
@@ -84,35 +80,36 @@ def peak_local_max_adaptive(data,
     kwargs = dict(dict(exclude_border=False), **kwargs)
 
     for md in min_distance:
-        idx = feature.peak_local_max(data,
-                                     min_distance=md,
-                                     labels=mask,
-                                     threshold_abs=threshold_abs,
-                                     threshold_rel=threshold_rel,
-                                     # this option removed in future
-                                     # indices=True,
-                                     **kwargs)
+        idx = feature.peak_local_max(
+            data,
+            min_distance=md,
+            labels=mask,
+            threshold_abs=threshold_abs,
+            threshold_rel=threshold_rel,
+            # this option removed in future
+            # indices=True,
+            **kwargs
+        )
 
         n = len(idx)
         if n <= num_peaks_max:
             break
 
     if n > num_peaks_max:
-        if errors == 'ignore':
+        if errors == "ignore":
             pass
-        elif errors in ('raise', 'ignore'):
-            message = '{} maxima found greater than {}'.format(
-                n, num_peaks_max)
-            if errors == 'raise':
+        elif errors in ("raise", "ignore"):
+            message = "{} maxima found greater than {}".format(n, num_peaks_max)
+            if errors == "raise":
                 raise RuntimeError(message)
             else:
-                warning.warn(message)
+                warnings.warn(message)
 
     idx = tuple(idx.T)
     if indices:
         return idx
     else:
-        out = np.zeros_like(data, dtype=np.bool)
+        out = np.zeros_like(data, dtype=bool)
         out[idx] = True
         return out
 
@@ -127,10 +124,10 @@ class Segmenter(object):
     watershep : watershed segementation
     segment_lnpi : helper funciton to segment lnPi
     """
-    def __init__(self,
-                 min_distance=[1, 5, 10, 15, 20],
-                 peak_kws=None,
-                 watershed_kws=None):
+
+    def __init__(
+        self, min_distance=[1, 5, 10, 15, 20], peak_kws=None, watershed_kws=None
+    ):
         """
         Parameters
         ----------
@@ -149,13 +146,15 @@ class Segmenter(object):
             watershed_kws = {}
         self.watershed_kws = watershed_kws
 
-    def peaks(self,
-              data,
-              mask=None,
-              num_peaks_max=None,
-              as_marker=True,
-              connectivity=None,
-              **kwargs):
+    def peaks(
+        self,
+        data,
+        mask=None,
+        num_peaks_max=None,
+        as_marker=True,
+        connectivity=None,
+        **kwargs
+    ):
         """
         Parameters
         ----------
@@ -182,9 +181,9 @@ class Segmenter(object):
 
         kwargs = dict(self.peak_kws, **kwargs)
         if mask is not None:
-            kwargs['mask'] = mask
+            kwargs["mask"] = mask
         if num_peaks_max is not None:
-            kwargs['num_peaks_max'] = num_peaks_max
+            kwargs["num_peaks_max"] = num_peaks_max
         out = peak_local_max_adaptive(data, **kwargs)
         # combine markers
         if as_marker:
@@ -214,31 +213,34 @@ class Segmenter(object):
         kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
         return segmentation.watershed(data, markers=markers, mask=mask, **kwargs)
 
-    def segment_lnpi(self,
-                     lnpi,
-                     find_peaks=True,
-                     num_peaks_max=None,
-                     connectivity=None,
-                     peaks_kws=None,
-                     watershed_kws=None):
+    def segment_lnpi(
+        self,
+        lnpi,
+        find_peaks=True,
+        num_peaks_max=None,
+        connectivity=None,
+        peaks_kws=None,
+        watershed_kws=None,
+    ):
 
         if find_peaks:
             if peaks_kws is None:
                 peaks_kws = {}
-            markers = self.peaks(lnpi.data,
-                                 mask=~lnpi.mask,
-                                 num_peaks_max=num_peaks_max,
-                                 connectivity=connectivity,
-                                 **peaks_kws)
+            markers = self.peaks(
+                lnpi.data,
+                mask=~lnpi.mask,
+                num_peaks_max=num_peaks_max,
+                connectivity=connectivity,
+                **peaks_kws
+            )
         else:
             markers = num_peaks_max
 
         if watershed_kws is None:
             watershed_kws = {}
-        labels = self.watershed(-lnpi.data,
-                                markers=markers,
-                                mask=~lnpi.mask,
-                                connectivity=connectivity)
+        labels = self.watershed(
+            -lnpi.data, markers=markers, mask=~lnpi.mask, connectivity=connectivity
+        )
         return labels
 
 
@@ -253,12 +255,8 @@ class FreeEnergylnPi(object):
     mask == True indicates that the region includes the feature.
     This is oposite the masked array convension, where mask==True implies that region is masked out.
     """
-    def __init__(self,
-                 data,
-                 masks,
-                 convention='image',
-                 connectivity=None,
-                 index=None):
+
+    def __init__(self, data, masks, convention="image", connectivity=None, index=None):
         """
         Parameters
         ----------
@@ -274,7 +272,7 @@ class FreeEnergylnPi(object):
         self._data = np.asarray(data)
 
         # make sure masks in image convention
-        self._masks = masks_change_convention(masks, convention, 'image')
+        self._masks = masks_change_convention(masks, convention, "image")
 
         self._nfeature = len(self._masks)
         if index is None:
@@ -286,35 +284,39 @@ class FreeEnergylnPi(object):
         self._connectivity = connectivity
 
     @classmethod
-    def from_labels(cls,
-                    data,
-                    labels,
-                    connectivity=None,
-                    features=None,
-                    include_boundary=False,
-                    **kwargs):
+    def from_labels(
+        cls,
+        data,
+        labels,
+        connectivity=None,
+        features=None,
+        include_boundary=False,
+        **kwargs
+    ):
         """
         create FreeEnergylnPi from labels
         """
-        masks, features = labels_to_masks(labels,
-                                          features=features,
-                                          convention='image',
-                                          include_boundary=include_boundary,
-                                          **kwargs)
+        masks, features = labels_to_masks(
+            labels,
+            features=features,
+            convention="image",
+            include_boundary=include_boundary,
+            **kwargs
+        )
         return cls(data=data, masks=masks, connectivity=connectivity)
 
     def _find_boundaries(self, idx):
-        return segmentation.find_boundaries(self._masks[idx],
-                                            connectivity=self._connectivity,
-                                            mode='thick')
+        return segmentation.find_boundaries(
+            self._masks[idx], connectivity=self._connectivity, mode="thick"
+        )
 
-    #@gcached() # no need to cache
+    # @gcached() # no need to cache
     @property
     def _boundaries(self):
         """boundary of each label"""
         return [self._find_boundaries(i) for i in self._index]
 
-    #@gcached()
+    # @gcached()
     @property
     def _boundaries_overlap(self):
         """overlap of boundaries"""
@@ -325,10 +327,9 @@ class FreeEnergylnPi(object):
             overlap = (
                 # overlap of boundary
                 (self._boundaries[i] & self._boundaries[j])
-                # overlap with
-                &
-                # with union of regions
-                (self._masks[i] | self._masks[j]))
+                # overlap with with union of region
+                & (self._masks[i] | self._masks[j])
+            )
 
             if overlap.sum() == 0:
                 overlap = None
@@ -351,9 +352,7 @@ class FreeEnergylnPi(object):
         out[i,j] = transition energy between phase[i] and phase[j]
         """
 
-        out = np.full((self._nfeature, ) * 2,
-                      dtype=np.float,
-                      fill_value=np.inf)
+        out = np.full((self._nfeature,) * 2, dtype=float, fill_value=np.inf)
 
         for (i, j), boundary in self._boundaries_overlap.items():
             # label to zero based
@@ -372,13 +371,15 @@ class FreeEnergylnPi(object):
         """
         return self.w_tran - self.w_min
 
-    def merge_regions(self,
-                      nfeature_max=None,
-                      efac=1.0,
-                      force=True,
-                      convention='image',
-                      warn=True,
-                      **kwargs):
+    def merge_regions(
+        self,
+        nfeature_max=None,
+        efac=1.0,
+        force=True,
+        convention="image",
+        warn=True,
+        **kwargs
+    ):
         """
         merge labels where free energy energy barrier < efac.
 
@@ -413,13 +414,13 @@ class FreeEnergylnPi(object):
         w_min = self.w_min.copy()
 
         # keep track of keep/kill
-        #mapping[keep] = [keep, merge_in_1, ...]
-        #mapping = {i : [i] for i in self._index}
+        # mapping[keep] = [keep, merge_in_1, ...]
+        # mapping = {i : [i] for i in self._index}
         mapping = {i: msk for i, msk in enumerate(self._masks)}
         for cnt in range(self._nfeature):
             # number of finite minima
             nfeature = len(mapping)
-            #nfeature = np.isfinite(w_min).sum()
+            # nfeature = np.isfinite(w_min).sum()
 
             de = w_tran - w_min
             min_val = np.nanmin(de)
@@ -428,9 +429,10 @@ class FreeEnergylnPi(object):
                 if not force:
                     if nfeature > nfeature_max:
                         warnings.warn(
-                            'min_val > efac, but still too many phases',
+                            "min_val > efac, but still too many phases",
                             Warning,
-                            stacklevel=2)
+                            stacklevel=2,
+                        )
                     break
                 elif nfeature <= nfeature_max:
                     break
@@ -462,7 +464,7 @@ class FreeEnergylnPi(object):
         idx_min = list(mapping.keys())
         w_min = w_min[idx_min]
 
-        idx_tran = np.ix_(*(idx_min, ) * 2)
+        idx_tran = np.ix_(*(idx_min,) * 2)
         w_tran = w_tran[idx_tran]
 
         # get masks
@@ -479,9 +481,7 @@ class wlnPi(FreeEnergylnPi):
         self._phases = phases
         base = self._phases[0]
         masks = [x.mask for x in self._phases]
-        super(wlnPi, self).__init__(data=base.data,
-                                    masks=masks,
-                                    convention=False)
+        super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False)
 
     @gcached()
     def delta_w(self):
@@ -492,7 +492,7 @@ class wlnPi(FreeEnergylnPi):
         xge = self._phases[0].xge
 
         dim_phase = self._phases._concat_dim
-        dims = [dim_phase, dim_phase + '_nebr']
+        dims = [dim_phase, dim_phase + "_nebr"]
 
         coords = dict(zip(dims, [self._phases.index.values] * 2))
         coords = dict(xge.coords_state, **coords)
@@ -532,23 +532,23 @@ class wlnPi(FreeEnergylnPi):
 
         if len(nebrs) == 0:
             return np.inf
-        dw = (p.wlnPi.delta_w.sel(phase=idx,
-                                  phase_nebr=nebrs).min('phase_nebr').values)
+        dw = p.wlnPi.delta_w.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
         return dw
 
 
 def _get_delta_w(index, w):
-    return (pd.DataFrame(
+    return pd.DataFrame(
         w.delta_w,
         index=index,
-        columns=index.get_level_values('phase').rename('phase_nebr')).stack())
+        columns=index.get_level_values("phase").rename("phase_nebr"),
+    ).stack()
 
 
-@CollectionlnPi.decorate_accessor('wlnPi')
+@CollectionlnPi.decorate_accessor("wlnPi")
 class wlnPivec(object):
     def __init__(self, parent):
         self._parent = parent
-        self._use_joblib = getattr(self._parent, '_use_joblib', False)
+        self._use_joblib = getattr(self._parent, "_use_joblib", False)
 
     def _get_items_ws(self):
         indexes = []
@@ -556,13 +556,12 @@ class wlnPivec(object):
 
         # s = self._parent._series
         # for meta, phases in s.groupby(allbut(s.index.names, 'phase')):
-        for meta, phases in self._parent.groupby_allbut('phase'):
+        for meta, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
             masks = [x.mask for x in phases.values]
             ws.append(
-                FreeEnergylnPi(data=phases.iloc[0].data,
-                               masks=masks,
-                               convention=False))
+                FreeEnergylnPi(data=phases.iloc[0].data, masks=masks, convention=False)
+            )
         return indexes, ws
 
     @gcached()
@@ -571,14 +570,11 @@ class wlnPivec(object):
 
         indexes, ws = self._get_items_ws()
 
-        seq = get_tqdm(zip(indexes, ws),
-                       total=len(ws),
-                       desc='wlnPi')
-        out = parallel_map_func_starargs(_get_delta_w,
-                                         items=seq,
-                                         use_joblib=self._use_joblib,
-                                         total=len(ws))
-        out = pd.concat(out).rename('delta_w')
+        seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wlnPi")
+        out = parallel_map_func_starargs(
+            _get_delta_w, items=seq, use_joblib=self._use_joblib, total=len(ws)
+        )
+        out = pd.concat(out).rename("delta_w")
         return out
 
     @property
@@ -608,11 +604,11 @@ class wlnPivec(object):
         """
 
         delta_w = self.dwx
-        #stack = {'sample': list(set(delta_w.coords) - {'phase', 'phase_nebr'})}
-        #delta_w = self.dwx.stack(stack)
+        # stack = {'sample': list(set(delta_w.coords) - {'phase', 'phase_nebr'})}
+        # delta_w = self.dwx.stack(stack)
 
-        #reindex so that has idx in phase
-        reindex = delta_w.indexes['phase'].union(pd.Index([idx], name='phase'))
+        # reindex so that has idx in phase
+        reindex = delta_w.indexes["phase"].union(pd.Index([idx], name="phase"))
         delta_w = delta_w.reindex(phase=reindex, phase_nebr=reindex)
 
         # much simpler
@@ -623,10 +619,10 @@ class wlnPivec(object):
                 idx_nebr = [idx_nebr]
             if idx not in idx_nebr:
                 idx_nebr.append(idx)
-            nebrs = delta_w.indexes['phase_nebr'].intersection(idx_nebr)
+            nebrs = delta_w.indexes["phase_nebr"].intersection(idx_nebr)
             delta_w = delta_w.sel(phase=idx, phase_nebr=nebrs)
 
-        out = delta_w.min('phase_nebr').fillna(0.0)
+        out = delta_w.min("phase_nebr").fillna(0.0)
         return out
 
     def get_dw(self, idx, idx_nebr=None):
@@ -635,26 +631,25 @@ class wlnPivec(object):
     # def get_dw2(self, idx, idx_nebr=None):
     #     dw = self.dw
 
-        # reindex across stuff:
+    # reindex across stuff:
 
 
-
-
-@CollectionlnPi.decorate_accessor('wlnPi_single')
+@CollectionlnPi.decorate_accessor("wlnPi_single")
 class wlnPi_single(wlnPivec):
     """
     stripped down version for single phase grouping
     """
+
     @gcached()
     def dwx(self):
-        index = list(self._parent.index.get_level_values('phase'))
+        index = list(self._parent.index.get_level_values("phase"))
         masks = [x.mask for x in self._parent]
-        w = FreeEnergylnPi(data=self._parent.iloc[0].data,
-                           masks=masks,
-                           convention=False)
+        w = FreeEnergylnPi(
+            data=self._parent.iloc[0].data, masks=masks, convention=False
+        )
 
         dw = w.w_tran - w.w_min
-        dims = ['phase', 'phase_nebr']
+        dims = ["phase", "phase_nebr"]
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
@@ -665,7 +660,7 @@ class wlnPi_single(wlnPivec):
 
     def get_dw(self, idx, idx_nebr=None):
         dw = self.dwx
-        index = dw.indexes['phase']
+        index = dw.indexes["phase"]
 
         if idx not in index:
             return 0.0
@@ -678,23 +673,26 @@ class wlnPi_single(wlnPivec):
 
         if len(nebrs) == 0:
             return np.inf
-        return dw.sel(phase=idx, phase_nebr=nebrs).min('phase_nebr').values
+        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
 
 
 class PhaseCreator(object):
     """
     Helper class to create phases
     """
-    def __init__(self,
-                 nmax,
-                 nmax_peak=None,
-                 ref=None,
-                 segmenter=None,
-                 segment_kws=None,
-                 tag_phases=None,
-                 phases_factory=CollectionlnPi.from_list,
-                 FreeEnergylnPi_kws=None,
-                 merge_kws=None):
+
+    def __init__(
+        self,
+        nmax,
+        nmax_peak=None,
+        ref=None,
+        segmenter=None,
+        segment_kws=None,
+        tag_phases=None,
+        phases_factory=CollectionlnPi.from_list,
+        FreeEnergylnPi_kws=None,
+        merge_kws=None,
+    ):
         """
         Parameters
         ----------
@@ -726,7 +724,7 @@ class PhaseCreator(object):
         if segment_kws is None:
             segment_kws = {}
         self.segment_kws = segment_kws
-        self.segment_kws['num_peaks_max'] = nmax_peak
+        self.segment_kws["num_peaks_max"] = nmax_peak
 
         if FreeEnergylnPi_kws is None:
             FreeEnergylnPi_kws = {}
@@ -748,7 +746,7 @@ class PhaseCreator(object):
             return phase_ids, lnpis
 
         phase_ids = np.array(phase_ids)
-        dist = pdist(phase_ids.reshape(-1, 1)).astype(np.int)
+        dist = pdist(phase_ids.reshape(-1, 1)).astype(int)
         if not np.any(dist == 0):
             # all different
             return phase_ids, lnpis
@@ -765,24 +763,26 @@ class PhaseCreator(object):
 
         return phase_ids_new, lnpis_new
 
-    def build_phases(self,
-                     lnz=None,
-                     ref=None,
-                     efac=None,
-                     nmax=None,
-                     nmax_peak=None,
-                     connectivity=None,
-                     reweight_kws=None,
-                     merge_phase_ids=True,
-                     phases_factory=None,
-                     phase_kws=None):
+    def build_phases(
+        self,
+        lnz=None,
+        ref=None,
+        efac=None,
+        nmax=None,
+        nmax_peak=None,
+        connectivity=None,
+        reweight_kws=None,
+        merge_phase_ids=True,
+        phases_factory=None,
+        phase_kws=None,
+    ):
         """
         build phase
         """
 
         if ref is None:
             if self.ref is None:
-                raise ValueError('must specify ref or self.ref')
+                raise ValueError("must specify ref or self.ref")
             ref = self.ref
 
         # reweight
@@ -801,21 +801,19 @@ class PhaseCreator(object):
             # labels
             kws = dict(self.segment_kws, num_peaks_max=nmax_peak)
             if connectivity is not None:
-                kws['connectivity'] = connectivity
+                kws["connectivity"] = connectivity
             labels = self.segmenter.segment_lnpi(lnpi=ref, **kws)
 
             # wlnpi
             kws = dict(self.FreeEnergylnPi_kws)
             if connectivity is not None:
-                kws['connectivity'] = connectivity
-            wlnpi = FreeEnergylnPi.from_labels(data=ref.data,
-                                               labels=labels,
-                                               **kws)
+                kws["connectivity"] = connectivity
+            wlnpi = FreeEnergylnPi.from_labels(data=ref.data, labels=labels, **kws)
 
             # merge
             kws = dict(self.merge_kws, nfeature_max=nmax)
             if efac is not None:
-                kws['efac'] = efac
+                kws["efac"] = efac
             masks, wtran, wmin = wlnpi.merge_regions(**kws)
 
             # list of lnpi
@@ -835,8 +833,7 @@ class PhaseCreator(object):
 
         if phases_factory is None:
             phases_factory = self.phases_factory
-        if isinstance(phases_factory,
-                      str) and phases_factory.lower() == 'none':
+        if isinstance(phases_factory, str) and phases_factory.lower() == "none":
             phases_factory = None
         if phases_factory is not None:
             if phase_kws is None:
@@ -856,6 +853,7 @@ class _BuildPhases(object):
     """
     class to build phases object from scalar mu's
     """
+
     def __init__(self, X, phase_creator):
 
         self._phase_creator = phase_creator

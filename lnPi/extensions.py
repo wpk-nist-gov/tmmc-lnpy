@@ -6,15 +6,16 @@ This is inspired by xarray accessors
 
 import warnings
 from itertools import chain
-from .cached_decorators import gcached
-
 from operator import attrgetter
 
+from .cached_decorators import gcached
 from .utils import get_tqdm_calc as get_tqdm
-from .utils import parallel_map_call, parallel_map_attr
+from .utils import parallel_map_attr, parallel_map_call
+
 
 class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
+
 
 class _CachedAccessorSingle(object):
     """
@@ -35,13 +36,14 @@ class _CachedAccessorSingle(object):
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError('error initializing %r accessor.' % self._name)
+            raise RuntimeError("error initializing %r accessor." % self._name)
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
         # AttrAccessMixin.
         object.__setattr__(obj, self._name, accessor_obj)
         return accessor_obj
+
 
 def _CachedAccessorCleared(name, accessor):
     """
@@ -56,9 +58,11 @@ def _CachedAccessorCleared(name, accessor):
 
     If you only want to create it once, then use the Single access wrapper below
     """
+
     @gcached(key=name, prop=True)
     def _get_prop(self):
         return accessor(self)
+
     return _get_prop
 
 
@@ -69,7 +73,8 @@ def _CachedAccessorWrapper(name, accessor, single_create=False):
         return _CachedAccessorCleared(name, accessor)
 
 
-from operator import attrgetter
+# from operator import attrgetter
+
 
 class AccessorMixin(object):
     @classmethod
@@ -79,15 +84,16 @@ class AccessorMixin(object):
         """
         if hasattr(cls, name):
             warnings.warn(
-                'registration of accessor %r under name %r for type %r is '
-                'overriding a preexisting attribute with the same name.' %
-                (accessor, name, cls),
-                AccessorRegistrationWarning, stacklevel=2)
+                "registration of accessor %r under name %r for type %r is "
+                "overriding a preexisting attribute with the same name."
+                % (accessor, name, cls),
+                AccessorRegistrationWarning,
+                stacklevel=2,
+            )
         setattr(cls, name, _CachedAccessorWrapper(name, accessor, single_create))
 
-
     @classmethod
-    def register_accessor_flat(cls, names, single_create=True, subattr='flat'):
+    def register_accessor_flat(cls, names, single_create=True, subattr="flat"):
         """
         helper class to register stuff to top of CollectionPhases
         """
@@ -95,7 +101,11 @@ class AccessorMixin(object):
         if isinstance(names, str):
             names = [names]
         for name in names:
-            cls._register_accessor(name=name, accessor=attrgetter('.'.join((subattr,name))), single_create=single_create)
+            cls._register_accessor(
+                name=name,
+                accessor=attrgetter(".".join((subattr, name))),
+                single_create=single_create,
+            )
 
     @classmethod
     def register_accessor(cls, name, accessor, single_create=False):
@@ -136,11 +146,12 @@ class AccessorMixin(object):
         >>> x.hello.there()
         'hello there parent'
         """
+
         def decorator(accessor):
             cls.register_accessor(name, accessor, single_create)
             return accessor
-        return decorator
 
+        return decorator
 
 
 ################################################################################
@@ -149,7 +160,7 @@ class AccessorMixin(object):
 
 class _CallableListResultsCache(object):
     """
-    if items of collection accessor are callable, then 
+    if items of collection accessor are callable, then
     """
 
     def __init__(self, parent, items, desc=None):
@@ -157,23 +168,22 @@ class _CallableListResultsCache(object):
         self.items = items
         self.desc = desc
         self._cache = {}
-        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
-
+        self._use_joblib = getattr(self.parent, "_USE_JOBLIB_", False)
 
     @gcached(prop=False)
     def __call__(self, *args, **kwargs):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
-        #results = [x(*args, **kwargs) for x in seq]
+        # results = [x(*args, **kwargs) for x in seq]
         results = parallel_map_call(seq, self._use_joblib, *args, **kwargs)
-        if hasattr(self.parent, 'wrap_list_results'):
+        if hasattr(self.parent, "wrap_list_results"):
             results = self.parent.wrap_list_results(results)
         return results
 
 
 class _CallableListResultsNoCache(object):
     """
-    if items of collection accessor are callable, then 
+    if items of collection accessor are callable, then
     """
 
     def __init__(self, parent, items, desc=None):
@@ -181,16 +191,17 @@ class _CallableListResultsNoCache(object):
         self.items = items
         self.desc = desc
         self._cache = {}
-        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
+        self._use_joblib = getattr(self.parent, "_USE_JOBLIB_", False)
 
     def __call__(self, *args, **kwargs):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
-        #results = [x(*args, **kwargs) for x in seq]
+        # results = [x(*args, **kwargs) for x in seq]
         results = parallel_map_call(seq, self._use_joblib, *args, **kwargs)
-        if hasattr(self.parent, 'wrap_list_results'):
+        if hasattr(self.parent, "wrap_list_results"):
             results = self.parent.wrap_list_results(results)
         return results
+
 
 def _CallableListResults(parent, items, use_cache=False, desc=None):
     if use_cache:
@@ -210,8 +221,7 @@ class _ListAccessor(object):
             cache_list = []
         self._cache_list = cache_list
         self._cache = {}
-        self._use_joblib = getattr(self.parent, '_USE_JOBLIB_', False)
-
+        self._use_joblib = getattr(self.parent, "_USE_JOBLIB_", False)
 
     def __getattr__(self, attr):
         if attr in self._cache:
@@ -222,16 +232,18 @@ class _ListAccessor(object):
             use_cache = attr in self._cache_list
             if callable(getattr(self.items[0], attr)):
                 seq = [getattr(x, attr) for x in self.items]
-                result = _CallableListResults(self.parent, seq, use_cache=use_cache, desc=attr)
+                result = _CallableListResults(
+                    self.parent, seq, use_cache=use_cache, desc=attr
+                )
             else:
                 seq = get_tqdm(self.items, desc=attr)
-                #result = [getattr(x, attr) for x in seq]
+                # result = [getattr(x, attr) for x in seq]
                 result = parallel_map_attr(attr, items=seq, use_joblib=self._use_joblib)
-                if hasattr(self.parent, 'wrap_list_results'):
+                if hasattr(self.parent, "wrap_list_results"):
                     result = self.parent.wrap_list_results(result)
 
-        except:
-            raise AttributeError(f'no attribute {attr} found')
+        except Exception:
+            raise AttributeError(f"no attribute {attr} found")
 
         # do caching?
         if use_cache:
@@ -244,16 +256,20 @@ class _ListAccessor(object):
 
     def __dir__(self):
         heritage = dir(super(self.__class__, self))
-        #hide = []
+        # hide = []
         x = self.items[0]
         show = [
-            k for k in chain(
-                self.__dict__.keys(), dir(x)
+            k
+            for k in chain(
+                self.__dict__.keys(),
+                dir(x)
                 # self.__class__.__dict__.keys()
                 # x.__dict__.keys(),
                 # x.__class__.__dict__.keys()
-            )] #  if k not in hide]
+            )
+        ]  # if k not in hide]
         return sorted(heritage + show)
+
 
 def _CachedListPropertyWrapper(name, cache_list=None):
     """
@@ -265,16 +281,16 @@ def _CachedListPropertyWrapper(name, cache_list=None):
     else:
         cache = False
 
-
-    #@gcached(key=name, prop=True)
+    # @gcached(key=name, prop=True)
     def _get_prop(self):
         results = [getattr(x, name) for x in self]
         if callable(results[0]):
-            result = _CallableListResults(self, result)
+            results = _CallableListResults(self, results)
         else:
-            if hasattr(self, 'wrap_list_results'):
+            if hasattr(self, "wrap_list_results"):
                 results = self.wrap_list_results(results)
         return results
+
     if cache:
         _get_prop = gcached(key=name, prop=True)(_get_prop)
     else:
@@ -282,13 +298,18 @@ def _CachedListPropertyWrapper(name, cache_list=None):
 
     return _get_prop
 
+
 def _CachedListAccessorWrapper(name, cache_list=None):
     """
     Wrap List accessor in cached property
     """
+
     @gcached(key=name, prop=True)
     def _get_prop(self):
-        return _ListAccessor(self, [getattr(x, name) for x in self], cache_list=cache_list)
+        return _ListAccessor(
+            self, [getattr(x, name) for x in self], cache_list=cache_list
+        )
+
     return _get_prop
 
 
@@ -303,9 +324,12 @@ class ListAccessorMixin(object):
         for name in names:
             if hasattr(cls, name):
                 warnings.warn(
-                    'registration of name %r for type %r is '
-                    'overriding a preexisting attribute with the same name.' % (name, cls),
-                    AccessorRegistrationWarning, stacklevel=2)
+                    "registration of name %r for type %r is "
+                    "overriding a preexisting attribute with the same name."
+                    % (name, cls),
+                    AccessorRegistrationWarning,
+                    stacklevel=2,
+                )
             setattr(cls, name, accessor_wrapper(name, **kwargs))
 
     @classmethod
@@ -337,7 +361,9 @@ class ListAccessorMixin(object):
         >>> w.a.prop
         [1, 2, 3]
         """
-        return cls._register_listaccessor(names, accessor_wrapper=_CachedListAccessorWrapper, cache_list=cache_list)
+        return cls._register_listaccessor(
+            names, accessor_wrapper=_CachedListAccessorWrapper, cache_list=cache_list
+        )
 
     @classmethod
     def register_listproperty(cls, names, cache_list=None):
@@ -370,34 +396,41 @@ class ListAccessorMixin(object):
         >>> w = Wrapper(x)
         >>> w.a
         [1, 2, 3]
-        >>> w.b('a')
+        >>> w.b("a")
         [(1,'a'), (2,'a'), (3,'a')]
         """
-        return cls._register_listaccessor(names, accessor_wrapper=_CachedListPropertyWrapper, cache_list=cache_list)
-
-
+        return cls._register_listaccessor(
+            names, accessor_wrapper=_CachedListPropertyWrapper, cache_list=cache_list
+        )
 
 
 def _decorate_listaccessor(names, accessor_wrapper, **kwargs):
     if isinstance(names, str):
         names = [names]
+
     def decorator(cls):
         for name in names:
             if hasattr(cls, name):
                 warnings.warn(
-                    'registration of name %r for type %r is '
-                    'overriding a preexisting attribute with the same name.' % (name,cls),
-                    AccessorRegistrationWarning, stacklevel=2)
+                    "registration of name %r for type %r is "
+                    "overriding a preexisting attribute with the same name."
+                    % (name, cls),
+                    AccessorRegistrationWarning,
+                    stacklevel=2,
+                )
             setattr(cls, name, accessor_wrapper(name, **kwargs))
         return cls
+
     return decorator
 
 
 def decorate_listaccessor(names, cache_list=None):
-    return _decorate_listaccessor(names, _CachedListAccessorWrapper, cache_list=cache_list)
+    return _decorate_listaccessor(
+        names, _CachedListAccessorWrapper, cache_list=cache_list
+    )
+
 
 def decorate_listproperty(names, cache_list=None):
-    return _decorate_listaccessor(names, _CachedListPropertyWrapper, cache_list=cache_list)
-
-
-
+    return _decorate_listaccessor(
+        names, _CachedListPropertyWrapper, cache_list=cache_list
+    )

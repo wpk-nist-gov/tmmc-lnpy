@@ -1,19 +1,13 @@
+from . import collectionlnpi, extensions, segment, xlnPi
+from .collectionlnpi import CollectionlnPi
 from .maskedlnpi import MaskedlnPi
 from .maskedlnpidelayed import MaskedlnPiDelayed
-from .collectionlnpi import CollectionlnPi
-from . import collectionlnpi
-from . import segment
-from . import extensions
-from . import xlnPi
-
-
+from .options import OPTIONS, set_options
 from .utils import dim_to_suffix
-from .options import set_options, OPTIONS
-
-
 
 try:
     import pkg_resources
+
     __version__ = pkg_resources.get_distribution("cmomy").version
 except Exception:
     # Local copy or not installed with setuptools.
@@ -22,3 +16,17 @@ except Exception:
 
 __author__ = """William P. Krekelberg"""
 __email__ = "wpk@nist.gov"
+
+
+__all__ = [
+    "MaskedlnPi",
+    "MaskedlnPiDelayed",
+    "CollectionlnPi",
+    "collectionlnpi",
+    "segment",
+    "extensions",
+    "xlnPi",
+    "dim_to_suffix",
+    "set_options",
+    "OPTIONS",
+]
