@@ -8,7 +8,6 @@ routines to segment lnPi
  4. combination of 1-3.
 """
 
-import itertools
 import warnings
 from collections.abc import Iterable
 
@@ -21,7 +20,8 @@ from skimage import feature, morphology, segmentation
 from .cached_decorators import gcached
 from .collectionlnpi import CollectionlnPi
 from .utils import get_tqdm_calc as get_tqdm
-from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
+from .utils import parallel_map_func_starargs
+from .wlnPi import FreeEnergylnPi
 
 
 def peak_local_max_adaptive(
@@ -222,6 +222,16 @@ class Segmenter(object):
         peaks_kws=None,
         watershed_kws=None,
     ):
+        """
+        Perform segmentations of lnPi object
+
+
+        Parameters
+        ----------
+        lnpi : MaskedlnPi
+        find_peaks : bool, default=True
+        if `True`, then first find peaks using
+        """
 
         if find_peaks:
             if peaks_kws is None:
@@ -244,296 +254,64 @@ class Segmenter(object):
         return labels
 
 
-class FreeEnergylnPi(object):
-    """
-    find/merge the transition energy between minima and barriers
-    in lnPi
+# class wlnPi(FreeEnergylnPi):
+#     def __init__(self, phases):
+#         self._phases = phases
+#         base = self._phases[0]
+#         masks = [x.mask for x in self._phases]
+#         super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False)
 
-    here we define the free energy w = betaW = -ln(Pi)
+#     @gcached()
+#     def delta_w(self):
+#         """wrap delta_w in xarray"""
 
-    NOTE : this class used the image convention that
-    mask == True indicates that the region includes the feature.
-    This is oposite the masked array convension, where mask==True implies that region is masked out.
-    """
+#         delta_w = self.w_tran - self.w_min
 
-    def __init__(self, data, masks, convention="image", connectivity=None, index=None):
-        """
-        Parameters
-        ----------
-        data : array
-            lnPi data
-        masks : list of arrays
-            masks[i] == True where feature exists
-        convention : str or bool
-            convention of masks
-        connectivity : int, optional
-            connectivity parameter for boundary construction
-        """
-        self._data = np.asarray(data)
+#         xge = self._phases[0].xge
 
-        # make sure masks in image convention
-        self._masks = masks_change_convention(masks, convention, "image")
+#         dim_phase = self._phases._concat_dim
+#         dims = [dim_phase, dim_phase + "_nebr"]
 
-        self._nfeature = len(self._masks)
-        if index is None:
-            index = np.arange(self._nfeature)
-        self._index = index
+#         coords = dict(zip(dims, [self._phases.index.values] * 2))
+#         coords = dict(xge.coords_state, **coords)
+#         return xr.DataArray(delta_w, dims=dims, coords=coords)
 
-        if connectivity is None:
-            connectivity = data.ndim
-        self._connectivity = connectivity
+#     def get_delta_w(self, idx, idx_nebr=None):
+#         """
+#         helper function to get the change in energy from
+#         phase idx to idx_nebr.
 
-    @classmethod
-    def from_labels(
-        cls,
-        data,
-        labels,
-        connectivity=None,
-        features=None,
-        include_boundary=False,
-        **kwargs
-    ):
-        """
-        create FreeEnergylnPi from labels
-        """
-        masks, features = labels_to_masks(
-            labels,
-            features=features,
-            convention="image",
-            include_boundary=include_boundary,
-            **kwargs
-        )
-        return cls(data=data, masks=masks, connectivity=connectivity)
+#         Parameters
+#         ----------
+#         idx : int
+#             phase index to consider transitions from
+#         idx_nebr : int or list, optional
+#             if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
+#             Default behavior is to return minimum transition from idx to all other neighboring regions
 
-    def _find_boundaries(self, idx):
-        return segmentation.find_boundaries(
-            self._masks[idx], connectivity=self._connectivity, mode="thick"
-        )
+#         Returns
+#         -------
+#         dw : float
+#             - if only phase idx exists, dw = np.inf
+#             - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
+#             - else min of transition for idx to idx_nebr
+#         """
+#         p = self._phases
 
-    # @gcached() # no need to cache
-    @property
-    def _boundaries(self):
-        """boundary of each label"""
-        return [self._find_boundaries(i) for i in self._index]
+#         has_idx = idx in p.index
+#         if not has_idx:
+#             return 0.0
+#         if idx_nebr is None:
+#             nebrs = p.index.drop(idx)
+#         else:
+#             if not isinstance(idx_nebr, list):
+#                 idx_nebr = [idx_nebr]
+#             nebrs = [_x for _x in idx_nebr if _x in p.index]
 
-    # @gcached()
-    @property
-    def _boundaries_overlap(self):
-        """overlap of boundaries"""
-        boundaries = {}
-        for i, j in itertools.combinations(self._index, 2):
-            # instead of using foreground, maker sure that the boundary
-            # is contained in eigher region[i] or region[j]
-            overlap = (
-                # overlap of boundary
-                (self._boundaries[i] & self._boundaries[j])
-                # overlap with with union of region
-                & (self._masks[i] | self._masks[j])
-            )
-
-            if overlap.sum() == 0:
-                overlap = None
-            boundaries[i, j] = overlap
-        return boundaries
-
-    @property
-    def _w_min(self):
-        return -np.array([self._data[msk].max() for msk in self._masks])
-
-    @property
-    def w_min(self):
-        return self._w_min.reshape(-1, 1)
-
-    @gcached()
-    def w_tran(self, **kwargs):
-        """
-        Transition point energy for all pairs
-
-        out[i,j] = transition energy between phase[i] and phase[j]
-        """
-
-        out = np.full((self._nfeature,) * 2, dtype=float, fill_value=np.inf)
-
-        for (i, j), boundary in self._boundaries_overlap.items():
-            # label to zero based
-            if boundary is None:
-                val = np.inf
-            else:
-                val = -(self._data[boundary]).max()
-
-            out[i, j] = out[j, i] = val
-        return np.array(out)
-
-    @gcached()
-    def delta_w(self):
-        """
-        -beta (lnPi[transition] - lnPi[max])
-        """
-        return self.w_tran - self.w_min
-
-    def merge_regions(
-        self,
-        nfeature_max=None,
-        efac=1.0,
-        force=True,
-        convention="image",
-        warn=True,
-        **kwargs
-    ):
-        """
-        merge labels where free energy energy barrier < efac.
-
-        Parameters
-        ----------
-        nfeature_max : int
-            maximum number of features
-        efac : float, default=0.5
-            energy difference to merge on
-        force : bool, default=True
-            if True, then keep going until nfeature <= nfeature_max
-            even if min_val > efac
-        convention : str or bool, default=True
-            convention of output masks
-        warn : bool, default=True
-            if True, give warning messages
-
-        Returns
-        -------
-        masks : list of bool arrays
-            output masks using `convention`
-        w_trans : array
-            transition energy for new masks
-        w_min : array
-            free energy minima of new masks
-        """
-
-        if nfeature_max is None:
-            nfeature_max = self._nfeature
-
-        w_tran = self.w_tran.copy()
-        w_min = self.w_min.copy()
-
-        # keep track of keep/kill
-        # mapping[keep] = [keep, merge_in_1, ...]
-        # mapping = {i : [i] for i in self._index}
-        mapping = {i: msk for i, msk in enumerate(self._masks)}
-        for cnt in range(self._nfeature):
-            # number of finite minima
-            nfeature = len(mapping)
-            # nfeature = np.isfinite(w_min).sum()
-
-            de = w_tran - w_min
-            min_val = np.nanmin(de)
-
-            if min_val > efac:
-                if not force:
-                    if nfeature > nfeature_max:
-                        warnings.warn(
-                            "min_val > efac, but still too many phases",
-                            Warning,
-                            stacklevel=2,
-                        )
-                    break
-                elif nfeature <= nfeature_max:
-                    break
-
-            idx_keep, idx_kill = [x[0] for x in np.where(de == min_val)]
-
-            # keep the one with lower energy
-            if w_min[idx_keep] > w_min[idx_kill]:
-                idx_keep, idx_kill = idx_kill, idx_keep
-
-            # idx[0] and idx[1] merge together
-            # arbitrarily bick idx[0] to keep and idx[1] to kill
-
-            # transition from idx_keep to any other phase equals the minimum transition
-            # from either idx_keep or idx_kill to that other phase
-            new_tran = w_tran[[idx_keep, idx_kill], :].min(axis=0)
-            new_tran[idx_keep] = np.inf
-
-            w_tran[idx_keep, :] = w_tran[:, idx_keep] = new_tran
-            # get rid of old one
-            w_tran[idx_kill, :] = w_tran[:, idx_kill] = np.inf
-
-            # mapping[idx_keep] += mapping[idx_kill]
-            mapping[idx_keep] |= mapping[idx_kill]
-            del mapping[idx_kill]
-
-        # from mapping create some new stuff
-        # new w/de
-        idx_min = list(mapping.keys())
-        w_min = w_min[idx_min]
-
-        idx_tran = np.ix_(*(idx_min,) * 2)
-        w_tran = w_tran[idx_tran]
-
-        # get masks
-        masks = [mapping[i] for i in idx_min]
-
-        # optionally convert image
-        masks = masks_change_convention(masks, True, convention)
-
-        return masks, w_tran, w_min
-
-
-class wlnPi(FreeEnergylnPi):
-    def __init__(self, phases):
-        self._phases = phases
-        base = self._phases[0]
-        masks = [x.mask for x in self._phases]
-        super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False)
-
-    @gcached()
-    def delta_w(self):
-        """wrap delta_w in xarray"""
-
-        delta_w = self.w_tran - self.w_min
-
-        xge = self._phases[0].xge
-
-        dim_phase = self._phases._concat_dim
-        dims = [dim_phase, dim_phase + "_nebr"]
-
-        coords = dict(zip(dims, [self._phases.index.values] * 2))
-        coords = dict(xge.coords_state, **coords)
-        return xr.DataArray(delta_w, dims=dims, coords=coords)
-
-    def get_delta_w(self, idx, idx_nebr=None):
-        """
-        helper function to get the change in energy from
-        phase idx to idx_nebr.
-
-        Parameters
-        ----------
-        idx : int
-            phase index to consider transitions from
-        idx_nebr : int or list, optional
-            if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
-            Default behavior is to return minimum transition from idx to all other neighboring regions
-
-        Returns
-        -------
-        dw : float
-            - if only phase idx exists, dw = np.inf
-            - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
-            - else min of transition for idx to idx_nebr
-        """
-        p = self._phases
-
-        has_idx = idx in p.index
-        if not has_idx:
-            return 0.0
-        if idx_nebr is None:
-            nebrs = p.index.drop(idx)
-        else:
-            if not isinstance(idx_nebr, list):
-                idx_nebr = [idx_nebr]
-            nebrs = [_x for _x in idx_nebr if _x in p.index]
-
-        if len(nebrs) == 0:
-            return np.inf
-        dw = p.wlnPi.delta_w.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
-        return dw
+#         if len(nebrs) == 0:
+#             return np.inf
+#         dw = p.wlnPi.delta_w.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
+#         return dw
 
 
 def _get_delta_w(index, w):
@@ -542,6 +320,25 @@ def _get_delta_w(index, w):
         index=index,
         columns=index.get_level_values("phase").rename("phase_nebr"),
     ).stack()
+
+
+def _get_w_data(index, w):
+    w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
+    w_trans = (
+        pd.DataFrame(
+            w.w_tran,
+            index=index,
+            columns=index.get_level_values("phase").rename("phase_nebr"),
+        )
+        .stack()
+        .rename("w_trans")
+    )
+
+    # argw_min = pd.Series(w.argw_min, index=index, name="w_min")
+
+    return {"w_min": w_min, "w_tran": w_trans}
+
+    # return [w_min, w_trans]
 
 
 @CollectionlnPi.decorate_accessor("wlnPi")
@@ -563,6 +360,28 @@ class wlnPivec(object):
                 FreeEnergylnPi(data=phases.iloc[0].data, masks=masks, convention=False)
             )
         return indexes, ws
+
+    @gcached()
+    def _data(self):
+        indexes, ws = self._get_items_ws()
+
+        seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wlnPi")
+        out = parallel_map_func_starargs(
+            _get_w_data, items=seq, use_joblib=self._use_joblib, total=len(ws)
+        )
+
+        w_min = pd.concat([x["w_min"] for x in out])
+        w_tran = pd.concat([x["w_tran"] for x in out])
+
+        return {"w_min": w_min, "w_tran": w_tran}
+
+    @property
+    def w_min(self):
+        return self._data["w_min"]
+
+    @property
+    def w_tran(self):
+        return self._data["w_tran"]
 
     @gcached()
     def dw(self):
