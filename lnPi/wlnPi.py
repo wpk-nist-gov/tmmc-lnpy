@@ -8,6 +8,123 @@ from .cached_decorators import gcached
 from .utils import labels_to_masks, masks_change_convention
 
 
+def find_boundaries(masks, mode="thick", connectivity=None, **kws):
+    """
+    find boundary region for masks
+
+    Parameters
+    ----------
+    masks : list of arrays of bool
+        Convesions is `masks[i][index] == True`` if `index` is active for the ith mask
+    mode : str, default="thick"
+        mode to use in `segmentation.find_boundaries`
+    connectivity : int, default = masks[0].ndim
+
+
+    Returns
+    -------
+    boundaries : list of arrays of bool, optional
+        If suppied, use these areas as boundaries.  Otherwise, calculate
+        boundaries using `segmentation.find_boundaries`
+
+    """
+    if connectivity is None:
+        connectivity = np.asarray(masks[0]).ndim
+
+    return [
+        segmentation.find_boundaries(m, connectivity=connectivity, mode=mode, **kws)
+        for m in masks
+    ]
+
+
+def find_boundaries_overlap(
+    masks, boundaries=None, flag_none=True, mode="thick", connectivity=None
+):
+    """
+    Find regions where boundaries overlap
+
+    Parameters
+    ----------
+    masks : list of arrays of bool
+        Convesions is `masks[i][index] == True`` if `index` is active for the ith mask
+    boundaries : list of arrays of bool, optional
+        If suppied, use these areas as boundaries.  Otherwise, calculate
+        boundaries using `find_boundaries`
+    flag_none : bool, default=True
+        if True, replace overlap with None if no overlap between regions
+
+    Returns
+    -------
+    overlap : dict of masks
+        overlap[i, j] = region of overlap between boundaries and masks in regions i and j
+    """
+
+    n = len(masks)
+
+    if boundaries is None:
+        boundaries = find_boundaries(masks, mode=mode, connectivity=connectivity)
+
+    assert n == len(boundaries)
+
+    result = {}
+    for i, j in itertools.combinations(range(n), 2):
+        # overlap region is where boundaries overlap, and in one of the masks
+        overlap = (boundaries[i] & boundaries[j]) & (masks[i] | masks[j])
+        if flag_none and not np.any(overlap):
+            overlap = None
+        result[i, j] = overlap
+    return result
+
+
+def find_masked_extrema(
+    data,
+    masks,
+    convention="image",
+    extrema="max",
+    fill_val=np.nan,
+    fill_arg=None,
+    unravel=True,
+):
+    """
+    find position and value of extrema of masked data
+    """
+
+    if extrema == "max":
+        func = np.argmax
+    elif extrema == "min":
+        func = np.argmin
+    else:
+        raise ValueError('extrema must be on of {"min", "max}')
+
+    masks = masks_change_convention(masks, convention, "image")
+
+    data_flat = data.reshape(-1)
+    positions_flat = np.arange(data.size)
+
+    out_val = []
+    out_arg = []
+
+    for mask in masks:
+
+        if not np.any(mask):
+            arg = fill_arg
+            val = fill_arg
+        else:
+            mask_flat = mask.reshape(-1)
+            arg = positions_flat[mask_flat][func(data_flat[mask_flat])]
+            val = data_flat[arg]
+
+        out_arg.append(arg)
+        out_val.append(val)
+
+    out_val = np.array(out_val)
+
+    if unravel:
+        out_arg = [np.unravel_index(idx, data.shape) for idx in out_arg]
+
+    return out_arg, out_val
+
+
 class FreeEnergylnPi(object):
     """
     find/merge the transition energy between minima and barriers
@@ -72,114 +189,54 @@ class FreeEnergylnPi(object):
         )
         return cls(data=data, masks=masks, connectivity=connectivity)
 
-    def _find_boundaries(self, idx):
+    @gcached()
+    def _data_max(self):
         """
-        Find boundaries between each regions
+        for lnPi data, find absolute argmax and max
         """
-        return segmentation.find_boundaries(
-            self.masks[idx], connectivity=self.connectivity, mode="thick"
+        return find_masked_extrema(self.data, self.masks)
+
+    @gcached()
+    def _boundary_max(self):
+        """
+        find argmax along boundaries of regions.
+        Corresponds to argmin(w)
+        """
+        overlap = find_boundaries_overlap(
+            self.masks, mode="thick", connectivity=self.connectivity, flag_none=True
         )
 
-    # @gcached() # no need to cache
-    @property
-    def _boundaries(self):
-        """boundary of each label"""
-        return [self._find_boundaries(i) for i in self.index]
+        argmax, valmax = find_masked_extrema(
+            self.data,
+            overlap.values(),
+            fill_val=np.nan,
+            fill_arg=None,
+        )
+        # unpack output
+        out_arg = {}
+        out_max = np.full((self.nfeature,) * 2, dtype=float, fill_value=np.nan)
 
-    # @gcached()
-    @property
-    def _boundaries_overlap(self):
-        """overlap of boundaries"""
-        boundaries = {}
-        for i, j in itertools.combinations(self.index, 2):
-            # instead of using foreground, maker sure that the boundary
-            # is contained in eigher region[i] or region[j]
-            overlap = (
-                # overlap of boundary
-                (self._boundaries[i] & self._boundaries[j])
-                # overlap with with union of region
-                & (self.masks[i] | self.masks[j])
-            )
+        for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
+            out_max[i, j] = out_max[j, i] = val
+            out_arg[i, j] = arg
 
-            if overlap.sum() == 0:
-                overlap = None
-            boundaries[i, j] = overlap
-        return boundaries
-
-    def _get_masked_array(self, mask, convention="image"):
-        mask = masks_change_convention(mask, convention, "masked")
-        return np.ma.MaskedArray(self.data, mask=mask)
-
-    @gcached()
-    def argw_min(self):
-        argmax = []
-        for mask in self.masks:
-            m = self._get_masked_array(mask, convention="image")
-            # create masked array
-            idx = m.argmax()
-            # unravel
-            idx = np.unravel_index(idx, self.data.shape)
-            argmax.append(idx)
-        return argmax
-
-    @gcached()
-    def argw_tran(self):
-        out = {}
-        for (i, j), boundary in self._boundaries_overlap.items():
-            if boundary is None:
-                val = np.inf
-            else:
-                m = self._get_masked_array(boundary, convention="image")
-                # want min of -lnPi, so get max of lnPi
-                val = np.unravel_index(m.argmax(), self.data.shape)
-            out[i, j] = val
-        return out
-
-    @property
-    def w_min2(self):
-        w_min = np.array([-self.data[k] for k in self.argw_min])
-        return w_min.reshape(-1, 1)
-
-    @property
-    def w_tran2(self):
-        out = np.full((self.nfeature,) * 2, dtype=float, fill_value=np.inf)
-
-        for phase_idx, val_idx in self.argw_tran.items():
-            val = -self.data[val_idx]
-            out[phase_idx] = val
-
-            if len(phase_idx) > 1:
-                out[phase_idx[-1::-1]] = val
-
-        return out
-
-    @property
-    def _w_min(self):
-        return -np.array([self.data[msk].max() for msk in self.masks])
+        return out_arg, out_max
 
     @property
     def w_min(self):
-        return self._w_min.reshape(-1, 1)
+        return -self._data_max[1][:, None]
 
-    @gcached()
+    @property
+    def w_argmin(self):
+        return self._data_max[0]
+
+    @property
     def w_tran(self):
-        """
-        Transition point energy for all pairs
+        return np.nan_to_num(-self._boundary_max[1], nan=np.inf)
 
-        out[i,j] = transition energy between phase[i] and phase[j]
-        """
-
-        out = np.full((self.nfeature,) * 2, dtype=float, fill_value=np.inf)
-
-        for (i, j), boundary in self._boundaries_overlap.items():
-            # label to zero based
-            if boundary is None:
-                val = np.inf
-            else:
-                val = (-self.data[boundary]).min()
-
-            out[i, j] = out[j, i] = val
-        return np.array(out)
+    @property
+    def w_argtran(self):
+        return self._boundary_max[0]
 
     @gcached()
     def delta_w(self):
