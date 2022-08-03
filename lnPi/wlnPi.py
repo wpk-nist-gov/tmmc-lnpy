@@ -38,7 +38,12 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
 
 
 def find_boundaries_overlap(
-    masks, boundaries=None, flag_none=True, mode="thick", connectivity=None
+    masks,
+    boundaries=None,
+    flag_none=True,
+    mode="thick",
+    connectivity=None,
+    method="approx",
 ):
     """
     Find regions where boundaries overlap
@@ -52,6 +57,7 @@ def find_boundaries_overlap(
         boundaries using `find_boundaries`
     flag_none : bool, default=True
         if True, replace overlap with None if no overlap between regions
+    method : str, {'approx', 'exact'}
 
     Returns
     -------
@@ -60,6 +66,7 @@ def find_boundaries_overlap(
     """
 
     n = len(masks)
+    assert method in ["approx", "exact"]
 
     if boundaries is None:
         boundaries = find_boundaries(masks, mode=mode, connectivity=connectivity)
@@ -68,11 +75,21 @@ def find_boundaries_overlap(
 
     result = {}
     for i, j in itertools.combinations(range(n), 2):
-        # overlap region is where boundaries overlap, and in one of the masks
-        overlap = (boundaries[i] & boundaries[j]) & (masks[i] | masks[j])
-        if flag_none and not np.any(overlap):
-            overlap = None
-        result[i, j] = overlap
+
+        if method == "approx":
+            # overlap region is where boundaries overlap, and in one of the masks
+            overlap = (boundaries[i] & boundaries[j]) & (masks[i] | masks[j])
+            if flag_none and not np.any(overlap):
+                overlap = None
+            result[i, j] = overlap
+        elif method == "exact":
+            boundaries_overlap = boundaries[i] & boundaries[j]
+            for index, m in enumerate([masks[i], masks[j]]):
+                overlap = boundaries_overlap & m
+                if flag_none and not np.any(overlap):
+                    overlap = None
+                result[i, j, index] = overlap
+
     return result
 
 
@@ -114,15 +131,124 @@ def find_masked_extrema(
             arg = positions_flat[mask_flat][func(data_flat[mask_flat])]
             val = data_flat[arg]
 
+            if unravel:
+                arg = np.unravel_index(arg, data.shape)
+
         out_arg.append(arg)
         out_val.append(val)
 
     out_val = np.array(out_val)
 
-    if unravel:
-        out_arg = [np.unravel_index(idx, data.shape) for idx in out_arg]
-
     return out_arg, out_val
+
+
+def merge_regions(
+    w_tran,
+    w_min,
+    masks,
+    nfeature_max=None,
+    efac=1.0,
+    force=True,
+    convention="image",
+    warn=True,
+    **kwargs
+):
+    """
+    merge labels where free energy energy barrier < efac.
+
+    Parameters
+    ----------
+    w_tran : array with shape (n, n)
+    w_min : array with shape (n, 1)
+    masks : iterable of bool arrays
+
+    nfeature_max : int
+        maximum number of features
+    efac : float, default=0.5
+        energy difference to merge on
+    force : bool, default=True
+        if True, then keep going until nfeature <= nfeature_max
+        even if min_val > efac
+    convention : str or bool, default=True
+        convention of output masks
+    warn : bool, default=True
+        if True, give warning messages
+
+    Returns
+    -------
+    masks : list of bool arrays
+        output masks using `convention`
+    w_trans : array
+        transition energy for new masks
+    w_min : array
+        free energy minima of new masks
+    """
+
+    nfeature = len(masks)
+    if nfeature_max is None:
+        nfeature_max = nfeature
+
+    w_tran = np.array(w_tran, copy=True)
+    w_min = np.array(w_min, copy=True)
+
+    # keep track of keep/kill
+    mapping = {i: msk for i, msk in enumerate(masks)}
+    for cnt in range(nfeature):
+        # number of finite minima
+        nfeature = len(mapping)
+
+        de = w_tran - w_min
+        min_val = np.nanmin(de)
+
+        if min_val > efac:
+            if not force:
+                if warn and nfeature > nfeature_max:
+                    warnings.warn(
+                        "min_val > efac, but still too many phases",
+                        Warning,
+                        stacklevel=2,
+                    )
+                break
+            elif nfeature <= nfeature_max:
+                break
+
+        idx_keep, idx_kill = [x[0] for x in np.where(de == min_val)]
+
+        # keep the one with lower energy
+        if w_min[idx_keep] > w_min[idx_kill]:
+            idx_keep, idx_kill = idx_kill, idx_keep
+
+        # idx[0] and idx[1] merge together
+        # arbitrarily bick idx[0] to keep and idx[1] to kill
+
+        # transition from idx_keep to any other phase equals the minimum transition
+        # from either idx_keep or idx_kill to that other phase
+        new_tran = w_tran[[idx_keep, idx_kill], :].min(axis=0)
+        new_tran[idx_keep] = np.inf
+
+        w_tran[idx_keep, :] = w_tran[:, idx_keep] = new_tran
+        # get rid of old one
+        w_tran[idx_kill, :] = w_tran[:, idx_kill] = np.inf
+
+        # mapping[idx_keep] += mapping[idx_kill]
+        mapping[idx_keep] |= mapping[idx_kill]
+        del mapping[idx_kill]
+
+    # from mapping create some new stuff
+    # new w/de
+    idx_min = list(mapping.keys())
+    w_min = w_min[idx_min]
+
+    idx_tran = np.ix_(*(idx_min,) * 2)
+    w_tran = w_tran[idx_tran]
+
+    # get masks
+    masks = [mapping[i] for i in idx_min]
+
+    # optionally convert image
+    masks = masks_change_convention(masks, True, convention)
+
+    return masks, w_tran, w_min
 
 
 class FreeEnergylnPi(object):
@@ -196,30 +322,53 @@ class FreeEnergylnPi(object):
         """
         return find_masked_extrema(self.data, self.masks)
 
-    @gcached()
-    def _boundary_max(self):
+    @gcached(prop=False)
+    def _boundary_max(self, method="approx"):
         """
         find argmax along boundaries of regions.
         Corresponds to argmin(w)
+
+        if method == 'exact', then find the boundary of each region
+        and find max.  then find min of those maxes.
         """
         overlap = find_boundaries_overlap(
-            self.masks, mode="thick", connectivity=self.connectivity, flag_none=True
+            self.masks,
+            mode="thick",
+            connectivity=self.connectivity,
+            flag_none=True,
+            method=method,
         )
-
         argmax, valmax = find_masked_extrema(
             self.data,
             overlap.values(),
             fill_val=np.nan,
             fill_arg=None,
         )
+
         # unpack output
         out_arg = {}
         out_max = np.full((self.nfeature,) * 2, dtype=float, fill_value=np.nan)
+        if method == "approx":
+            for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
+                out_max[i, j] = out_max[j, i] = val
+                out_arg[i, j] = arg
 
-        for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
-            out_max[i, j] = out_max[j, i] = val
-            out_arg[i, j] = arg
+        elif method == "exact":
+            # attach keys to argmax, valmax
+            argmax = dict(zip(overlap.keys(), argmax))
+            valmax = dict(zip(overlap.keys(), valmax))
 
+            # first get unique keys:
+            keys = [(i, j) for i, j, _ in overlap.keys()]
+            keys = list(set(keys))
+
+            for (i, j) in keys:
+                vals = [valmax[i, j, index] for index in range(2)]
+                # take min value of maxes
+                idx_min = np.nanargmin(vals)
+
+                out_arg[i, j] = argmax[i, j, idx_min]
+                out_max[i, j] = out_max[j, i] = valmax[i, j, idx_min]
         return out_arg, out_max
 
     @property
@@ -232,11 +381,11 @@ class FreeEnergylnPi(object):
 
     @property
     def w_tran(self):
-        return np.nan_to_num(-self._boundary_max[1], nan=np.inf)
+        return np.nan_to_num(-self._boundary_max()[1], nan=np.inf)
 
     @property
     def w_argtran(self):
-        return self._boundary_max[0]
+        return self._boundary_max()[0]
 
     @gcached()
     def delta_w(self):
@@ -281,70 +430,14 @@ class FreeEnergylnPi(object):
             free energy minima of new masks
         """
 
-        if nfeature_max is None:
-            nfeature_max = self.nfeature
-
-        w_tran = self.w_tran.copy()
-        w_min = self.w_min.copy()
-
-        # keep track of keep/kill
-        # mapping[keep] = [keep, merge_in_1, ...]
-        # mapping = {i : [i] for i in self._index}
-        mapping = {i: msk for i, msk in enumerate(self.masks)}
-        for cnt in range(self.nfeature):
-            # number of finite minima
-            nfeature = len(mapping)
-            # nfeature = np.isfinite(w_min).sum()
-
-            de = w_tran - w_min
-            min_val = np.nanmin(de)
-
-            if min_val > efac:
-                if not force:
-                    if warn and nfeature > nfeature_max:
-                        warnings.warn(
-                            "min_val > efac, but still too many phases",
-                            Warning,
-                            stacklevel=2,
-                        )
-                    break
-                elif nfeature <= nfeature_max:
-                    break
-
-            idx_keep, idx_kill = [x[0] for x in np.where(de == min_val)]
-
-            # keep the one with lower energy
-            if w_min[idx_keep] > w_min[idx_kill]:
-                idx_keep, idx_kill = idx_kill, idx_keep
-
-            # idx[0] and idx[1] merge together
-            # arbitrarily bick idx[0] to keep and idx[1] to kill
-
-            # transition from idx_keep to any other phase equals the minimum transition
-            # from either idx_keep or idx_kill to that other phase
-            new_tran = w_tran[[idx_keep, idx_kill], :].min(axis=0)
-            new_tran[idx_keep] = np.inf
-
-            w_tran[idx_keep, :] = w_tran[:, idx_keep] = new_tran
-            # get rid of old one
-            w_tran[idx_kill, :] = w_tran[:, idx_kill] = np.inf
-
-            # mapping[idx_keep] += mapping[idx_kill]
-            mapping[idx_keep] |= mapping[idx_kill]
-            del mapping[idx_kill]
-
-        # from mapping create some new stuff
-        # new w/de
-        idx_min = list(mapping.keys())
-        w_min = w_min[idx_min]
-
-        idx_tran = np.ix_(*(idx_min,) * 2)
-        w_tran = w_tran[idx_tran]
-
-        # get masks
-        masks = [mapping[i] for i in idx_min]
-
-        # optionally convert image
-        masks = masks_change_convention(masks, True, convention)
-
-        return masks, w_tran, w_min
+        return merge_regions(
+            w_tran=self.w_tran,
+            w_min=self.w_min,
+            masks=self.masks,
+            nfeature_max=nfeature_max,
+            efac=efac,
+            force=force,
+            convention=convention,
+            warn=warn,
+            **kwargs
+        )
