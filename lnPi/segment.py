@@ -254,91 +254,54 @@ class Segmenter(object):
         return labels
 
 
-# class wlnPi(FreeEnergylnPi):
-#     def __init__(self, phases):
-#         self._phases = phases
-#         base = self._phases[0]
-#         masks = [x.mask for x in self._phases]
-#         super(wlnPi, self).__init__(data=base.data, masks=masks, convention=False)
-
-#     @gcached()
-#     def delta_w(self):
-#         """wrap delta_w in xarray"""
-
-#         delta_w = self.w_tran - self.w_min
-
-#         xge = self._phases[0].xge
-
-#         dim_phase = self._phases._concat_dim
-#         dims = [dim_phase, dim_phase + "_nebr"]
-
-#         coords = dict(zip(dims, [self._phases.index.values] * 2))
-#         coords = dict(xge.coords_state, **coords)
-#         return xr.DataArray(delta_w, dims=dims, coords=coords)
-
-#     def get_delta_w(self, idx, idx_nebr=None):
-#         """
-#         helper function to get the change in energy from
-#         phase idx to idx_nebr.
-
-#         Parameters
-#         ----------
-#         idx : int
-#             phase index to consider transitions from
-#         idx_nebr : int or list, optional
-#             if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
-#             Default behavior is to return minimum transition from idx to all other neighboring regions
-
-#         Returns
-#         -------
-#         dw : float
-#             - if only phase idx exists, dw = np.inf
-#             - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
-#             - else min of transition for idx to idx_nebr
-#         """
-#         p = self._phases
-
-#         has_idx = idx in p.index
-#         if not has_idx:
-#             return 0.0
-#         if idx_nebr is None:
-#             nebrs = p.index.drop(idx)
-#         else:
-#             if not isinstance(idx_nebr, list):
-#                 idx_nebr = [idx_nebr]
-#             nebrs = [_x for _x in idx_nebr if _x in p.index]
-
-#         if len(nebrs) == 0:
-#             return np.inf
-#         dw = p.wlnPi.delta_w.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
-#         return dw
-
-
-def _get_delta_w(index, w):
-    return pd.DataFrame(
-        w.delta_w,
-        index=index,
-        columns=index.get_level_values("phase").rename("phase_nebr"),
-    ).stack()
+# def _get_delta_w(index, w):
+#     return pd.DataFrame(
+#         w.delta_w,
+#         index=index,
+#         columns=index.get_level_values("phase").rename("phase_nebr"),
+#     ).stack()
 
 
 def _get_w_data(index, w):
     w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
-    w_trans = (
+    w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
+
+    w_tran = (
         pd.DataFrame(
             w.w_tran,
             index=index,
             columns=index.get_level_values("phase").rename("phase_nebr"),
         )
         .stack()
-        .rename("w_trans")
+        .rename("w_tran")
     )
 
-    # argw_min = pd.Series(w.argw_min, index=index, name="w_min")
+    # get argtrans values for each index
+    index_map = {idx: i for i, idx in enumerate(index.get_level_values("phase"))}
+    v = w.w_argtran
 
-    return {"w_min": w_min, "w_tran": w_trans}
+    argtran = []
+    for idxs in zip(
+        *[w_tran.index.get_level_values(_) for _ in ["phase", "phase_nebr"]]
+    ):
+        i, j = [index_map[_] for _ in idxs]
 
-    # return [w_min, w_trans]
+        if (i, j) in v:
+            val = v[i, j]
+        elif (j, i) in v:
+            val = v[j, i]
+        else:
+            val = None
+        argtran.append(val)
+
+    w_argtran = pd.Series(argtran, index=w_tran.index, name="w_argtran")
+
+    return {
+        "w_min": w_min,
+        "w_tran": w_tran,
+        "w_argmin": w_argmin,
+        "w_argtran": w_argtran,
+    }  # [index_map, w.w_argtran]}
 
 
 @CollectionlnPi.decorate_accessor("wlnPi")
@@ -350,9 +313,6 @@ class wlnPivec(object):
     def _get_items_ws(self):
         indexes = []
         ws = []
-
-        # s = self._parent._series
-        # for meta, phases in s.groupby(allbut(s.index.names, 'phase')):
         for meta, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
             masks = [x.mask for x in phases.values]
@@ -364,16 +324,14 @@ class wlnPivec(object):
     @gcached()
     def _data(self):
         indexes, ws = self._get_items_ws()
-
         seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wlnPi")
         out = parallel_map_func_starargs(
             _get_w_data, items=seq, use_joblib=self._use_joblib, total=len(ws)
         )
 
-        w_min = pd.concat([x["w_min"] for x in out])
-        w_tran = pd.concat([x["w_tran"] for x in out])
+        result = {key: pd.concat([x[key] for x in out]) for key in out[0].keys()}
 
-        return {"w_min": w_min, "w_tran": w_tran}
+        return result
 
     @property
     def w_min(self):
@@ -383,18 +341,18 @@ class wlnPivec(object):
     def w_tran(self):
         return self._data["w_tran"]
 
-    @gcached()
+    @property
+    def w_argmin(self):
+        return self._data["w_argmin"]
+
+    @property
+    def w_argtran(self):
+        return self._data["w_argtran"]
+
+    @property
     def dw(self):
         """Series representation of delta_w"""
-
-        indexes, ws = self._get_items_ws()
-
-        seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wlnPi")
-        out = parallel_map_func_starargs(
-            _get_delta_w, items=seq, use_joblib=self._use_joblib, total=len(ws)
-        )
-        out = pd.concat(out).rename("delta_w")
-        return out
+        return (self.w_tran - self.w_min).rename("delta_w")
 
     @property
     def dwx(self):
@@ -423,8 +381,6 @@ class wlnPivec(object):
         """
 
         delta_w = self.dwx
-        # stack = {'sample': list(set(delta_w.coords) - {'phase', 'phase_nebr'})}
-        # delta_w = self.dwx.stack(stack)
 
         # reindex so that has idx in phase
         reindex = delta_w.indexes["phase"].union(pd.Index([idx], name="phase"))
@@ -446,11 +402,6 @@ class wlnPivec(object):
 
     def get_dw(self, idx, idx_nebr=None):
         return self.get_dwx(idx, idx_nebr).to_series()
-
-    # def get_dw2(self, idx, idx_nebr=None):
-    #     dw = self.dw
-
-    # reindex across stuff:
 
 
 @CollectionlnPi.decorate_accessor("wlnPi_single")

@@ -217,7 +217,13 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
 
     if convention == 'image', values of True/False indicate inclusion/exclusion
     if convention == 'masksed', values of False/True indicate inclution/exclusion
+
+    Note: None values are passed through
     """
+
+    if mask is None:
+        return mask
+
     convention_in = _convention_to_bool(convention_in)
     convention_out = _convention_to_bool(convention_out)
 
@@ -235,7 +241,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
     convention_out = _convention_to_bool(convention_out)
 
     if convention_in != convention_out:
-        masks = [~m for m in masks]
+        masks = [m if m is None else ~m for m in masks]
     return masks
 
 

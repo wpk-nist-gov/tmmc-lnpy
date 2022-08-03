@@ -123,9 +123,9 @@ def find_masked_extrema(
 
     for mask in masks:
 
-        if not np.any(mask):
+        if mask is None or not np.any(mask):
             arg = fill_arg
-            val = fill_arg
+            val = fill_val
         else:
             mask_flat = mask.reshape(-1)
             arg = positions_flat[mask_flat][func(data_flat[mask_flat])]
@@ -198,7 +198,10 @@ def merge_regions(
         nfeature = len(mapping)
 
         de = w_tran - w_min
-        min_val = np.nanmin(de)
+
+        # X min_val = np.nanmin(de)
+        min_arg = np.unravel_index(np.nanargmin(de), de.shape)
+        min_val = de[min_arg]
 
         if min_val > efac:
             if not force:
@@ -212,25 +215,21 @@ def merge_regions(
             elif nfeature <= nfeature_max:
                 break
 
-        idx_keep, idx_kill = [x[0] for x in np.where(de == min_val)]
-
+        idx_keep, idx_kill = min_arg
         # keep the one with lower energy
-        if w_min[idx_keep] > w_min[idx_kill]:
+        if w_min[idx_keep, 0] > w_min[idx_kill, 0]:
             idx_keep, idx_kill = idx_kill, idx_keep
-
-        # idx[0] and idx[1] merge together
-        # arbitrarily bick idx[0] to keep and idx[1] to kill
 
         # transition from idx_keep to any other phase equals the minimum transition
         # from either idx_keep or idx_kill to that other phase
         new_tran = w_tran[[idx_keep, idx_kill], :].min(axis=0)
         new_tran[idx_keep] = np.inf
-
         w_tran[idx_keep, :] = w_tran[:, idx_keep] = new_tran
+
         # get rid of old one
         w_tran[idx_kill, :] = w_tran[:, idx_kill] = np.inf
 
-        # mapping[idx_keep] += mapping[idx_kill]
+        # new mask
         mapping[idx_keep] |= mapping[idx_kill]
         del mapping[idx_kill]
 
@@ -323,7 +322,7 @@ class FreeEnergylnPi(object):
         return find_masked_extrema(self.data, self.masks)
 
     @gcached(prop=False)
-    def _boundary_max(self, method="approx"):
+    def _boundary_max(self, method="exact"):
         """
         find argmax along boundaries of regions.
         Corresponds to argmin(w)
@@ -365,10 +364,12 @@ class FreeEnergylnPi(object):
             for (i, j) in keys:
                 vals = [valmax[i, j, index] for index in range(2)]
                 # take min value of maxes
-                idx_min = np.nanargmin(vals)
-
-                out_arg[i, j] = argmax[i, j, idx_min]
-                out_max[i, j] = out_max[j, i] = valmax[i, j, idx_min]
+                if np.all(np.isnan(vals)):
+                    out_arg[i, j] = None
+                else:
+                    idx_min = np.nanargmin(vals)
+                    out_arg[i, j] = argmax[i, j, idx_min]
+                    out_max[i, j] = out_max[j, i] = valmax[i, j, idx_min]
         return out_arg, out_max
 
     @property
