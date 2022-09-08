@@ -35,9 +35,7 @@ def ref():
     lnz = np.array([-2.5, -2.5])
 
     return (
-        lnPi.MaskedlnPiDelayed.from_table(path, state_kws=state_kws, lnz=lnz)
-        .zeromax()
-        .pad()
+        lnPi.MaskedlnPi.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
     )
 
 

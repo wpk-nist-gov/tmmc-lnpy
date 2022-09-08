@@ -48,6 +48,7 @@ class SeriesWrapper(AccessorMixin):
 
     @property
     def series(self):
+        """View of the underlying :class:`pandas.Series`"""
         return self._series
 
     @series.setter
@@ -58,6 +59,7 @@ class SeriesWrapper(AccessorMixin):
 
     @property
     def s(self):
+        """Alias to `self.series`"""
         return self.series
 
     def __iter__(self):
@@ -67,21 +69,30 @@ class SeriesWrapper(AccessorMixin):
         return next(self._series)
 
     @property
-    def items(self):
+    def values(self):
+        """Series values"""
         return self._series.values
 
     @property
+    def items(self):
+        """Alias to `self.values`"""
+        return self.values
+
+    @property
     def index(self):
+        """Series index"""
         return self._series.index
 
     @property
     def name(self):
+        """Series name"""
         return self._series.name
 
     def copy(self):
-        return self.__class__(data=self.s, base_class=self._base_class)
+        return type(self)(data=self.s, base_class=self._base_class)
 
     def new_like(self, data=None, index=None, **kwargs):
+        """Create new object with optional new data/index"""
         return self.__class__(
             data=data,
             index=index,
@@ -99,14 +110,17 @@ class SeriesWrapper(AccessorMixin):
         return val
 
     def __getitem__(self, key):
+        """Interface to :meth:`pandas.Series.__getitem__`"""
         return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)
 
     def xs(self, key, axis=0, level=None, drop_level=False, wrap=True):
+        """Interface to :meth:`pandas.Series.xs`"""
         return self._wrapped_pandas_method(
             "xs", wrap=wrap, key=key, axis=axis, level=level, drop_level=drop_level
         )
 
     def __setitem__(self, idx, values):
+        """Interface to :meth:`pandas.Series.__setitem__`"""
         self._series[idx] = values
 
     def __repr__(self):
@@ -121,6 +135,21 @@ class SeriesWrapper(AccessorMixin):
     def append(
         self, to_append, ignore_index=False, verify_integrity=True, inplace=False
     ):
+        """Interface to :meth:`pandas.Series.append`
+
+
+        Parameters
+        ----------
+        to_append : object
+            Object to append
+        ignore_index : bool, default=False
+        verify_integrity : bool, default=True
+        inplace : bool, default = False
+
+        See Also
+        --------
+        pandas.Series.append
+        """
         if isinstance(to_append, self.__class__):
             to_append = to_append.series
 
@@ -134,9 +163,16 @@ class SeriesWrapper(AccessorMixin):
             return self.new_like(s)
 
     def droplevel(self, level, axis=0):
+        """New object with dropped level
+
+        See Also
+        --------
+        pandas.Series.droplevel
+        """
         return self.new_like(self._series.droplevel(level=level, axis=axis))
 
     def apply(self, func, convert_dtype=True, args=(), wrap=False, **kwds):
+        """Interface to :meth:`pandas.Series.apply`"""
 
         return self._wrapped_pandas_method(
             "apply",
@@ -148,6 +184,7 @@ class SeriesWrapper(AccessorMixin):
         )
 
     def sort_index(self, wrap=True, *args, **kwargs):
+        """Interface to :meth:`pandas.Series.sort_index`"""
         return self._wrapped_pandas_method("sort_index", wrap=wrap, *args, **kwargs)
 
     def groupby(
@@ -164,7 +201,7 @@ class SeriesWrapper(AccessorMixin):
         **kwargs
     ):
         """
-        wrapper around groupby.
+        Wrapper around :meth:`pandas.Series.groupby`.
 
         Paremters
         ---------
@@ -173,7 +210,7 @@ class SeriesWrapper(AccessorMixin):
 
         See Also
         --------
-        `pandas.Series.groupby` documentation
+        pandas.Series.groupby
         """
 
         group = self.s.groupby(
@@ -231,11 +268,13 @@ class SeriesWrapper(AccessorMixin):
         return pd.concat(objs, **concat_kws)
 
     def concat_like(self, objs, **concat_kws):
+        """Concat a sequence of objects like `self`"""
         s = self._concat_to_series(objs, **concat_kws)
         return self.new_like(s)
 
     @classmethod
     def concat(cls, objs, concat_kws=None, *args, **kwargs):
+        """Create collection from sequence of objects"""
         if concat_kws is None:
             concat_kws = {}
         s = cls._concat_to_series(objs, **concat_kws)
@@ -273,6 +312,12 @@ class _Groupby(object):
 
 @SeriesWrapper.decorate_accessor("loc")
 class _LocIndexer(object):
+    """
+    Indexer by value.
+
+    See :attr:`pandas.Series.loc`
+    """
+
     def __init__(self, parent):
         self._parent = parent
         self._loc = self._parent._series.loc
@@ -289,6 +334,11 @@ class _LocIndexer(object):
 
 @SeriesWrapper.decorate_accessor("iloc")
 class _iLocIndexer(object):
+    """Indexer by position.
+
+    See :attr:`pandas.Series.iloc`
+    """
+
     def __init__(self, parent):
         self._parent = parent
         self._iloc = self._parent._series.iloc
@@ -305,6 +355,12 @@ class _iLocIndexer(object):
 
 @SeriesWrapper.decorate_accessor("query")
 class _Query(object):
+    """
+    Select values by string query.
+
+    See :meth:`pandas.DataFrame.query`
+    """
+
     def __init__(self, parent):
         self._parent = parent
         self._frame = self._parent.index.to_frame().reset_index(drop=True)
@@ -315,6 +371,30 @@ class _Query(object):
 
 
 class CollectionlnPi(SeriesWrapper):
+    """
+    Wrapper around :class:`pandas.Series` for collection of :class:`lnPi.MaskedlnPi` objects.
+
+
+    Parameters
+    ----------
+    data : sequence of MaskedlnPi
+        :math:`\ln \Pi(N)` instances to consider.
+    index : array-like, pandas.Index, pandas.MultiIndex, optional
+        Index to apply to Series.
+    xarray_output : bool, default = True
+        If True, then wrap CollectionlnPi outputs in :class:`~xarray.DataArray`
+    concat_dim : str, optional
+        Name of dimensions to concat results along.
+        Also Used by :class:`~lnPi.xlnPi.xlnPiGrandCanonical`.
+    concat_coords : string, optional
+        parameters `coords `to :func:`xarray.concat`
+    unstack : bool, default=True
+        If True, then outputs will be unstacked using :meth:`xarray.DataArray.unstack`
+    *args **kwargs
+        Extra arguments to Series constructor
+
+    """
+
     _concat_dim = "sample"
     _concat_coords = "different"
     _use_joblib = True
@@ -350,6 +430,7 @@ class CollectionlnPi(SeriesWrapper):
         # self._series.index.name = self._concat_dim
 
     def new_like(self, data=None, index=None):
+        """Create new object with optional new data/index."""
         return super(CollectionlnPi, self).new_like(
             data=data,
             index=index,
@@ -387,11 +468,12 @@ class CollectionlnPi(SeriesWrapper):
 
     @property
     def state_kws(self):
+        """state_kws from first :class:`~lnPi.MaskedlnPi`"""
         return self.iloc[0].state_kws
 
     @property
     def nlnz(self):
-        """number of unique lnzs"""
+        """Number of unique lnzs"""
         return len(self.index.droplevel("phase").drop_duplicates())
 
     @gcached()
@@ -441,6 +523,7 @@ class CollectionlnPi(SeriesWrapper):
         return index
 
     def get_index_level(self, level="phase"):
+        """Get index values for specified level"""
         return self._get_level(level=level)
 
     # @gcached()
@@ -490,6 +573,7 @@ class CollectionlnPi(SeriesWrapper):
         return pi_norm, pi_sum, lnpi_zero
 
     def wrap_list_results(self, items):
+        """Unitility to wrap output in :class:xarray.DataArray"""
         if self._xarray_output:
             x = items[0]
             if isinstance(x, xr.DataArray):
@@ -503,16 +587,18 @@ class CollectionlnPi(SeriesWrapper):
     @classmethod
     def from_list(cls, items, index, *args, **kwargs):
         """
-        create collection from list of lnPi's
+        Create collection from list of :class:`lnPi.MaskedlnPi` objects.
 
         Parameters
         ----------
-        items : sequence
+        items : sequence of MaskedlnPi
             Sequence of lnPi
         index : sequence
             Sequence of phases ID for each lnPi
-        *args, **kwargs :
-            extra arguments to class constructor
+        *args
+            Extra positional arguments to `cls`
+        **kwargs :
+            Extra keyword arguments to `cls`
         Returns
         -------
         output : class instance
@@ -537,7 +623,7 @@ class CollectionlnPi(SeriesWrapper):
         **kwargs
     ):
         """
-        build collection from scalar builder
+        Build collection from scalar builder
 
         Parameters
         ----------
@@ -552,6 +638,14 @@ class CollectionlnPi(SeriesWrapper):
         Returns
         -------
         out : Collection object
+
+
+        See Also
+        --------
+        ~lnPi.segment.Segmenter.build_phases
+        ~lnPi.segment.Segmenter.build_phases_mu
+        ~lnPi.segment.Segmenter.build_phases_dmu
+
         """
         if build_kws is None:
             build_kws = {}
@@ -571,6 +665,9 @@ class CollectionlnPi(SeriesWrapper):
     ################################################################################
     # dataarray io
     def to_dataarray(self, dtype=np.uint8, reset_index=True, **kwargs):
+        """
+        Convert collection to a :class:`~xarray.DataArray`
+        """
         labels = []
         indexes = []
 
@@ -614,6 +711,30 @@ class CollectionlnPi(SeriesWrapper):
         check_features=True,
         **kwargs
     ):
+        r"""
+        Create from reference :class:`~lnPi.MaskedlnPi` and labels array
+
+
+        Parameters
+        ----------
+        ref : MaskedlnPi
+        labels : sequence of label arrays
+            Each `labels[i]` will be used to construct multiple phases from single
+            (reweighted)  :math:`ln \Pi(N)`
+        lnzs : sequence
+            Each lnzs[i] will be passed to ``ref.reweight``.
+        features : int, optional
+        include_boundary : bool, default=False
+        labels_kws : mapping, optional
+        check_features : bool, default = True
+        **kwargs
+            Extra arguments past to :meth:`from_list`
+
+        See Also
+        --------
+        labels_to_masks
+        from_list
+        """
 
         if labels_kws is None:
             labels_kws = {}
@@ -652,6 +773,23 @@ class CollectionlnPi(SeriesWrapper):
         check_features=True,
         **kwargs
     ):
+        """
+        Create a collection from DataArray of labels
+
+        Parameters
+        ----------
+        ref : MaskedlnPi
+        da : DataArray or labels
+        grouper : Hashable
+            Name of dimension(s) to group along to give a single label array
+
+
+        See Also
+        --------
+        from_labels
+
+
+        """
 
         labels = []
         lnzs = []

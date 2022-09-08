@@ -2,10 +2,15 @@ import itertools
 import warnings
 
 import numpy as np
+import pandas as pd
+import xarray as xr
 from skimage import segmentation
 
+from ._docstrings import docfiller_shared
 from .cached_decorators import gcached
-from .utils import labels_to_masks, masks_change_convention
+from .collectionlnpi import CollectionlnPi
+from .utils import get_tqdm_calc as get_tqdm
+from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
 
 def find_boundaries(masks, mode="thick", connectivity=None, **kws):
@@ -17,7 +22,7 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
     masks : list of arrays of bool
         Convesions is `masks[i][index] == True`` if `index` is active for the ith mask
     mode : str, default="thick"
-        mode to use in `segmentation.find_boundaries`
+        mode to use in :func:`skimage.segmentation.find_boundaries`
     connectivity : int, default = masks[0].ndim
 
 
@@ -26,6 +31,10 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
     boundaries : list of arrays of bool, optional
         If suppied, use these areas as boundaries.  Otherwise, calculate
         boundaries using `segmentation.find_boundaries`
+
+    See Also
+    --------
+    skimage.segmentation.find_boundaries
 
     """
     if connectivity is None:
@@ -43,7 +52,7 @@ def find_boundaries_overlap(
     flag_none=True,
     mode="thick",
     connectivity=None,
-    method="approx",
+    method="exact",
 ):
     """
     Find regions where boundaries overlap
@@ -58,11 +67,18 @@ def find_boundaries_overlap(
     flag_none : bool, default=True
         if True, replace overlap with None if no overlap between regions
     method : str, {'approx', 'exact'}
+        * approx : consider regions where boundaries overlap and in one of the two region
+        * exact : consider regions where boundaries overlap
 
     Returns
     -------
     overlap : dict of masks
         overlap[i, j] = region of overlap between boundaries and masks in regions i and j
+
+
+    See Also
+    --------
+    find_boundaries
     """
 
     n = len(masks)
@@ -75,7 +91,6 @@ def find_boundaries_overlap(
 
     result = {}
     for i, j in itertools.combinations(range(n), 2):
-
         if method == "approx":
             # overlap region is where boundaries overlap, and in one of the masks
             overlap = (boundaries[i] & boundaries[j]) & (masks[i] | masks[j])
@@ -93,6 +108,7 @@ def find_boundaries_overlap(
     return result
 
 
+@docfiller_shared
 def find_masked_extrema(
     data,
     masks,
@@ -103,7 +119,31 @@ def find_masked_extrema(
     unravel=True,
 ):
     """
-    find position and value of extrema of masked data
+    Find position and value of extrema of masked data.
+
+    Parameters
+    ----------
+    data : ndarray
+        input data to consider
+    masks : list of bool arrays
+        masks for data regions
+    {mask_convention}
+    extrema : {{'max','min}}
+        Type of extrema to calculate
+    fill_val : scalar, default=nan
+        Value to fill for `out_arg` for empty `mask`
+    fill_arg : scalar, optional
+        Value to fill for `out_val` for empty `mask`
+    unravel : bool, default=True
+        If True, unravel flat index to multi dimensional index.
+
+
+    Returns
+    -------
+    out_arg : list of indices
+        index of extrema, one for each `mask`
+    out_val : ndarray
+        value of extrema, one for each `mask`
     """
 
     if extrema == "max":
@@ -142,6 +182,7 @@ def find_masked_extrema(
     return out_arg, out_val
 
 
+@docfiller_shared
 def merge_regions(
     w_tran,
     w_min,
@@ -151,26 +192,34 @@ def merge_regions(
     force=True,
     convention="image",
     warn=True,
-    **kwargs
 ):
-    """
-    merge labels where free energy energy barrier < efac.
+    r"""
+    Merge labels where free energy energy barrier < efac.
+
+    The scaled free energy :math:`w = \beta f = - \ln \Pi ` is analized.
+    Anywhere where :math:`\Delta w = \text{{w_tran}} - \text{{w_min}} < \text{{efac}}` will be merged into a single phase.  Here,
+    ``w_trans`` is the transition energy between phases (i.e., the minimum value of `lnPi`` between regions`) and ``w_min`` is the minimum energy (the maximum `lnPi`) for a phase.
+
+
 
     Parameters
     ----------
-    w_tran : array with shape (n, n)
-    w_min : array with shape (n, 1)
-    masks : iterable of bool arrays
-
+    w_tran : array
+        Shape of array is ``(n, n)``, where ``n`` is the number of unique regions/phases.
+    This is the transitional free energy ()
+    w_min : array
+        Shape of array is ``(n, 1)``.
+    masks : sequence of bool arrays
+        Masks for each region using `convention`
     nfeature_max : int
-        maximum number of features
+        maximum number of features/phases to allow
     efac : float, default=0.5
-        energy difference to merge on
+        Wnergy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
+        ``i`` and ``j`` will be merged together.
     force : bool, default=True
         if True, then keep going until nfeature <= nfeature_max
-        even if min_val > efac
-    convention : str or bool, default=True
-        convention of output masks
+        even if min_val > efac.
+    {mask_convention}
     warn : bool, default=True
         if True, give warning messages
 
@@ -199,7 +248,6 @@ def merge_regions(
 
         de = w_tran - w_min
 
-        # X min_val = np.nanmin(de)
         min_arg = np.unravel_index(np.nanargmin(de), de.shape)
         min_val = de[min_arg]
 
@@ -250,31 +298,33 @@ def merge_regions(
     return masks, w_tran, w_min
 
 
+@docfiller_shared
 class FreeEnergylnPi(object):
-    """
-    find/merge the transition energy between minima and barriers
-    in lnPi
+    r"""
+    Analysis of local free energy :math:`w = \beta f = - \ln \Pi`.
 
-    here we define the free energy w = betaW = -ln(Pi)
+    Parameters
+    ----------
+    data : ndarray
+        lnPi data
+    masks : sequence of arrays of bool
+        `masks[i]` is the mask indicating the `ith` phase.  See `convention`.
+    {mask_convention}
+    connectivity : int, optional
+        connectivity parameter for boundary construction
+    index : sequence of ints, optional
+        Optional index to apply to phases.
+        Not yet fully supported.
 
-    NOTE : this class used the image convention that
-    mask == True indicates that the region includes the feature.
-    This is oposite the masked array convension, where mask==True implies that region is masked out.
+    Notes
+    -----
+    this class uses the 'image' convention for masks.  That is
+    where `mask == True` indicates locations in the phase/region,
+    and `mask == False` indicates locations not in the phase/region.
+    This is opposite the convention used in :mod:`numpy.ma`.
     """
 
     def __init__(self, data, masks, convention="image", connectivity=None, index=None):
-        """
-        Parameters
-        ----------
-        data : array
-            lnPi data
-        masks : list of arrays
-            masks[i] == True where feature exists
-        convention : str or bool
-            convention of masks
-        connectivity : int, optional
-            connectivity parameter for boundary construction
-        """
         self.data = np.asarray(data)
 
         # make sure masks in image convention
@@ -290,9 +340,11 @@ class FreeEnergylnPi(object):
 
     @property
     def nfeature(self):
+        """number of features/regions/phases"""
         return len(self.masks)
 
     @classmethod
+    @docfiller_shared
     def from_labels(
         cls,
         data,
@@ -304,6 +356,29 @@ class FreeEnergylnPi(object):
     ):
         """
         create FreeEnergylnPi from labels
+
+        Parameters
+        ----------
+        data : ndarray
+            lnPi data
+        {labels}
+        connectivity : int, optional
+            connectivity parameters
+        features : array-like, optional
+            list of features to extract from labels.  Note that returned
+            mask[i] corresponds to labels == feature[i].
+        include_boundary : bool, default=False
+            if True, include boundary regions in output mask
+        **kwargs
+            Extra arguments to :func:`lnPi.utils.labels_to_masks`
+
+        Returns
+        -------
+        out : FreeEnergylnPi instance
+
+        See Also
+        --------
+        lnPi.utils.labels_to_masks
         """
         masks, features = labels_to_masks(
             labels,
@@ -374,25 +449,30 @@ class FreeEnergylnPi(object):
 
     @property
     def w_min(self):
+        """Minimum value of `w` (max `lnPi`) in each phase/region."""
         return -self._data_max[1][:, None]
 
     @property
     def w_argmin(self):
+        """locations of the minimum of `w` in each phase/region"""
         return self._data_max[0]
 
     @property
     def w_tran(self):
+        """Minimum value of `w` (max `lnPi`) in the boundary between phases.
+
+        `w_tran[i, j]` is the transition energy between phases `i` ans `j`.
+        """
         return np.nan_to_num(-self._boundary_max()[1], nan=np.inf)
 
     @property
     def w_argtran(self):
+        """location of `w_tran`"""
         return self._boundary_max()[0]
 
     @gcached()
     def delta_w(self):
-        """
-        -beta (lnPi[transition] - lnPi[max])
-        """
+        """Transition energy ``delta_w[i, j] = w_tran[i, j] - w_min[i]``."""
         return self.w_tran - self.w_min
 
     def merge_regions(
@@ -402,22 +482,23 @@ class FreeEnergylnPi(object):
         force=True,
         convention="image",
         warn=True,
-        **kwargs
     ):
         """
-        merge labels where free energy energy barrier < efac.
+        Merge labels where free energy energy barrier < efac.
+
+        Interface to :func:`merge_regions`
 
         Parameters
         ----------
         nfeature_max : int
-            maximum number of features
+            maximum number of features/phases to allow
         efac : float, default=0.5
-            energy difference to merge on
+            Wnergy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
+            ``i`` and ``j`` will be merged together.
         force : bool, default=True
             if True, then keep going until nfeature <= nfeature_max
-            even if min_val > efac
-        convention : str or bool, default=True
-            convention of output masks
+            even if min_val > efac.
+        {mask_convention}
         warn : bool, default=True
             if True, give warning messages
 
@@ -440,5 +521,232 @@ class FreeEnergylnPi(object):
             force=force,
             convention=convention,
             warn=warn,
-            **kwargs
         )
+
+
+def _get_w_data(index, w):
+    w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
+    w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
+
+    w_tran = (
+        pd.DataFrame(
+            w.w_tran,
+            index=index,
+            columns=index.get_level_values("phase").rename("phase_nebr"),
+        )
+        .stack()
+        .rename("w_tran")
+    )
+
+    # get argtrans values for each index
+    index_map = {idx: i for i, idx in enumerate(index.get_level_values("phase"))}
+    v = w.w_argtran
+
+    argtran = []
+    for idxs in zip(
+        *[w_tran.index.get_level_values(_) for _ in ["phase", "phase_nebr"]]
+    ):
+        i, j = [index_map[_] for _ in idxs]
+
+        if (i, j) in v:
+            val = v[i, j]
+        elif (j, i) in v:
+            val = v[j, i]
+        else:
+            val = None
+        argtran.append(val)
+
+    w_argtran = pd.Series(argtran, index=w_tran.index, name="w_argtran")
+
+    return {
+        "w_min": w_min,
+        "w_tran": w_tran,
+        "w_argmin": w_argmin,
+        "w_argtran": w_argtran,
+    }  # [index_map, w.w_argtran]}
+
+
+class wlnPivec(object):
+    r"""
+    Calculate the transition free energies.
+
+    :math:`w = \beta f = - \ln \Pi`
+
+    Parameters
+    ----------
+    parent : CollectionlnPi
+
+    Notes
+    -----
+    An instance of :class:`wlnPivec` is normally created from the accessor :meth:`lnPi.CollectionlnPi.wlnPi`
+    """
+
+    def __init__(self, parent):
+        self._parent = parent
+        self._use_joblib = getattr(self._parent, "_use_joblib", False)
+
+    def _get_items_ws(self):
+        indexes = []
+        ws = []
+        for meta, phases in self._parent.groupby_allbut("phase"):
+            indexes.append(phases.index)
+            masks = [x.mask for x in phases.values]
+            ws.append(
+                FreeEnergylnPi(data=phases.iloc[0].data, masks=masks, convention=False)
+            )
+        return indexes, ws
+
+    @gcached()
+    def _data(self):
+        indexes, ws = self._get_items_ws()
+        seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wlnPi")
+        out = parallel_map_func_starargs(
+            _get_w_data, items=seq, use_joblib=self._use_joblib, total=len(ws)
+        )
+
+        result = {key: pd.concat([x[key] for x in out]) for key in out[0].keys()}
+
+        return result
+
+    @property
+    def w_min(self):
+        """Minimum energy (maximum `lnPi`) for a given region/phase"""
+        return self._data["w_min"]
+
+    @property
+    def w_tran(self):
+        """Minimum energy (maximum `lnPi`) at boundary between phases"""
+        return self._data["w_tran"]
+
+    @property
+    def w_argmin(self):
+        """location of :attr:`w_min`"""
+        return self._data["w_argmin"]
+
+    @property
+    def w_argtran(self):
+        """location of :attr:`w_tran`"""
+        return self._data["w_argtran"]
+
+    @property
+    def dw(self):
+        """Series representation of `dw = w_tran - w_min`"""
+        return (self.w_tran - self.w_min).rename("delta_w")
+
+    @property
+    def dwx(self):
+        """xarray representation of :attr:`dw`"""
+        return self.dw.to_xarray()
+
+    def get_dwx(self, idx, idx_nebr=None):
+        """
+        helper function to get the change in energy from
+        phase idx to idx_nebr.
+
+        Parameters
+        ----------
+        idx : int
+            phase index to consider transitions from
+        idx_nebr : int or list, optional
+            if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
+            Default behavior is to return minimum transition from idx to all other neighboring regions
+
+        Returns
+        -------
+        dw : DataArray
+            Transition energy from `idx` to `idx_nebr`
+            - if only phase idx exists, dw = np.inf
+            - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
+            - else min of transition for idx to idx_nebr
+        """
+
+        delta_w = self.dwx
+
+        # reindex so that has idx in phase
+        reindex = delta_w.indexes["phase"].union(pd.Index([idx], name="phase"))
+        delta_w = delta_w.reindex(phase=reindex, phase_nebr=reindex)
+
+        # much simpler
+        if idx_nebr is None:
+            delta_w = delta_w.sel(phase=idx)
+        else:
+            if not isinstance(idx_nebr, list):
+                idx_nebr = [idx_nebr]
+            if idx not in idx_nebr:
+                idx_nebr.append(idx)
+            nebrs = delta_w.indexes["phase_nebr"].intersection(idx_nebr)
+            delta_w = delta_w.sel(phase=idx, phase_nebr=nebrs)
+
+        out = delta_w.min("phase_nebr").fillna(0.0)
+        return out
+
+    def get_dw(self, idx, idx_nebr=None):
+        """Sereis version of :meth:`get_dwx`"""
+        return self.get_dwx(idx, idx_nebr).to_series()
+
+
+@CollectionlnPi.decorate_accessor("wlnPi")
+def wlnPivec_accessor(parent):
+    """
+    Accessor to :class:`~lnPi.wlnPi.wlnPivec` instance on `self.`
+    """
+    return wlnPivec(parent)
+
+
+# @CollectionlnPi.decorate_accessor("wlnPi_single")
+class wlnPi_single(wlnPivec):
+    """
+    Stripped down version of :class:`wlnPi` for single phase grouping.
+
+    This should be used for a collection of lnPi that is at a single state point, with multiple phases.
+
+    Parameters
+    ----------
+    parent : CollectionlnPi
+
+    Notes
+    -----
+    This is accessed through :attr:`CollectionlnPi.wlnPi_single`
+
+    """
+
+    @gcached()
+    def dwx(self):
+        index = list(self._parent.index.get_level_values("phase"))
+        masks = [x.mask for x in self._parent]
+        w = FreeEnergylnPi(
+            data=self._parent.iloc[0].data, masks=masks, convention=False
+        )
+
+        dw = w.w_tran - w.w_min
+        dims = ["phase", "phase_nebr"]
+        coords = dict(zip(dims, [index] * 2))
+        return xr.DataArray(dw, dims=dims, coords=coords)
+
+    @gcached()
+    def dw(self):
+        """Series representation of delta_w"""
+        return self.dwx.to_series()
+
+    def get_dw(self, idx, idx_nebr=None):
+        dw = self.dwx
+        index = dw.indexes["phase"]
+
+        if idx not in index:
+            return 0.0
+        elif idx_nebr is None:
+            nebrs = index.drop(idx)
+        else:
+            if not isinstance(idx_nebr, list):
+                idx_nebr = [idx_nebr]
+            nebrs = [x for x in idx_nebr if x in index]
+
+        if len(nebrs) == 0:
+            return np.inf
+        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
+
+
+@CollectionlnPi.decorate_accessor("wlnPi_single")
+def wlnPi_single_accessor(parent):
+    """Accessor to :class:`~lnPi.wlnPi.wlnPi_single` instance on `self`"""
+    return wlnPi_single(parent)

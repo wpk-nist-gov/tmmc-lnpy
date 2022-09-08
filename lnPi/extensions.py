@@ -1,7 +1,6 @@
-"""
-define accessors
+"""Define accessor routines.
 
-This is inspired by xarray accessors
+This is inspired by xarray accessors.
 """
 
 import warnings
@@ -45,21 +44,25 @@ class _CachedAccessorSingle(object):
         return accessor_obj
 
 
+from functools import wraps
+
+
 def _CachedAccessorCleared(name, accessor):
     """
     Wrap accessor in a cached property
 
     This creates an property in the parent class with name `name`
-    from `accessor(self)`
+    from `accessor(self)`.
+    This only gets initialized when called
 
-    this only gets initialized when called
-
-    NOTE : it gets deleted if self._cache is cleared.
-
+    Notes
+    -----
+    This gets deleted if self._cache is cleared.
     If you only want to create it once, then use the Single access wrapper below
     """
 
     @gcached(key=name, prop=True)
+    @wraps(accessor)
     def _get_prop(self):
         return accessor(self)
 
@@ -107,18 +110,19 @@ class AccessorMixin(object):
     @classmethod
     def register_accessor(cls, name, accessor, single_create=False):
         """
-        register a property `name` to `class` of type `accessor(self)`
+        Register a property `name` to `class` of type `accessor(self)`
+
         Examples
         --------
-        class parent(AccessorMixin):
-            pass
+        >>> class parent(AccessorMixin):
+        ...     pass
+        >>> class hello(AccessorMixin):
+        ...     def __init__(self, parent):
+        ...         self._parent = parent
+        ...     def there(self):
+        ...         return 'hello there {}'.format(type(self._parent))
 
-        class hello(AccessorMixin):
-            def __init__(self, parent):
-                self._parent = parent
-            def there(self):
-                return 'hello there {}'.format(type(self._parent))
-        parent.register_accessor('hello', hello)
+        >>> parent.register_accessor('hello', hello)
         >>> x = parent()
         >>> x.hello.there()
         'hello there parent'
@@ -128,17 +132,20 @@ class AccessorMixin(object):
     @classmethod
     def decorate_accessor(cls, name, single_create=False):
         """
-        register a property `name` to `class` of type `accessor(self)`
+        Register a property `name` to `class` of type `accessor(self)`.
+
         Examples
         --------
-        class parent(AccessorMixin):
-            pass
-        @parent.decorate('hello)
-        class hello(AccessorMixin):
-            def __init__(self, parent):
-                self._parent = parent
-            def there(self):
-                return 'hello there {}'.format(type(self._parent))
+        >>> class parent(AccessorMixin):
+        ...     pass
+
+        >>> @parent.decorate('hello)
+        ... class hello(AccessorMixin):
+        ...     def __init__(self, parent):
+        ...         self._parent = parent
+        ...     def there(self):
+        ...         return 'hello there {}'.format(type(self._parent))
+
         >>> x = parent()
         >>> x.hello.there()
         'hello there parent'

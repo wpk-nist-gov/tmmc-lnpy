@@ -9,8 +9,8 @@ import xarray as xr
 
 from .cached_decorators import gcached_use_cache as gcached
 from .collectionlnpi import CollectionlnPi
-from .maskedlnpi import MaskedlnPi
-from .maskedlnpidelayed import MaskedlnPiDelayed
+from .maskedlnpi import MaskedlnPi, MaskedlnPiDelayed
+from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .utils import dim_to_suffix_dataset
 
 
@@ -177,10 +177,22 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
 
 @MaskedlnPi.decorate_accessor("xge")
 @MaskedlnPiDelayed.decorate_accessor("xge")
+@MaskedlnPiLegacy.decorate_accessor("xge")
 @CollectionlnPi.decorate_accessor("xge")
-class xrlnPi(object):
+def xge_accessor(parent):
     """
-    accessor for lnpi properties
+    Accessor to :class:`~lnPi.xlnPi.xlnPiGrandCanonical`.
+    """
+    return xlnPiGrandCanonical(parent)
+
+
+class xlnPiGrandCanonical:
+    """
+    :class:`DataArray` accessor to Grand Canonical properties from lnPi
+
+
+    This class is primarily interacted with through the attributes ``xge`` attached
+    to :class:`~lnPi.maskedlnpi.MaskedlnPi` and :class:`~lnPi.collectionlnpi.CollectionlnPi`.
     """
 
     def __init__(self, parent):
@@ -223,38 +235,47 @@ class xrlnPi(object):
 
     @property
     def ncoords(self):
+        """Particle number coordinates."""
         return self._wrapper.ncoords()
 
     @property
     def ncoords_tot(self):
+        """Total number of particles coordinates"""
         return self._wrapper.ncoords_tot()
 
     @property
     def dims_n(self):
+        """Dimension(s) corresponding to  number of particles"""
         return self._wrapper.dims_n
 
     @property
     def dims_lnz(self):
+        r"""Dimension corresponding to values of :math:`\ln z`"""
         return self._wrapper.dims_lnz
 
     @property
     def dims_comp(self):
+        """Dimension of component number"""
         return self._wrapper.dims_comp
 
     @property
     def dims_state(self):
+        """Dimensions corresponding to 'state variables'"""
         return self.pi_norm.attrs["dims_state"]
 
     @property
     def dims_rec(self):
+        """Dimensions for replicates"""
         return self._wrapper.dims_rec
 
     @property
     def beta(self):
+        r"""Inverse temperature :math:`\beta = 1 / (k_{\rm B} T)`"""
         return self._parent.state_kws["beta"]
 
     @property
     def volume(self):
+        """System volume :math:`V`."""
         return self._parent.state_kws["volume"]
 
     @gcached()
@@ -264,37 +285,23 @@ class xrlnPi(object):
     @gcached()
     @xr_name(r"$\beta {\bf \mu}$")
     def betamu(self):
+        r"""Scaled checmical potential :math:`\beta \mu`"""
         return self._wrapper.wrap_lnz(self._parent._lnz_tot, coords=self._rec_coords)
 
     @property
     @xr_name(r"$\ln\beta{\bf\mu}$")
     def lnz(self):
+        r"""Log of activity :math:`\ln z``"""
         return self.betamu
 
     @xr_name(r"$\ln \Pi(n,\mu,V,T)$", unstack=False)
     def lnpi(self, fill_value=None):
+        r"""DataArray view of :math:`\ln \Pi({\bf N})`"""
         return self._wrapper.wrap_lnpi(
             self._parent._lnpi_tot(fill_value),
             coords=self._rec_coords,
             **self._parent.state_kws,
         )  # .assign_coords(**self._rec_coords)
-
-    # @gcached()
-    # def _pi_params(self):
-    #     """
-    #     store pi_norm and pi_sum for later calculations
-    #     """
-    #     lnpi = self.lnpi(-np.inf)
-
-    #     lnpi_local_max = lnpi.max(self.dims_n)
-    #     pi = np.exp(lnpi - lnpi_local_max)
-    #     pi_sum = pi.sum(self.dims_n)
-    #     pi_norm = pi / pi_sum
-
-    #     lnpi_zero = (self._wrapper.wrap_lnpi_0(self._parent._lnpi_0_tot) -
-    #                  lnpi_local_max)
-
-    #     return pi_norm, pi_sum, lnpi_zero
 
     @gcached()
     def _pi_params(self):
@@ -316,10 +323,12 @@ class xrlnPi(object):
 
     @property
     def pi_norm(self):
+        r"""Normalized value of :math:`\Pi_{\rm norm}(N) = \Pi(N) / \sum_N \Pi(N)`"""
         return self._pi_params[0]
 
     @property
     def pi_sum(self):
+        r"""Sum of unnormalized :math:`\Pi(N)`"""
         return self._pi_params[1]
 
     @property
@@ -328,9 +337,7 @@ class xrlnPi(object):
 
     @property
     def lnpi_norm(self):
-        """
-        fill zeros with nan
-        """
+        r""":math:`\ln \Pi_{\rm norm}(N)`."""
         pi = self.pi_norm
         return np.log(xr.where(pi > 0, pi, np.nan))
 
@@ -365,9 +372,20 @@ class xrlnPi(object):
 
     @xr_name()
     def mean_pi(self, x, *args, **kwargs):
-        """
-        sum(Pi * x)
+        r"""
+        Calculates :math:`\overline{x} = \sum_N \Pi_{\rm norm}(N) x(N)`
 
+        Parameters
+        ----------
+        x : array, callable, or str
+            If callable, should have form ``x = x(self, *args, **kwargs)``.
+            If string, then set `x = self.parent.extra_kws[x]`.
+            Otherwise, should be an array of same shape as single lnPi.
+        *args, **kwargs
+            Extra arguments to `x` if passing callable
+        Returns
+        -------
+        ave : DataArray
         x can be an array or a callable
 
         f(self, *args, **kwargs)
@@ -414,15 +432,20 @@ class xrlnPi(object):
         return self._mean_pi(dx)
 
     def var_pi(self, x, y=None, *args, **kwargs):
-        """
-        given x(N) and y(N), calculate
+        r"""Calculate Grand Canonical variance from canonical properties.
 
-        v = <x(N) y(N)> - <x(N)> <y(N)>
+        Given x(N) and y(N), calculate
+
+        .. math::
+
+            {\rm var}(x, y) = \overline{(x - \overline{x}) (y - \overline{y})}
 
         x and y can be arrays, or callables, in which case:
         x = x(self, *args, **kwargs)
 
-        etc.
+        See Also
+        --------
+        :math:`mean_pi`
 
         """
 
@@ -452,48 +475,56 @@ class xrlnPi(object):
         return xr.dot(self.pi_norm, xx, yy, dims=self.dims_n, **self._xarray_dot_kws)
 
     def pipe(self, func, *args, **kwargs):
+        """
+        Apply function to `self`
+        """
         return func(self, *args, **kwargs)
 
     @gcached()
     @xr_name(r"${\bf n}(\mu,V,T)$")
     def nvec(self):
-        """average number of particles of each component"""
+        r"""Average number of particles of each component :math:`\overline{{\bf N}}`"""
         return self._mean_pi(self.ncoords)
 
     @gcached()
     @xr_name(r"$n(\mu,V,T)$")
     def ntot(self):
+        r"""Average total number of particles :math:`\overline{N}`"""
         return self._mean_pi(self.ncoords_tot)
 
     @property
     @xr_name(r"${\bf x}(\mu,V,T)$")
     def molfrac(self):
+        r"""Average molfrac for each components :math:`{\bf x} = \overline{{\bf N}} / N`"""
         return self.nvec.pipe(lambda x: x / x.sum(self.dims_comp))
 
     @gcached()
     @xr_name(r"$var[{\bf n}(\mu,V,T)]$")
     def nvec_var(self):
+        r"""Variance in particle number :math:`{\rm var}\, \bf{N}`"""
         return self.var_pi(self.ncoords)
 
     @gcached()
     @xr_name(r"$var[n(\mu,V,T)]$")
     def ntot_var(self):
-        """variance in total number of particles"""
+        r"""Variance in total number of particles :math:`{\rm var}\, N`"""
         return self.var_pi(self.ncoords_tot)
 
     @property
     @xr_name(r"${\bf \rho}(\mu,V,T)$")
     def dens(self):
-        """density of each component"""
+        r"""Density of each component :math:`{\bf \rho} = \overline{{\bf N}} / V`"""
         # NOTE: keep this here because of some internal calculations
         return self.nvec.pipe(lambda x: x / x["volume"])
 
     @property
     @xr_name(r"$\rho(\mu,V,T)$", standard_name="total_density")
     def dens_tot(self):
+        """Total density :math:`\overline{N} / V`"""
         return self.ntot.pipe(lambda x: x / x["volume"])
 
     def max(self, *args, **kwargs):
+        """:math:`\max_N \ln \Pi(N)`"""
         return self.lnpi().max(self.dims_n)
 
     # def argmax(self, *args, **kwargs):
@@ -536,6 +567,7 @@ class xrlnPi(object):
         return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)
 
     def lnpi_max(self, fill_value=None, add_n_coords=True):
+        r"""maximum value of :math:`\max_N \ln \Pi(N, ...)`"""
         out = self.lnpi(fill_value).isel(**self._sample_argmax_indexer_dict)
 
         # NOTE : This assumes each n value corresponds to index
@@ -548,34 +580,11 @@ class xrlnPi(object):
         return out
 
     def pi_norm_max(self, add_n_coords=True):
+        r"""Maximum value :math:`\max_N \Pi_{\rm norm}(N, meta)`"""
         out = self.pi_norm.isel(**self._sample_argmax_indexer_dict)
         if add_n_coords:
             out = out.assign_coords(**self._argmax_indexer_dict)
         return out
-
-    # def lnpi_max(self, fill_value=None, add_n_coords=True):
-
-    #     idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
-    #     out = xr.DataArray(
-    #         self.lnpi(fill_value).values[idx],
-    #         dims=self.dims_rec,
-    #         coords=self._rec_coords)
-
-    #     if add_n_coords:
-    #         out = out.assign_coords(**self._argmax_indexer_dict)
-
-    #     return out
-
-    # def pi_norm_max(self, add_n_coords=True):
-    #     idx = (np.arange(len(self._parent)),) + self._argmax_indexer()
-    #     out = xr.DataArray(
-    #         self.pi_norm.values[idx],
-    #         dims=self.dims_rec,
-    #         coords=self._rec_coords)
-
-    #     if add_n_coords:
-    #         out = out.assign_coords(**self._argmax_indexer_dict)
-    #     return out
 
     @gcached(prop=False)
     def argmax(self):
@@ -583,21 +592,19 @@ class xrlnPi(object):
 
     @xr_name("distance from upper edge")
     def edge_distance(self, ref, *args, **kwargs):
-        """distance from endpoint"""
-
+        """Distance from argmax(lnPi) to endpoint"""
         out = ref.edge_distance_matrix[self._argmax_indexer()]
-
         return xr.DataArray(out, dims=self.dims_rec, coords=self._rec_coords)
 
     @xr_name("distance from edge of cut value")
     def edge_distance_val(self, ref, val=None, max_frac=None, *args, **kwargs):
         """
-        calulate min distance from where self.pi_norm > val to edge
+        Calulate min distance from where self.pi_norm > val to edge
 
         Parameters
         ----------
-        ref : MaskedlnPi object
-
+        ref : MaskedlnPi
+            reference object to consider.
         val : float
 
         max_frac : bool, optional
@@ -617,27 +624,17 @@ class xrlnPi(object):
     @gcached(prop=False)
     @xr_name(r"$\beta \Omega(\mu,V,T)$", standard_name="grand_potential")
     def _betaOmega(self, lnpi_zero=None):
-        """
-        beta * (Grand potential) = - beta * p * V
-
-        Parameters
-        ----------
-        lnpi_zero : float or None
-         if None, lnpi_zero = self.data.ravel()[0]
-        """
-
         if lnpi_zero is None:
             lnpi_zero = self._lnpi_zero
         return lnpi_zero - np.log(self.pi_sum)
 
     def betaOmega(self, lnpi_zero=None):
-        """
-        beta * (Grand potential) = - beta * p * V
+        r"""Scaled grand potential :math:`\beta \Omega`.
 
         Parameters
         ----------
         lnpi_zero : float or None
-         if None, lnpi_zero = self.data.ravel()[0]
+            if None, lnpi_zero = self.data.ravel()[0]
         """
         # Note.  Put calculation in _betaOmega
         # because so many other things
@@ -649,9 +646,8 @@ class xrlnPi(object):
     @gcached()
     @xr_name(r"${\rm PE}(\mu,V,T)$", standard_name="potential_energy")
     def PE(self):
-        """
-        beta *(Internal energy)
-        """
+        r"""Potential energy :math:`\overline{PE}`"""
+
         # if betaPE available, use that:
 
         if hasattr(self._parent, "_series"):
@@ -667,13 +663,20 @@ class xrlnPi(object):
 
     @xr_name(r"$\beta F(\mu,V,T)$", standard_name="helmholtz_free_energy")
     def betaF_alt(self, betaF_can, correction=True):
-        """
-        calculate betaF from formula
+        r"""Alternate scaled Helmholtz free energy :math:`\beta \overline{F}`.
 
-        betaF = sum(Pi(N) * betaF(N))
+        Calculated using
 
-        if correction is True, then include:
-        betaF = sum(Pi * (betaF(N) + lnPi(N)))
+        .. math::
+
+            \beta \overline{F} = \sum_N [\Pi(N) \beta F(N) + C(N)]
+
+        Parameters
+        ----------
+        betaF_can : array-like
+            Value of :math:`F(N)`
+        correction : bool, default=True
+            If True, :math:`C(N) = \ln \Pi(N) `.  Otherwise, :math:`C=0`.
         """
         if correction:
             betaF_can = betaF_can + self.lnpi_norm
@@ -684,24 +687,20 @@ class xrlnPi(object):
     # Other properties
     @xr_name(r"$\beta\omega(\mu,V,T)$", standard_name="grand_potential_per_particle")
     def betaOmega_n(self, lnpi_zero=None):
-        """
-        beta * (Grand potential) / <n> = -beta * p * V / <n>
-        """
+        r"""Grand potential per particle :math:`\beta \Omega / \overline{N}`"""
         return self.betaOmega(lnpi_zero) / self.ntot
 
     # @gcached(prop=False)
     @xr_name(r"$\beta p(\mu,V,T)V$")
     def betapV(self, lnpi_zero=None):
-        """
-        Note: this is just - beta * Omega
-        """
+        r""":math:`\beta p V = - \beta \Omega`"""
         return -self.betaOmega(lnpi_zero)
 
     @gcached()
     @xr_name("mask_stable", description="True where state is most stable")
     def mask_stable(self):
         """
-        stable mask.  Only works with unstack
+        Masks are True where values are stable. Only works for unstacked data.
         """
         if not self._xarray_unstack:
             # raise Value'only mask with unstack')
@@ -719,48 +718,73 @@ class xrlnPi(object):
     # @gcached(prop=False)
     @xr_name(r"$\beta p(\mu,V,T)/\rho$", standard_name="compressibility_factor")
     def Z(self, lnpi_zero=None):
-        """
-        compressibility factor = beta * P / rho
-        """
+        r"""Compressibility factor :math:`\beta p / \rho`"""
         return -self.betaOmega_n(lnpi_zero)
 
     @xr_name(r"$p(\mu,V,T)$")
     def pressure(self, lnpi_zero=None):
+        r"""Pressure :math:`p = -\Omega / V`"""
         return self.betapV(lnpi_zero).pipe(lambda x: x / (x["beta"] * x["volume"]))
 
     @property
     @xr_name(r"${\rm PE}(\mu,V,T)/n$", standard_name="potential_energy_per_particle")
     def PE_n(self):
-        """
-        beta * (Internal energy) / n
-        """
+        r"""Potential energy per particle :math:`\overline{PE}/\overline{N}`"""
         return self.PE / self.ntot
 
     def table(
         self,
         keys=None,
-        default_keys=["nvec", "betapV", "PE_n"],
+        default_keys=("nvec", "betapV", "PE_n"),
         ref=None,
         mask_stable=False,
         dim_to_suffix=None,
     ):
+        """
+        Create :class:`xarray.Dataset` of calculated properties.
+
+        Parameters
+        ----------
+        keys : sequence of str, optional
+            keys of attributes or methods of `self` to include in ouput
+        default_keys : sequence of str
+            Default keys to consider.
+        ref : MaskedlnPi, optional
+            If calculating `edge_distastance`, need a reference :class:`~lnPi.MaskedlnPi` object.
+        mask_stable : bool, default=False
+            If True, remove any unstable values
+        dim_to_suffix : sequence of hashables, optional
+            dimensions to remove from ouput.  These are instead added as suffix to variable names
+
+        Returns
+        -------
+        ds : Dataset
+            Contianing all the calculated properties in a single object
+
+        Notes
+        -----
+        The results can be easily convert to a :class:`pandas.DataFrame` using ``ds.to_frame()``
+        """
 
         out = []
         if ref is not None:
             out.append(self.edge_distance(ref))
 
-        if keys is None:
-            keys = []
+        def _process_keys(x):
+            if x is None:
+                return []
+            elif isinstance(x, str):
+                return [x]
+            else:
+                return list(x)
 
-        if default_keys is None:
-            default_keys = []
-
-        keys = keys + default_keys
-
+        keys = _process_keys(keys) + _process_keys(default_keys)
         if not keys:
             raise ValueError("must specify some keys or default_keys to use")
 
-        for key in keys:
+        # only unique keys
+        # this preserves order
+        for key in dict.fromkeys(keys):
             try:
                 v = getattr(self, key)
                 if callable(v):
@@ -797,9 +821,7 @@ class xrlnPi(object):
     @property
     @xr_name(r"$\beta G(\mu,V,T)$", standard_name="Gibbs_free_energy")
     def betaG(self):
-        """
-        beta * (Gibbs free energy)
-        """
+        r"""Scaled Gibbs free energy :math:`\beta G = \sum_i \beta \mu_i \overline{N}_i`."""
         # return self.betamu.pipe(lambda betamu: (betamu * self.nvec).sum(betamu.dims_comp))
         # return (self.betamu * self.nvec).sum(self.dims_comp)
         return xr.dot(
@@ -809,61 +831,59 @@ class xrlnPi(object):
     @property
     @xr_name(r"$\beta G(\mu,V,T)/n$", standard_name="Gibbs_free_energy_per_particle")
     def betaG_n(self):
-        """
-        beta * (Gibbs free energy) / n
-        """
+        r"""Scaled Gibbs free energy per particle :math:`\beta G / \overline{N}`."""
         return self.betaG / self.ntot
 
     @xr_name(r"$\beta F(\mu,V,T)$", standard_name="helmholtz_free_energy")
     def betaF(self, lnpi_zero=None):
-        """
-        beta * (Helmholtz free energy)
-        """
+        r"""Scaled Helmholtz free energy :math:`\beta F = \beta \Omega + \beta G`."""
         return self.betaOmega(lnpi_zero) + self.betaG
 
     @xr_name(
         r"$\beta F(\mu,V,T)/n$", standard_name="helmholtz_free_energy_per_particle"
     )
     def betaF_n(self, lnpi_zero=None):
-        """
-        beta * (Helmholtz free energy) / n
-        """
+        r"""Scaled Helmholtz free enenergy per particle :math:`\beta F / \overline{N}`."""
         return self.betaF(lnpi_zero) / self.ntot
 
     @xr_name(r"$\beta E(\mu,V,T)$", standard_name="total_energy")
     def betaE(self, ndim=3):
-        """
-        Total energy
-        """
+        r"""Scaled total energy :math:`\beta E = \beta \overline{PE} + \beta \overline{KE}`."""
         return ndim / 2.0 * self.ntot + self.PE.pipe(lambda x: x * x.beta)
 
     @xr_name(r"$\beta E(\mu,V,T)/ n$", standard_name="total_energy_per_particle")
     def betaE_n(self, ndim=3):
-        """
-        (Total energy) / n
-        """
+        r"""Scaled total energy per particle :math:`\beta E / \overline{N}`."""
         return self.betaE(ndim) / self.ntot
 
     @xr_name(r"$S(\mu,V,T) / k_{\rm B}$", standard_name="entropy")
     def S(self, lnpi_zero=None, ndim=3):
-        """
-        Entropy / kB
-        """
+        r"""Scaled entropy :math:`S / k_{\rm B} = \beta E - \beta F`."""
         return self.betaE(ndim) - self.betaF(lnpi_zero)
 
     @xr_name(r"$S(\mu,V,T)/(n kB)$", standard_name="entropy_per_particle")
     def S_n(self, lnpi_zero=None, ndim=3):
-        """
-        Entropy / (N kB)
-        """
+        r"""Scaled entropy per particle :math:`S / (N k_{\rm B})`."""
+
         return self.S(lnpi_zero, ndim) / self.ntot
 
 
+# NOTE: Using function accessor to override the docstring
 @MaskedlnPi.decorate_accessor("xce")
 @MaskedlnPiDelayed.decorate_accessor("xce")
-class TMCanonical(object):
+@MaskedlnPiLegacy.decorate_accessor("xce")
+def xce_accessor(parent):
+    """Accessor to :class:`~lnPi.xlnPi.xlnPiCanonical`"""
+    return xlnPiCanonical(parent)
+
+
+class xlnPiCanonical(object):
     """
     Canonical ensemble properties
+
+    Parameters
+    ----------
+    parent : MaskedlnPi object
     """
 
     def __init__(self, parent):
@@ -876,6 +896,7 @@ class TMCanonical(object):
 
     @gcached()
     def ncoords(self):
+        """Coordinate vector `dims_n`"""
         return (
             self._xge.ncoords
             # NOTE: if don't use '.values', then get extra coords don't want
@@ -884,10 +905,12 @@ class TMCanonical(object):
 
     @property
     def nvec(self):
+        r"""Number of particles for each components :math:`{\bf N}`"""
         return self.ncoords.rename("nvec")
 
     @gcached()
     def ntot(self):
+        """Total number of particles :math:`N`"""
         return self.ncoords.sum(self._xge.dims_comp)
 
     @gcached(prop=False)
@@ -910,20 +933,20 @@ class TMCanonical(object):
         )
 
     def betaF(self, lnpi_zero=None):
-        """
-        Helmholtz free energy
-        """
+        r"""Scaled Helmoltz free energy :math:`\beta F`"""
         return self._betaF(lnpi_zero)
 
     @xr_name(
         r"$\beta F({\bf n},V,T)/n$", standard_name="helmholtz_free_energy_per_particle"
     )
     def betaF_n(self, lnpi_zero=None):
+        r"""Scaled Helmoltz free energy per particle :math:`\beta F / N`"""
         return self.betaF(lnpi_zero) / self.ntot
 
     @gcached()
     @xr_name(r"${\rm PE}({\bf n},V,T)/n$", standard_name="potential_energy")
     def PE(self):
+        """Internal Energy :math:`PE`"""
         # if betaPE available, use that:
         PE = self._parent.extra_kws.get("PE", None)
         if PE is None:
@@ -937,39 +960,45 @@ class TMCanonical(object):
         r"${\rm PE}({\bf n},V,T)/n$", standard_name="potential_energy_per_particle"
     )
     def PE_n(self):
+        r"""Internal energy per particle :math:`PE / N`"""
         return self.PE / self.ntot
 
     @xr_name(r"$\beta E({\bf n},V,T)$")
     def betaE(self, ndim=3):
+        r"""Scaled total energy :math:`\beta E = \beta PE + \beta KE`"""
         return ndim / 2 * self.ntot + self._xge.beta * self.PE
 
     @xr_name(r"$\beta E({\bf n},V,T)/n$")
     def betaE_n(self, ndim=3):
+        """Scaled total energy per particle"""
         return self.betaE(ndim) / self.ntot
 
     @xr_name(r"$S({\bf n},V,T)/k_{\rm B}$")
     def S(self, ndim=3, lnpi_zero=None):
+        r"""Entropy :math:`S / k_{\rm B}`"""
         return self.betaE(ndim) - self.betaF(lnpi_zero)
 
     @xr_name(r"$S({\bf n},V,T)/(n k_{rm B})$")
     def S_n(self, ndim=3, lnpi_zero=None):
+        r"""Entropy per particle :math:`S / (N k_{\rm B})`"""
         return self.S(ndim, lnpi_zero) / self.ntot
 
     @gcached(prop=False)
     @xr_name(r"$\beta {\bf\mu}({bf n},V,T)$", standard_name="absolute_activity")
     def _betamu(self, lnpi_zero=None):
-        """Canonical beta*(chemial potential)"""
         return xr.concat(
             [self.betaF(lnpi_zero).differentiate(n) for n in self._xge.dims_n],
             dim=self._xge.dims_comp[0],
         ).assign_attrs(self._xge._standard_attrs)
 
     def betamu(self, lnpi_zero=None):
+        r"""Scaled chemical potential :math:`\beta \mu`"""
         return self._betamu(lnpi_zero)
 
     @property
     @xr_name(r"${\bf \rho}({\bf n},V,T)$")
     def dens(self):
+        r"""Density :math:`\rho = N / V`"""
         return self.ncoords / self._xge.volume
 
     @gcached(prop=False)
@@ -983,38 +1012,67 @@ class TMCanonical(object):
         )
 
     def betaOmega(self, lnpi_zero=None):
+        r"""Scaled Grand Potential :math:`\beta \Omega`"""
         return self._betaOmega(lnpi_zero)
 
     @xr_name(r"$\beta\Omega({\bf n},V,T)/n$")
     def betaOmega_n(self, lnpi_zero=None):
+        r"""Scaled Grand potential per particle, :math:`\beta\Omega / N`"""
         return self.betaOmega(lnpi_zero) / self.ntot
 
     @xr_name(r"$\beta p({\bf n},V,T)V$")
     def betapV(self, lnpi_zero=None):
-        """
-        beta * p * V = - beta * Omega
-        """
+        r""":math:`\beta p V = -\beta \Omega`"""
         return -self.betaOmega(lnpi_zero)
 
     @xr_name(r"$\beta p({\bf n},V,T)/\rho$")
     def Z(self, lnpi_zero=None):
+        r"""Compressibility :math:`Z = \beta p / \rho = pV / (k_{\rm B} T)`"""
         return -self.betaOmega_n(lnpi_zero)
 
     @xr_name(r"$p({\bf n},V,T)$")
     def pressure(self, lnpi_zero=None):
+        r"""Pressure :math:`p = -\Omega / V`"""
         return self.betapV(lnpi_zero).pipe(lambda x: x / (x.beta * x.volume))
 
     def table(
         self,
         keys=None,
-        default_keys=["betamu", "betapV", "PE_n", "betaF_n"],
+        default_keys=("betamu", "betapV", "PE_n", "betaF_n"),
         dim_to_suffix=None,
     ):
-        out = []
-        if keys is None:
-            keys = []
+        """
+        Create Dataset from attributes/methods of `self`
 
-        for key in keys + default_keys:
+        Parameters
+        ----------
+        keys : sequence of str
+            Names of attributes/methods to access
+        default_keys : sequence of str
+            Default keys to access.
+        dim_to_suffix : str, sequence of str, optional
+            If passed, convert dimenensions in `dim_to_suffix` from dimensions in output to suffixes to variable names
+
+
+        Returns
+        -------
+        table : Dataset
+        """
+
+        out = []
+
+        def _process_keys(x):
+            if x is None:
+                return []
+            elif isinstance(x, str):
+                return [x]
+            else:
+                return list(x)
+
+        keys = _process_keys(keys) + _process_keys(default_keys)
+
+        # loop over unique keys only, in order
+        for key in dict.fromkeys(keys):
             try:
                 v = getattr(self, key)
                 if callable(v):

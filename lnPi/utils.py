@@ -211,14 +211,27 @@ def _convention_to_bool(convention):
 
 def mask_change_convention(mask, convention_in="image", convention_out="masked"):
     """
-    convert an array from one convensiton to another
+    convert an array from one 'mask' convention to another.
 
-    convention : {'image', 'masked', True, False}
+    Parameters
+    ----------
+    mask : array-like
+        Masking array.
+    convention_in, convention_out : string or bool or None.
+        Convention for input and output.
+        Convention for mask.  Allowable values are:
 
-    if convention == 'image', values of True/False indicate inclusion/exclusion
-    if convention == 'masksed', values of False/True indicate inclution/exclusion
+        * 'image' or True : `True` values included, `False` values excluded.
+          This is the normal convention in :mod:`scipy.ndimage`.
+        * 'masked' or False:  `False` values are included, `True` values are excluded.
+          This is the convention in :mod:`numpy.ma`
 
-    Note: None values are passed through
+        If `None`, then pass return input `mask`
+
+    Returns
+    -------
+    new_mask : array
+    New 'mask' array with specified convension.
     """
 
     if mask is None:
@@ -234,7 +247,27 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
 
 def masks_change_convention(masks, convention_in="image", convention_out="masked"):
     """
-    convert convension of list of masks
+    Perform convension change of sequence of masks
+
+    Parameters
+    ----------
+    masks : sequence of array-like
+        masks[i] is the 'ith' mask
+    convention_in, convention_out : string or bool or None.
+        Convention for input and output.
+        Convention for mask.  Allowable values are:
+
+        * 'image' or True : `True` values included, `False` values excluded.
+          This is the normal convention in :mod:`scipy.ndimage`.
+        * 'masked' or False:  `False` values are included, `True` values are excluded.
+          This is the convention in :mod:`numpy.ma`
+
+        If `None`, then pass return input `mask`
+
+    Returns
+    -------
+    new_masks : list of arrays
+        New 'masks' array with specified convension.
     """
 
     convention_in = _convention_to_bool(convention_in)
@@ -262,19 +295,21 @@ def labels_to_masks(
     Parameters
     ----------
     labels : array of labels to analyze
-
+        Each unique value `i` in `labels` indicates a mask.
+        That is ``labels == i``.
     features : array-like, optional
         list of features to extract from labels.  Note that returned
         mask[i] corresponds to labels == feature[i].
-    include_boundary : bool (Default False)
+    include_boundary : bool, default=False
         if True, include boundary regions in output mask
     convention : {'image','masked'} or bool.
         convention for output masks
     check_features : bool, default=True
         if True, and supply features, then make sure each feature is in labels
 
-    **kwargs : arguments to find_boundary if include_boundary is True
-        mode='outer', connectivity=labels.ndim
+    **kwargs
+        arguments to find_boundary if include_boundary is True
+        default to mode='outer', connectivity=labels.ndim
 
     Returns
     -------
@@ -282,6 +317,11 @@ def labels_to_masks(
         mask for each feature
     features : list
         features
+
+    See Also
+    --------
+    masks_to_labels
+    :func:`skimage.segmentation.find_boundaries`
 
     """
 
@@ -325,6 +365,11 @@ def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwarg
     Returns
     -------
     labels : array of labels
+
+
+    See Also
+    --------
+    labels_to_masks
     """
 
     if features is None:
@@ -441,13 +486,18 @@ def distance_matrix(mask, convention="image"):
     ----------
     mask : array-like
         image mask
-    conventions : str or bool, default='image'
+    convention : str or bool, default='image'
         mask convetion
 
     Returns
     -------
     distance : array of same shape as mask
         distance from possible feature elements to background
+
+
+    See Also
+    --------
+    scipy.ndimage.distance_transform_edt
     """
 
     mask = np.asarray(mask, dtype=bool)

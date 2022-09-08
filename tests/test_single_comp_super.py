@@ -54,7 +54,7 @@ def ref():
     )["e"].values
 
     return (
-        lnPi.MaskedlnPiDelayed.from_table(
+        lnPi.MaskedlnPi.from_table(
             path_data / "ljsf.t150.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,

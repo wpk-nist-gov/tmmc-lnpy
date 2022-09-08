@@ -22,7 +22,7 @@ def tag_phases2(x):
 @pytest.fixture
 def ref():
     return (
-        lnPi.MaskedlnPiDelayed.from_table(
+        lnPi.MaskedlnPi.from_table(
             path_data / "nahs_asym_mix.07_07_07.r1.lnpi_o.dat",
             lnz=np.array([0.5, 0.5]),
             state_kws={"beta": 1.0, "volume": 1.0},
@@ -83,10 +83,6 @@ def test_collection(build_phases, ref, lnzs):
     c = lnPi.CollectionlnPi.from_builder(lnzs, build_phases)
     c.spinodal(2, build_phases, inplace=True, unstack=True)
     c.binodal(2, build_phases, inplace=True, unstack=True)
-
-    table = get_test_table(c, ref)
-    table_spin = get_test_table(c.spinodal.access, ref)
-    table_bino = get_test_table(c.binodal.access, ref)
 
     for path, obj in [
         ("data_0", c),

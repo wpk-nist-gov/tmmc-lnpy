@@ -35,7 +35,7 @@ def ref():
 
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified
-    ref = lnPi.MaskedlnPiDelayed.from_data(
+    ref = lnPi.MaskedlnPi.from_data(
         data=data["lnPi"].values,
         fill_value=np.nan,
         lnz=lnz,

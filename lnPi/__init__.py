@@ -1,7 +1,7 @@
-from . import collectionlnpi, extensions, segment, xlnPi
+from . import collectionlnpi, extensions, segment, wlnPi, xlnPi
 from .collectionlnpi import CollectionlnPi
-from .maskedlnpi import MaskedlnPi
-from .maskedlnpidelayed import MaskedlnPiDelayed
+from .maskedlnpi import MaskedlnPi, MaskedlnPiDelayed, lnPiData
+from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .options import OPTIONS, set_options
 from .utils import dim_to_suffix
 
@@ -19,13 +19,16 @@ __email__ = "wpk@nist.gov"
 
 
 __all__ = [
+    "lnPiData",
     "MaskedlnPi",
     "MaskedlnPiDelayed",
+    "MaskedlnPiLegacy",
     "CollectionlnPi",
     "collectionlnpi",
     "segment",
     "extensions",
     "xlnPi",
+    "wlnPi",
     "dim_to_suffix",
     "set_options",
     "OPTIONS",

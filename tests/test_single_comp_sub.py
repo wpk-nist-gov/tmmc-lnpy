@@ -57,12 +57,12 @@ def ref():
     pe = pd.read_csv(
         path_data / "ljsf.t072871.bulk.v512.r1.energy.dat",
         header=None,
-        sep="\s+",
+        sep=r"\s+",
         names=["n", "e"],
     )["e"].values
 
     return (
-        lnPi.MaskedlnPiDelayed.from_table(
+        lnPi.MaskedlnPi.from_table(
             path_data / "ljsf.t072871.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,
