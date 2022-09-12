@@ -38,7 +38,7 @@ notebook for a quick introduction.
 
 ## Licence
 
-See [LICENCE](./LICENCE).
+See [LICENCE](LICENCE.txt)
 
 ### Credits
 
