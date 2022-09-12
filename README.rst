@@ -1,12 +1,6 @@
 lnpy
 ====
 
-|image|
-
-.. raw:: html
-
-   <!-- [![Documentation Status](https://readthedocs.org/projects/lnpy/badge/?version=latest)](https://lnpy.readthedocs.io/en/latest/?badge=latest) -->
-
 Package to analyze :math:`\ln \Pi(N)` data from Transition Matrix Monte
 Carlo simulation
 
@@ -36,16 +30,6 @@ From Source
 
    pytest -x -v
 
-Quick Intro
------------
-
-Take a look at the `basic usage <docs/notebooks/Basic_usage.ipynb>`__
-notebook for a quick introduction.
-
-Licence
--------
-
-See `LICENCE <./LICENCE>`__.
 
 Credits
 ~~~~~~~
@@ -55,6 +39,3 @@ This package was created with
 `wpk-nist-gov/cookiecutter-pypackage <https://github.com/wpk-nist-gov/cookiecutter-pypackage>`__
 Project template forked from
 `audreyr/cookiecutter-pypackage <https://github.com/audreyr/cookiecutter-pypackage>`__.
-
-.. |image| image:: https://img.shields.io/pypi/v/lnpy.svg
-   :target: https://pypi.python.org/pypi/lnpy
