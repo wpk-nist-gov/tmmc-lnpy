@@ -132,9 +132,9 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 
-version: ## check version of package
-	python setup.py --version
 
+version: ## check version of package
+	python -m setuptools_scm
 
 ################################################################################
 # Docs
