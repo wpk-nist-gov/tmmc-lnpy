@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import lnPi
-import lnPi.stability
+import lnpy
+import lnpy.stability
 
 path_data = Path(__file__).parent / "water_cluster"
 
@@ -34,7 +34,7 @@ def load_ref():
 
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified
-    ref = lnPi.lnPiMasked.from_data(
+    ref = lnpy.lnPiMasked.from_data(
         data=data["lnPi"].values,
         fill_value=np.nan,
         lnz=lnz,
@@ -52,9 +52,9 @@ def ref(request):
     if request.param == 0:
         return load_ref()
     else:
-        import lnPi.examples
+        import lnpy.examples
 
-        return lnPi.examples.load_example_maskddata("watermof")
+        return lnpy.examples.load_example_maskddata("watermof")
 
 
 def get_test_table(o, ref):
@@ -88,7 +88,7 @@ def do_test(phase_creator, ref, fname):
 
 
 def test_0(ref):
-    phase_creator = lnPi.segment.PhaseCreator(
+    phase_creator = lnpy.segment.PhaseCreator(
         nmax=2,  # number of phases
         nmax_peak=10,  # max number of peaks in lnPi
         ref=ref,
@@ -99,7 +99,7 @@ def test_0(ref):
 
 
 def test_1(ref):
-    phase_creator = lnPi.segment.PhaseCreator(
+    phase_creator = lnpy.segment.PhaseCreator(
         nmax=20,  # number of phases
         nmax_peak=50,  # max number of peaks in lnPi
         ref=ref,

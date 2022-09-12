@@ -5,7 +5,7 @@ API Reference
 
 Masked lnPi objects
 ===================
-.. currentmodule:: lnPi
+.. currentmodule:: lnpy
 
 .. autosummary::
    :toctree: generated/
@@ -42,7 +42,7 @@ Multiple phases
 Local free energy calculation
 =============================
 
-.. currentmodule:: lnPi
+.. currentmodule:: lnpy
 
 .. autosummary::
    :toctree: generated/
@@ -102,7 +102,7 @@ Stability
 Utilities
 =========
 
-.. currentmodule:: lnPi
+.. currentmodule:: lnpy
 
 .. autosummary::
    :toctree: generated/

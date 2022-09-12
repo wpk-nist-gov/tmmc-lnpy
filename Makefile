@@ -56,7 +56,7 @@ clean-test: ## remove test and coverage artifacts
 .PHONY: lint pre-commit-init pre-commit-run pre-commit-run-all init
 
 lint: ## check style with flake8
-	flake8 lnPi tests
+	flake8 lnpy tests
 
 pre-commit-init: ## install pre-commit
 	pre-commit install
@@ -85,7 +85,7 @@ conda-env: ## conda create base env
 	conda env create -f environment.yaml
 
 conda-dev: ## conda update development dependencies
-	conda env update -n lnPi-env -f environment-dev.yaml
+	conda env update -n lnpy-env -f environment-dev.yaml
 
 conda-all: conda-env conda-dev ## conda create development env
 
@@ -93,12 +93,12 @@ mamba-env: ## mamba create base env
 	mamba env create -f environment.yaml
 
 mamba-dev: ## mamba update development dependencies
-	mamba env update -n lnPi-env -f environment-dev.yaml
+	mamba env update -n lnpy-env -f environment-dev.yaml
 
 mamba-all: mamba-env mamba-dev ## mamba create development env
 
 activate: ## activate base env
-	conda activate lnPi-env
+	conda activate lnpy-env
 
 
 ################################################################################
@@ -106,7 +106,7 @@ activate: ## activate base env
 ################################################################################
 .PHONY: user-venv user-autoenv-zsh user-all
 user-venv: ## create .venv file with name of conda env
-	echo lnPi-env > .venv
+	echo lnpy-env > .venv
 
 user-autoenv-zsh: ## create .autoenv.zsh files
 	echo conda activate $$(cat .venv) > .autoenv.zsh
@@ -126,7 +126,7 @@ test-all: ## run tests on every Python version with tox
 	tox -- -x -v
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source lnPi -m pytest
+	coverage run --source lnpy -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
@@ -141,7 +141,7 @@ version: ## check version of package
 ################################################################################
 .PHONY: docs serverdocs
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/lnPi.rst
+	rm -f docs/lnpy.rst
 	rm -f docs/modules.rst
 	rm -fr docs/generated
 	$(MAKE) -C docs clean
@@ -170,7 +170,7 @@ release-test: dist ## package and upload to test
 conda-dist: ## build conda dist (run dist and clean?)
 	mkdir conda_dist; \
 	cd cond_dist; \
-	grayskull pypi lnPi ; \
+	grayskull pypi lnpy ; \
 	conda-build .; \
 	echo 'upload now'
 

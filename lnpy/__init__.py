@@ -22,14 +22,21 @@ from .segment import (
 from .stability import Binodals, Spinodals
 from .utils import dim_to_suffix
 
+# updated versioning scheme
 try:
-    import pkg_resources
+    from importlib.metadata import version as _version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
 
-    __version__ = pkg_resources.get_distribution("cmomy").version
+
+try:
+    __version__ = _version("lnpy")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
+
 
 __author__ = """William P. Krekelberg"""
 __email__ = "wpk@nist.gov"

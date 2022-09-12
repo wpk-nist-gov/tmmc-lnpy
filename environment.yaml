@@ -1,4 +1,4 @@
-name: lnPi-env
+name: lnpy-env
 dependencies:
   - python=3.8
   - numpy

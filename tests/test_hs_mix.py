@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import lnPi
-import lnPi.stability
+import lnpy
+import lnpy.stability
 
 path_data = Path(__file__).parent / "../examples/HS_mix"
 
@@ -22,7 +22,7 @@ def tag_phases2(x):
 @pytest.fixture
 def ref():
     return (
-        lnPi.lnPiMasked.from_table(
+        lnpy.lnPiMasked.from_table(
             path_data / "nahs_asym_mix.07_07_07.r1.lnpi_o.dat",
             lnz=np.array([0.5, 0.5]),
             state_kws={"beta": 1.0, "volume": 1.0},
@@ -34,7 +34,7 @@ def ref():
 
 @pytest.fixture
 def phase_creator(ref):
-    return lnPi.segment.PhaseCreator(
+    return lnpy.segment.PhaseCreator(
         nmax=2,
         nmax_peak=4,
         ref=ref,
@@ -43,17 +43,17 @@ def phase_creator(ref):
     )
 
 
-import lnPi.examples
+import lnpy.examples
 
 
 @pytest.fixture(params=[0, 1])
 def obj(request, ref, phase_creator):
     if request.param == 0:
-        return lnPi.examples.Example(
+        return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=None
         )
     else:
-        return lnPi.examples.hsmix_example()
+        return lnpy.examples.hsmix_example()
 
 
 @pytest.fixture
@@ -94,7 +94,7 @@ def get_test_table(o, ref):
 def test_collection(obj, build_phases, lnzs):
     ref = obj.ref
 
-    c = lnPi.lnPiCollection.from_builder(lnzs, build_phases)
+    c = lnpy.lnPiCollection.from_builder(lnzs, build_phases)
     c.spinodal(2, build_phases, inplace=True, unstack=True)
     c.binodal(2, build_phases, inplace=True, unstack=True)
 

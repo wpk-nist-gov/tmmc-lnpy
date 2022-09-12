@@ -1,22 +1,22 @@
 ====
-lnPi
+lnpy
 ====
 
 
-.. image:: https://img.shields.io/pypi/v/lnPi.svg
-        :target: https://pypi.python.org/pypi/lnPi
+.. image:: https://img.shields.io/pypi/v/lnpy.svg
+        :target: https://pypi.python.org/pypi/lnpy
 
-.. image:: https://img.shields.io/travis/wpk-nist-gov/lnPi.svg
-        :target: https://travis-ci.com/wpk-nist-gov/lnPi
+.. image:: https://img.shields.io/travis/wpk-nist-gov/lnpy.svg
+        :target: https://travis-ci.com/wpk-nist-gov/lnpy
 
-.. image:: https://readthedocs.org/projects/lnPi/badge/?version=latest
-        :target: https://lnPi.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/lnpy/badge/?version=latest
+        :target: https://lnpy.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 
 
 
-Package to analyze lnPi data from TMMC simulations
+Package to analyze lnpy data from TMMC simulations
 
 
 * Free software: NIST license

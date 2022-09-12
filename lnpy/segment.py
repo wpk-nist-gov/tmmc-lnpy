@@ -353,10 +353,10 @@ class PhaseCreator(object):
     segment_kws : mapping, optional
         Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
     tag_phases : callable, optional
-        Optional funciton which takes a list of :class:`lnPi.lnPiMasked` objects
+        Optional funciton which takes a list of :class:`lnpy.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
-        Factory function for returning Collection from a list of :class:`lnPi.lnPiMasked` object
+        Factory function for returning Collection from a list of :class:`lnpy.lnPiMasked` object
     lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional

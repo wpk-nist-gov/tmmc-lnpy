@@ -370,7 +370,7 @@ class wFreeEnergy(object):
         include_boundary : bool, default=False
             if True, include boundary regions in output mask
         **kwargs
-            Extra arguments to :func:`lnPi.utils.labels_to_masks`
+            Extra arguments to :func:`lnpy.utils.labels_to_masks`
 
         Returns
         -------
@@ -568,7 +568,7 @@ def _get_w_data(index, w):
 
 class wFreeEnergyCollection(object):
     r"""
-    Calculate the transition free energies for a :class:`lnPi.lnPiCollection`.
+    Calculate the transition free energies for a :class:`lnpy.lnPiCollection`.
 
     :math:`w(N) = \beta f(N) = - \ln \Pi(N)`
 
@@ -578,7 +578,7 @@ class wFreeEnergyCollection(object):
 
     Notes
     -----
-    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnPi.lnPiCollection.wfe`
+    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnpy.lnPiCollection.wfe`
     """
 
     def __init__(self, parent):
@@ -739,14 +739,14 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 @lnPiCollection.decorate_accessor("wfe")
 def wfe_accessor(parent):
     """
-    Accessor to :class:`~lnPi.wFreeEnergyCollection` from `self.wfe`.
+    Accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wfe`.
     """
     return wFreeEnergyCollection(parent)
 
 
 @lnPiCollection.decorate_accessor("wfe_phases")
 def wfe_phases_accessor(parent):
-    """Accessor to :class:`~lnPi.wFreeEnergyPhases` from `self.wfe_phases`."""
+    """Accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wfe_phases`."""
     return wFreeEnergyPhases(parent)
 
 
@@ -756,7 +756,7 @@ from warnings import warn
 # create alias accessors
 @lnPiCollection.decorate_accessor("wlnPi")
 def wlnPi_accessor(parent):
-    """Deprecated accessor to :class:`~lnPi.wFreeEnergyCollection` from `self.wlnPi`.
+    """Deprecated accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wlnPi`.
 
     Alias to `self.wfe`
     """
@@ -766,7 +766,7 @@ def wlnPi_accessor(parent):
 
 @lnPiCollection.decorate_accessor("wlnPi_single")
 def wlnPi_single_accessor(parent):
-    """Deprecated accessor to :class:`~lnPi.wFreeEnergyPhases` from `self.wlnPi_single`.
+    """Deprecated accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wlnPi_single`.
 
     Alias to `self.wfe_single`
     """

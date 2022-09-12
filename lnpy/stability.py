@@ -629,7 +629,7 @@ class Spinodals(_BaseStability):
             range(phase_ids).
         build_phases : callable
             Factory function to build phases.
-            This should most likely be an instance of :class:`lnPi.BuildPhases_mu`
+            This should most likely be an instance of :class:`lnpy.BuildPhases_mu`
         efac : float, default=1.0
             Target value of `dw` to define spinodal.
         ref : lnPiMasked, optional

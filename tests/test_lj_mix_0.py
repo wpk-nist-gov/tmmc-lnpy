@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import lnPi
+import lnpy
 
 path_data = Path(__file__).parent / "../examples/LJ_mix"
 
@@ -18,31 +18,31 @@ def ref():
     lnz = np.array([-2.5, -2.5])
 
     return (
-        lnPi.lnPiMasked.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
+        lnpy.lnPiMasked.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
     )
 
 
 @pytest.fixture
 def phase_creator(ref):
-    return lnPi.segment.PhaseCreator(
+    return lnpy.segment.PhaseCreator(
         nmax=2, nmax_peak=4, ref=ref, merge_kws=dict(efac=0.8)
     )
 
 
-import lnPi.examples
+import lnpy.examples
 
 
 @pytest.fixture(params=[0, 1])
 def obj(request, ref, phase_creator):
     if request.param == 0:
-        return lnPi.examples.Example(
+        return lnpy.examples.Example(
             ref=ref,
             phase_creator=phase_creator,
             build_phases=phase_creator.build_phases,
         )
 
     else:
-        return lnPi.examples.ljmix_sup_example()
+        return lnpy.examples.ljmix_sup_example()
 
 
 def get_test_table(o, ref):
@@ -68,14 +68,14 @@ def test_collection(obj):
 
     lnz_values = test[["lnz_0", "lnz_1"]].values
 
-    with lnPi.set_options(
+    with lnpy.set_options(
         tqdm_leave=True,
         joblib_use=True,
         joblib_len_build=20,
         tqdm_len_build=10,
         tqdm_bar="text",
     ):
-        o = lnPi.lnPiCollection.from_builder(
+        o = lnpy.lnPiCollection.from_builder(
             lnz_values[:], phase_creator.build_phases, unstack=False
         )
 

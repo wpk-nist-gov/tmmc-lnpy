@@ -108,7 +108,7 @@ _shared_docs = {
     "peak_kws":
     """
     peak_kws : mapping, optional
-        Optional parameters to :func:`~lnPi.segment.peak_local_max_adaptive`
+        Optional parameters to :func:`~lnpy.segment.peak_local_max_adaptive`
     """,
 
     "watershed_kws":

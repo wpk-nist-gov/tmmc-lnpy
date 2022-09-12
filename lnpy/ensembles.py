@@ -181,7 +181,7 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
 @lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
     """
-    Accessor to :class:`~lnPi.xGrandCanonical`.
+    Accessor to :class:`~lnpy.xGrandCanonical`.
     """
     return xGrandCanonical(parent)
 
@@ -192,7 +192,7 @@ class xGrandCanonical:
 
 
     This class is primarily interacted with through the attributes ``xge`` attached
-    to :class:`~lnPi.lnPiMasked` and :class:`~lnPi.lnPiCollection`.
+    to :class:`~lnpy.lnPiMasked` and :class:`~lnpy.lnPiCollection`.
     """
 
     def __init__(self, parent):
@@ -756,7 +756,7 @@ class xGrandCanonical:
         default_keys : sequence of str
             Default keys to consider.
         ref : lnPiMasked, optional
-            If calculating `edge_distastance`, need a reference :class:`~lnPi.lnPiMasked` object.
+            If calculating `edge_distastance`, need a reference :class:`~lnpy.lnPiMasked` object.
         mask_stable : bool, default=False
             If True, remove any unstable values
         dim_to_suffix : sequence of hashables, optional
@@ -879,7 +879,7 @@ class xGrandCanonical:
 @MaskedlnPiDelayed.decorate_accessor("xce")
 @MaskedlnPiLegacy.decorate_accessor("xce")
 def xce_accessor(parent):
-    """Accessor to :class:`~lnPi.xCanonical`"""
+    """Accessor to :class:`~lnpy.xCanonical`"""
     return xCanonical(parent)
 
 

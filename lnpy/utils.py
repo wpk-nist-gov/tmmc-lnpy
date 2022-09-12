@@ -519,7 +519,7 @@ def distance_matrix(mask, convention="image"):
 
 def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
     """
-    Convert a :class:`~lnPi.lnPiMasked` object into as :class:`~xarray.Dataset`.
+    Convert a :class:`~lnpy.lnPiMasked` object into as :class:`~xarray.Dataset`.
 
     Parameters
     ----------
@@ -535,7 +535,7 @@ def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
 
 def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
     """
-    Convert a :class:`~xarray.Dataset` to a :class:`~lnPi.lnPiMasked` object.
+    Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnPiMasked` object.
 
     Parameters
     ----------

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import lnPi
+import lnpy
 
 path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
 
@@ -54,7 +54,7 @@ def ref():
     )["e"].values
 
     return (
-        lnPi.lnPiMasked.from_table(
+        lnpy.lnPiMasked.from_table(
             path_data / "ljsf.t150.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,
@@ -72,7 +72,7 @@ def ref():
 
 @pytest.fixture
 def phase_creator(ref):
-    return lnPi.segment.PhaseCreator(
+    return lnpy.segment.PhaseCreator(
         nmax=1,
         nmax_peak=4,
         ref=ref,
@@ -93,19 +93,19 @@ def build_phases(phase_creator):
     return phase_creator.build_phases_mu([None])
 
 
-import lnPi.examples
+import lnpy.examples
 
 
 # can drop param = 0 after make sure all good
 @pytest.fixture(params=[1])
 def obj(request, ref, phase_creator, build_phases):
     if request.param == 0:
-        return lnPi.examples.Example(
+        return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=build_phases
         )
 
     else:
-        return lnPi.examples.lj_sup_example()
+        return lnpy.examples.lj_sup_example()
 
 
 @pytest.fixture
@@ -142,8 +142,8 @@ def test_collection_properties(obj, test_table):
 
     # by default, progress bar hides itself after completion.  use context manager to keep it
     # note that for this example (where only have a single phase), doesn't really make a difference
-    with lnPi.set_options(tqdm_leave=True, joblib_use=False, tqdm_bar="text"):
-        o = lnPi.lnPiCollection.from_builder(lnzs, build_phases)
+    with lnpy.set_options(tqdm_leave=True, joblib_use=False, tqdm_bar="text"):
+        o = lnpy.lnPiCollection.from_builder(lnzs, build_phases)
 
     other = get_test_table(o, ref)
 
@@ -175,10 +175,10 @@ def test_canonical_properties(obj, test_table_can):
 
 def test_nice_grid(obj):
     ref, build_phases = obj.unpack(["ref", "build_phases"])
-    import lnPi.lnpicollectionutils
+    import lnpy.lnpicollectionutils
 
-    with lnPi.set_options(joblib_use=True):
-        o_course, o = lnPi.lnpicollectionutils.limited_collection(
+    with lnpy.set_options(joblib_use=True):
+        o_course, o = lnpy.lnpicollectionutils.limited_collection(
             build_phases,
             dlnz=0.01,
             offsets=[-10, +10],

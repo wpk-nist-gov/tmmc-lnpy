@@ -23,12 +23,12 @@ from .utils import dataset_to_lnpimasked
 def json_to_dict(basename):
     """Load a json file into a dict.
 
-    All files names are relative to 'lnPi/data/'
+    All files names are relative to 'lnpy/data/'
 
     Parameters
     ----------
     basename : string
-        Name of file to load in 'lnPi/data' directory.
+        Name of file to load in 'lnpy/data' directory.
 
     Returns
     -------
@@ -43,7 +43,7 @@ def json_to_dict(basename):
     else:
         fopen = open
 
-    with fopen(resources.files("lnPi.data").joinpath(basename), "r") as f:
+    with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:
         out = json.load(f)
 
     return out

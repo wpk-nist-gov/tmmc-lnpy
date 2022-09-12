@@ -372,7 +372,7 @@ class _Query(object):
 
 class lnPiCollection(SeriesWrapper):
     r"""
-    Wrapper around :class:`pandas.Series` for collection of :class:`lnPi.lnPiMasked` objects.
+    Wrapper around :class:`pandas.Series` for collection of :class:`lnpy.lnPiMasked` objects.
 
 
     Parameters
@@ -385,7 +385,7 @@ class lnPiCollection(SeriesWrapper):
         If True, then wrap lnPiCollection outputs in :class:`~xarray.DataArray`
     concat_dim : str, optional
         Name of dimensions to concat results along.
-        Also Used by :class:`~lnPi.xlnPi.xGrandCanonical`.
+        Also Used by :class:`~lnpy.xlnPi.xGrandCanonical`.
     concat_coords : string, optional
         parameters `coords `to :func:`xarray.concat`
     unstack : bool, default=True
@@ -468,7 +468,7 @@ class lnPiCollection(SeriesWrapper):
 
     @property
     def state_kws(self):
-        """state_kws from first :class:`~lnPi.lnPiMasked`"""
+        """state_kws from first :class:`~lnpy.lnPiMasked`"""
         return self.iloc[0].state_kws
 
     @property
@@ -587,7 +587,7 @@ class lnPiCollection(SeriesWrapper):
     @classmethod
     def from_list(cls, items, index, *args, **kwargs):
         """
-        Create collection from list of :class:`lnPi.lnPiMasked` objects.
+        Create collection from list of :class:`lnpy.lnPiMasked` objects.
 
         Parameters
         ----------
@@ -642,9 +642,9 @@ class lnPiCollection(SeriesWrapper):
 
         See Also
         --------
-        ~lnPi.segment.Segmenter.build_phases
-        ~lnPi.segment.Segmenter.build_phases_mu
-        ~lnPi.segment.Segmenter.build_phases_dmu
+        ~lnpy.segment.Segmenter.build_phases
+        ~lnpy.segment.Segmenter.build_phases_mu
+        ~lnpy.segment.Segmenter.build_phases_dmu
 
         """
         if build_kws is None:
@@ -712,7 +712,7 @@ class lnPiCollection(SeriesWrapper):
         **kwargs
     ):
         r"""
-        Create from reference :class:`~lnPi.lnPiMasked` and labels array
+        Create from reference :class:`~lnpy.lnPiMasked` and labels array
 
 
         Parameters

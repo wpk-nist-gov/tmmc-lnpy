@@ -1,4 +1,4 @@
-Welcome to lnPi's documentation!
+Welcome to lnpy's documentation!
 ======================================
 
 .. toctree::

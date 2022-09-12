@@ -442,7 +442,7 @@ class lnPiMasked(AccessorMixin):
 
         See Also
         --------
-        lnPi.utils.distance_matrix
+        lnpy.utils.distance_matrix
         """
         from .utils import distance_matrix
 
@@ -459,7 +459,7 @@ class lnPiMasked(AccessorMixin):
         See Also
         --------
         edge_distance_matrix
-        lnPi.utils.distance_matrix
+        lnpy.utils.distance_matrix
         """
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
 
@@ -700,7 +700,7 @@ class lnPiMasked(AccessorMixin):
         check_features : bool, default=True
             if True, and supply features, then make sure each feature is in labels
         **kwargs
-            Extra arguments to to :func:`~lnPi.utils.labels_to_masks`
+            Extra arguments to to :func:`~lnpy.utils.labels_to_masks`
 
         Returns
         -------
