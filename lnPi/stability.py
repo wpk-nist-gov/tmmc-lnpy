@@ -7,7 +7,7 @@ import numpy as np
 from scipy import optimize
 
 from .cached_decorators import gcached
-from .collectionlnpi import CollectionlnPi
+from .collection import MaskedDataCollection
 
 
 # ###############################################################################
@@ -32,7 +32,7 @@ def _initial_bracket_spinodal_right(
 
     Parameters
     ----------
-    ref : MaskedlnPi, optional
+    ref : MaskedData, optional
     build_phases : callable
         scalar funciton to build phases
     C : lnPi_collection
@@ -70,7 +70,7 @@ def _initial_bracket_spinodal_right(
         raise ValueError("efac must be positive")
 
     # Series representation of dw
-    s = C.wlnPi.get_dw(idx, idx_nebr)
+    s = C.wfe.get_dw(idx, idx_nebr)
     if step < 0:
         s = s.iloc[-1::-1]
 
@@ -91,7 +91,7 @@ def _initial_bracket_spinodal_right(
             t = build_phases(new_lnz, ref=ref, **build_kws)
             if (
                 idx in t._get_level("phase")
-                and t.wlnPi_single.get_dw(idx, idx_nebr) > efac
+                and t.wfe_phases.get_dw(idx, idx_nebr) > efac
             ):
                 left = t
                 break
@@ -112,7 +112,7 @@ def _initial_bracket_spinodal_right(
             t = build_phases(new_lnz, ref=ref, **build_kws)
             if (
                 idx not in t._get_level("phase")
-                or t.wlnPi_single.get_dw(idx, idx_nebr) < efac
+                or t.wfe_phases.get_dw(idx, idx_nebr) < efac
             ):
                 right = t
                 break
@@ -174,12 +174,12 @@ def _refine_bracket_spinodal_right(
     for i in range(nmax):
         # if idx in left.index and idx_nebr in left.index:
         # dw = _get_dw(left, idx, idx_nebr)
-        dw = left.wlnPi_single.get_dw(idx, idx_nebr)
+        dw = left.wfe_phases.get_dw(idx, idx_nebr)
         if dw < vmax and dw > efac:
             doneLeft = True
 
         # dw = _get_dw(right, idx, idx_nebr)
-        dw = right.wlnPi_single.get_dw(idx, idx_nebr)
+        dw = right.wfe_phases.get_dw(idx, idx_nebr)
         if dw > vmin and dw < efac:
             doneRight = True
 
@@ -237,10 +237,10 @@ def _refine_bracket_spinodal_right(
         )
 
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
-        dw = mid.wlnPi_single.get_dw(idx, idx_nebr)
+        dw = mid.wfe_phases.get_dw(idx, idx_nebr)
 
         if (idx in mid._get_level("phase")) and (
-            mid.wlnPi_single.get_dw(idx, idx_nebr) >= efac
+            mid.wfe_phases.get_dw(idx, idx_nebr) >= efac
         ):
             left = mid
         else:
@@ -268,7 +268,7 @@ def _solve_spinodal(
 
     def f(x):
         c = build_phases(x, ref=ref, **build_kws)
-        dw = c.wlnPi_single.get_dw(idx, idx_nebr)
+        dw = c.wfe_phases.get_dw(idx, idx_nebr)
         out = dw - efac
 
         f._lnpi = c
@@ -291,9 +291,9 @@ def _get_step(C, idx, idx_nebr):
 
     else step = -1
     """
-    delta = C.zloc[[-1]].wlnPi_single.get_dw(idx, idx_nebr) - C.zloc[
+    delta = C.zloc[[-1]].wfe_phases.get_dw(idx, idx_nebr) - C.zloc[
         [0]
-    ].wlnPi_single.get_dw(idx, idx_nebr)
+    ].wfe_phases.get_dw(idx, idx_nebr)
     if delta == 0:
         raise ValueError("could not determine step, delta==0")
     elif delta < 0.0:
@@ -326,7 +326,7 @@ def get_spinodal(
     _
         Parameters
         ----------
-        ref : MaskedlnPi
+        ref : MaskedData
         C : lnPi_collection
             initial estimates to work from.  Function assumes C is in lnz sorted order
         idx, idx_nebr : int
@@ -458,7 +458,14 @@ def get_spinodal(
 
 
 def get_binodal_point(
-    IDs, lnzA, lnzB, build_phases, ref=None, build_kws=None, full_output=False, **kwargs
+    IDs,
+    lnz_min,
+    lnz_max,
+    build_phases,
+    ref=None,
+    build_kws=None,
+    full_output=False,
+    **kwargs,
 ):
     """
     calculate binodal point where Omega[ID[0]]==Omega[ID[1]]
@@ -469,7 +476,7 @@ def get_binodal_point(
         object to reweight
     IDs : tuple
         phase index of pair to equate
-    lnzA, lnzB : float
+    lnz_min, lnz_max : float
         lnz_index values bracketing solution
     build_phases : callable
         function to create Phases object
@@ -494,7 +501,7 @@ def get_binodal_point(
 
     # lnz_idx = build_phases.index
 
-    a, b = min(lnzA, lnzB), max(lnzA, lnzB)
+    a, b = min(lnz_min, lnz_max), max(lnz_min, lnz_max)
 
     def f(x):
         p = build_phases(x, ref=ref, **build_kws)
@@ -517,13 +524,12 @@ def get_binodal_point(
 
 class _BaseStability(object):
     """
-    Attributes
+
+    Parameters
     ----------
-    access : CollectionlnPi
-        includes stability phase_id in index
-    items  : dict
-    appender : CollectionlnPi
-        does not include a stability phase_id in index
+    collection: MaskedDataCollection
+        Used to bracket the location limit of stability
+
 
     Methods
     -------
@@ -551,6 +557,7 @@ class _BaseStability(object):
 
     @property
     def items(self):
+        """Access to the underlying data"""
         return self._items
 
     def _get_access(self, items=None, concat_kws=None, **kwargs):
@@ -567,6 +574,7 @@ class _BaseStability(object):
 
     @gcached()
     def access(self):
+        """MaskedDataCollection view of stability"""
         return self._get_access()
 
     def __getitem__(self, idx):
@@ -591,14 +599,19 @@ class _BaseStability(object):
 
 
 # NOTE : single create means this is only created once
-@CollectionlnPi.decorate_accessor("spinodal", single_create=True)
+@MaskedDataCollection.decorate_accessor("spinodal", single_create=False)
 class Spinodals(_BaseStability):
+    """
+    Methods for calculation locations of spinodal
+    """
+
     _NAME = "spinodal"
 
     def __call__(
         self,
         phase_ids,
         build_phases,
+        efac=1.0,
         ref=None,
         build_kws=None,
         inplace=True,
@@ -615,8 +628,11 @@ class Spinodals(_BaseStability):
             Phase ids to calculate spinodal for.  If int, then find spinodals for phases
             range(phase_ids).
         build_phases : callable
-            Factory function to build phases
-        ref : MaskedlnPi, optional
+            Factory function to build phases.
+            This should most likely be an instance of :class:`lnPi.BuildPhases_mu`
+        efac : float, default=1.0
+            Target value of `dw` to define spinodal.
+        ref : MaskedData, optional
         build_kws : dict, optional
             optional arguments to `build_phases`
         inplace : bool, default=True
@@ -625,9 +641,9 @@ class Spinodals(_BaseStability):
             if True, force recalcuation of spinodal if alread set inplace.  Otherwise return already
             calculated values
         as_dict : bool, default=True
-            if True, return dict of form {phase_id[0] : phases object, ...}
+            if True, return dict of form {phase_id[0] : phases object, ...}.
         unstack : bool, optional
-            if passed, create CollectionlnPi objects with this unstack value.  If not passed,
+            if passed, create MaskedDataCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
         **kwargs : extra argument to `get_spinodal` function
 
@@ -635,10 +651,10 @@ class Spinodals(_BaseStability):
         -------
         out : output
             if inplace, return self.
-            if not inplace, and as dict, return dict, else return CollectionlnPi with phase_id in index
+            if not inplace, and as dict, return dict, else return :class:`MaskedDataCollection` with phase_id in index
         """
 
-        if inplace and hasattr(self, "_items") and not force:
+        if hasattr(self, "_items") and not force:
             if inplace:
                 return self
             else:
@@ -647,6 +663,15 @@ class Spinodals(_BaseStability):
                 else:
                     out = self.access
                 return out, self._info
+
+        from .segment import BuildPhasesBase
+
+        if not isinstance(build_phases, BuildPhasesBase):
+            raise ValueError(
+                "`build_phases` should be an instance of `BuildPhasesBase`."
+                "Its likely an instance of `PhaseCreator.builphases`."
+                "Instead, use an instance of `PhaseCreator.buildphases_mu`."
+            )
 
         if isinstance(phase_ids, int):
             phase_ids = list(range(phase_ids))
@@ -685,15 +710,17 @@ class Spinodals(_BaseStability):
             return out, info
 
 
-@CollectionlnPi.decorate_accessor("binodal", single_create=True)
+@MaskedDataCollection.decorate_accessor("binodal", single_create=False)
 class Binodals(_BaseStability):
+    """Routines to calculate binodal."""
+
     _NAME = "binodal"
 
     def get_pair(
         self,
         ids,
-        lnzA=None,
-        lnzB=None,
+        lnz_min=None,
+        lnz_max=None,
         spinodals=None,
         ref=None,
         build_phases=None,
@@ -701,17 +728,17 @@ class Binodals(_BaseStability):
         **kwargs,
     ):
 
-        if None in [lnzA, lnzB] and spinodals is None:
+        if None in [lnz_min, lnz_max] and spinodals is None:
             spinodals = self._parent.spinodal
-        if lnzA is None:
-            lnzA = spinodals[ids[0]]._get_lnz(build_phases.index)
-        if lnzB is None:
-            lnzB = spinodals[ids[1]]._get_lnz(build_phases.index)
+        if lnz_min is None:
+            lnz_min = spinodals[ids[0]]._get_lnz(build_phases.index)
+        if lnz_max is None:
+            lnz_max = spinodals[ids[1]]._get_lnz(build_phases.index)
         return get_binodal_point(
             ref=ref,
             IDs=ids,
-            lnzA=lnzA,
-            lnzB=lnzB,
+            lnz_min=lnz_min,
+            lnz_max=lnz_max,
             build_phases=build_phases,
             build_kws=build_kws,
             **kwargs,
@@ -741,7 +768,7 @@ class Binodals(_BaseStability):
         spinodals : optional
             if not passes, then use parent.spinodal
             Used for bounding binodal
-        ref : MaskedlnPi, optional
+        ref : MaskedData, optional
         build_kws : dict, optional
             optional arguments to `build_phases`
         inplace : bool, default=True
@@ -752,7 +779,7 @@ class Binodals(_BaseStability):
         as_dict : bool, default=True
             if True, return dict of form {phase_id[0] : phases object, ...}
         unstack : bool, optional
-            if passed, create CollectionlnPi objects with this unstack value.  If not passed,
+            if passed, create MaskedDataCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
         **kwargs : extra argument to `get_spinodal` function
 
@@ -760,7 +787,7 @@ class Binodals(_BaseStability):
         -------
         out : output
             if inplace, return self
-            if not inplace, and as dict, return dict, else return CollectionlnPi with phase_id in index
+            if not inplace, and as dict, return dict, else return MaskedDataCollection with phase_id in index
         """
 
         if inplace and hasattr(self, "_items") and not force:
@@ -819,8 +846,24 @@ class Binodals(_BaseStability):
             return out, info
 
 
-@CollectionlnPi.decorate_accessor("stability_append", single_create=True)
+@MaskedDataCollection.decorate_accessor("stability_append", single_create=False)
 def _stability_append(self):
+    """
+    add stability from collection to this collection
+
+    Parameters
+    ----------
+    other : optional, default=self
+        if passed, copy stability from this collection to self, otherwise
+        use self
+    append: bool, default=True
+        if True, append results to new frame
+    sort: bool, default=True
+        if True, sort appended results
+    copy_stability
+    """
+    # Duplicate docstring so show up in docs
+
     def func(other=None, append=True, sort=True, copy_stability=True):
         """
         add stability from collection to this collection

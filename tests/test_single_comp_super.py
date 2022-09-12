@@ -54,7 +54,7 @@ def ref():
     )["e"].values
 
     return (
-        lnPi.MaskedlnPi.from_table(
+        lnPi.MaskedData.from_table(
             path_data / "ljsf.t150.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,
@@ -93,6 +93,21 @@ def build_phases(phase_creator):
     return phase_creator.build_phases_mu([None])
 
 
+import lnPi.examples
+
+
+# can drop param = 0 after make sure all good
+@pytest.fixture(params=[1])
+def obj(request, ref, phase_creator, build_phases):
+    if request.param == 0:
+        return lnPi.examples.Example(
+            ref=ref, phase_creator=phase_creator, build_phases=build_phases
+        )
+
+    else:
+        return lnPi.examples.lj_sup_example()
+
+
 @pytest.fixture
 def test_table():
     table = pd.read_csv(path_data / "data_0.csv")
@@ -119,14 +134,16 @@ def get_test_table(o, ref):
     )  # .to_csv('data_0.csv', index=False)
 
 
-def test_collection_properties(build_phases, test_table, ref):
+def test_collection_properties(obj, test_table):
+    ref, build_phases = obj.unpack(["ref", "build_phases"])
+
     # for big builds, take advantage of progress bar, and parallel builds
     lnzs = np.linspace(-10, 3.5, 2000)
 
     # by default, progress bar hides itself after completion.  use context manager to keep it
     # note that for this example (where only have a single phase), doesn't really make a difference
     with lnPi.set_options(tqdm_leave=True, joblib_use=False, tqdm_bar="text"):
-        o = lnPi.CollectionlnPi.from_builder(lnzs, build_phases)
+        o = lnPi.MaskedDataCollection.from_builder(lnzs, build_phases)
 
     other = get_test_table(o, ref)
 
@@ -150,16 +167,18 @@ def get_test_table_can(ref):
     )
 
 
-def test_canonical_properties(ref, test_table_can):
+def test_canonical_properties(obj, test_table_can):
+    ref = obj.ref
     other = get_test_table_can(ref)
     pd.testing.assert_frame_equal(other, test_table_can)
 
 
-def test_nice_grid(build_phases, ref):
-    import lnPi.collectionlnpiutils
+def test_nice_grid(obj):
+    ref, build_phases = obj.unpack(["ref", "build_phases"])
+    import lnPi.collectionutils
 
     with lnPi.set_options(joblib_use=True):
-        o_course, o = lnPi.collectionlnpiutils.limited_collection(
+        o_course, o = lnPi.collectionutils.limited_collection(
             build_phases,
             dlnz=0.01,
             offsets=[-10, +10],

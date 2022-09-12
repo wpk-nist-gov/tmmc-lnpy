@@ -23,6 +23,9 @@ class _CachedAccessorSingle(object):
     """
 
     def __init__(self, name, accessor):
+
+        self.__doc__ = accessor.__doc__
+
         self._name = name
         self._accessor = accessor
 
@@ -116,16 +119,19 @@ class AccessorMixin(object):
         --------
         >>> class parent(AccessorMixin):
         ...     pass
+        ...
         >>> class hello(AccessorMixin):
         ...     def __init__(self, parent):
         ...         self._parent = parent
+        ...
         ...     def there(self):
-        ...         return 'hello there {}'.format(type(self._parent))
+        ...         return f"{type(self._parent)}"
+        ...
 
-        >>> parent.register_accessor('hello', hello)
+        >>> parent.register_accessor("hello", hello)
         >>> x = parent()
         >>> x.hello.there()
-        'hello there parent'
+        'parent'
         """
         cls._register_accessor(name, accessor, single_create)
 
@@ -138,17 +144,19 @@ class AccessorMixin(object):
         --------
         >>> class parent(AccessorMixin):
         ...     pass
+        ...
 
-        >>> @parent.decorate('hello)
+        >>> @parent.decorate("hello")
         ... class hello(AccessorMixin):
         ...     def __init__(self, parent):
         ...         self._parent = parent
+        ...
         ...     def there(self):
-        ...         return 'hello there {}'.format(type(self._parent))
+        ...         return f"{type(self._parent)}"
 
         >>> x = parent()
         >>> x.hello.there()
-        'hello there parent'
+        'parent'
         """
 
         def decorator(accessor):

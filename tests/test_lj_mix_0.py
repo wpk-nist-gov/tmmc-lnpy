@@ -10,23 +10,6 @@ path_data = Path(__file__).parent / "../examples/LJ_mix"
 
 
 @pytest.fixture
-def lnz_values():
-
-    # compare to this
-    df = pd.read_csv(
-        path_data / "out.ljmix4_full.t080.v512.r1.lnpi_o.dat.const_mu.csv.gz"
-    ).assign(
-        lnz_0=lambda x: x["beta"] * x["mu_0"],
-        lnz_1=lambda x: x["beta"] * x["mu_1"],
-        betaOmega=lambda x: -x["beta"] * x["pressure"] * x["volume"],
-    )
-
-    lnzs = df[["lnz_0", "lnz_1"]].values[:5]
-
-    return lnzs
-
-
-@pytest.fixture
 def ref():
 
     path = path_data / "ljmix4_full.t080.v512.r1.lnpi_o.dat.gz"
@@ -35,7 +18,7 @@ def ref():
     lnz = np.array([-2.5, -2.5])
 
     return (
-        lnPi.MaskedlnPi.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
+        lnPi.MaskedData.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
     )
 
 
@@ -44,6 +27,22 @@ def phase_creator(ref):
     return lnPi.segment.PhaseCreator(
         nmax=2, nmax_peak=4, ref=ref, merge_kws=dict(efac=0.8)
     )
+
+
+import lnPi.examples
+
+
+@pytest.fixture(params=[0, 1])
+def obj(request, ref, phase_creator):
+    if request.param == 0:
+        return lnPi.examples.Example(
+            ref=ref,
+            phase_creator=phase_creator,
+            build_phases=phase_creator.build_phases,
+        )
+
+    else:
+        return lnPi.examples.ljmix_sup_example()
 
 
 def get_test_table(o, ref):
@@ -62,7 +61,13 @@ def get_test_table(o, ref):
     )
 
 
-def test_collection(phase_creator, ref, lnz_values):
+def test_collection(obj):
+    ref, phase_creator = obj.unpack(["ref", "phase_creator"])
+
+    test = pd.read_csv(path_data / "data_0.csv")
+
+    lnz_values = test[["lnz_0", "lnz_1"]].values
+
     with lnPi.set_options(
         tqdm_leave=True,
         joblib_use=True,
@@ -70,12 +75,10 @@ def test_collection(phase_creator, ref, lnz_values):
         tqdm_len_build=10,
         tqdm_bar="text",
     ):
-        o = lnPi.CollectionlnPi.from_builder(
+        o = lnPi.MaskedDataCollection.from_builder(
             lnz_values[:], phase_creator.build_phases, unstack=False
         )
 
     other = get_test_table(o, ref).unstack("sample").to_dataframe().reset_index()
-
-    test = pd.read_csv(path_data / "data_0.csv")
 
     pd.testing.assert_frame_equal(other, test)

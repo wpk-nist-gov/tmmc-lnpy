@@ -1,5 +1,6 @@
 import json
-from pathlib import Path
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,16 @@ import pytest
 
 import lnPi
 import lnPi.stability
+
+
+def tag_phases2(x):
+    if len(x) > 2:
+        raise ValueError("bad tag function")
+    argmax0 = np.array([xx.local_argmax()[0] for xx in x])
+    return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
+
+
+from pathlib import Path
 
 path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
 
@@ -40,13 +51,6 @@ def get_lnz(path):
     return lnz, {"beta": 1.0 / temp, "volume": metadata["V*"]}
 
 
-def tag_phases2(x):
-    if len(x) > 2:
-        raise ValueError("bad tag function")
-    argmax0 = np.array([xx.local_argmax()[0] for xx in x])
-    return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
-
-
 # get meta data
 @pytest.fixture
 def ref():
@@ -62,7 +66,7 @@ def ref():
     )["e"].values
 
     return (
-        lnPi.MaskedlnPi.from_table(
+        lnPi.MaskedData.from_table(
             path_data / "ljsf.t072871.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,
@@ -101,6 +105,20 @@ def build_phases(phase_creator):
     return phase_creator.build_phases_mu([None])
 
 
+import lnPi.examples
+
+
+@pytest.fixture(params=[1])
+def obj(request, ref, phase_creator, build_phases):
+    if request.param == 0:
+        return lnPi.examples.Example(
+            ref=ref, phase_creator=phase_creator, build_phases=build_phases
+        )
+    else:
+
+        return lnPi.examples.lj_sub_example()
+
+
 @pytest.fixture
 def test_table():
     table = pd.read_csv(path_data / "data_1.csv")
@@ -127,14 +145,16 @@ def get_test_table(o, ref):
     )  # .to_csv('data_0.csv', index=False)
 
 
-def test_collection_properties(build_phases, test_table, ref):
+def test_collection_properties(build_phases, test_table, obj):
+    ref = obj.ref
+
     # for big builds, take advantage of progress bar, and parallel builds
     lnzs = np.linspace(-10, 3, 2000)
 
     # by default, progress bar hides itself after completion.  use context manager to keep it
     # note that for this example (where only have a single phase), doesn't really make a difference
     with lnPi.set_options(tqdm_leave=True, joblib_use=False, tqdm_bar="text"):
-        o = lnPi.CollectionlnPi.from_builder(lnzs, build_phases)
+        o = lnPi.MaskedDataCollection.from_builder(lnzs, build_phases)
 
     other = get_test_table(o, ref)
 
@@ -158,16 +178,20 @@ def get_test_table_can(ref):
     )
 
 
-def test_canonical_properties(ref, test_table_can):
+def test_canonical_properties(obj, test_table_can):
+    ref = obj.ref
     other = get_test_table_can(ref)
     pd.testing.assert_frame_equal(other, test_table_can)
 
 
-def test_nice_grid(build_phases, ref):
-    import lnPi.collectionlnpiutils
+def test_nice_grid(obj):
+    ref = obj.ref
+    build_phases = obj.build_phases
+
+    import lnPi.collectionutils
 
     with lnPi.set_options(joblib_use=True):
-        o_course, o = lnPi.collectionlnpiutils.limited_collection(
+        o_course, o = lnPi.collectionutils.limited_collection(
             build_phases,
             dlnz=0.01,
             offsets=[-10, +10],
@@ -198,6 +222,6 @@ def test_nice_grid(build_phases, ref):
     pd.testing.assert_frame_equal(other, test)
 
     # check dw
-    other = o_course.spinodal.access.wlnPi.dw.to_frame().reset_index()
+    other = o_course.spinodal.access.wfe.dw.to_frame().reset_index()
     test = pd.read_csv(path_data / "data_1_spin_dw.csv")
     pd.testing.assert_frame_equal(other, test)

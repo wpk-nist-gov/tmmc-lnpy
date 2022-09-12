@@ -11,15 +11,14 @@ Routines to segment lnPi
 import warnings
 from collections.abc import Iterable
 from functools import lru_cache
-from typing import Optional
 
 import bottleneck
 import numpy as np
 from skimage import feature, morphology, segmentation
 
 from ._docstrings import _shared_docs, docfiller
-from .collectionlnpi import CollectionlnPi
-from .wlnPi import FreeEnergylnPi
+from .collection import MaskedDataCollection
+from .localenergy import wFreeEnergy
 
 # * Common doc strings
 
@@ -293,7 +292,7 @@ class Segmenter(object):
 
         Parameters
         ----------
-        lnPi : MaskedlnPi
+        lnPi : MaskedData
             Object to be segmented
         {markers}
         find_peaks : bool, default=True
@@ -348,17 +347,17 @@ class PhaseCreator(object):
     nmax_peak : int, optional
         if specified, the allowable number of peaks to locate.
         This can be useful for some cases.  These phases will be merged out at the end.
-    ref : MaskedlnPi, optional
+    ref : MaskedData, optional
     segmenter : Segmenter object, optional
         segmenter object to create labels/masks. Defaults to using base segmenter.
     segment_kws : mapping, optional
         Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
     tag_phases : callable, optional
-        Optional funciton which takes a list of :class:`lnPi.MaskedlnPi` objects
+        Optional funciton which takes a list of :class:`lnPi.MaskedData` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
-        Factory function for returning Collection from a list of :class:`lnPi.MaskedlnPi` object
-    FreeEnergylnPi_kws : mapping, optional
+        Factory function for returning Collection from a list of :class:`lnPi.MaskedData` object
+    lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
         Optional arguments to ...
@@ -373,8 +372,8 @@ class PhaseCreator(object):
         segmenter=None,
         segment_kws=None,
         tag_phases=None,
-        phases_factory=CollectionlnPi.from_list,
-        FreeEnergylnPi_kws=None,
+        phases_factory=MaskedDataCollection.from_list,
+        lnPiFreeEnergy_kws=None,
         merge_kws=None,
     ):
 
@@ -396,9 +395,9 @@ class PhaseCreator(object):
         self.segment_kws = segment_kws
         self.segment_kws["num_peaks_max"] = nmax_peak
 
-        if FreeEnergylnPi_kws is None:
-            FreeEnergylnPi_kws = {}
-        self.FreeEnergylnPi_kws = FreeEnergylnPi_kws
+        if lnPiFreeEnergy_kws is None:
+            lnPiFreeEnergy_kws = {}
+        self.lnPiFreeEnergy_kws = lnPiFreeEnergy_kws
 
         if merge_kws is None:
             merge_kws = {}
@@ -447,7 +446,7 @@ class PhaseCreator(object):
         phases_factory=None,
         phase_kws=None,
         segment_kws=None,
-        FreeEnergylnPi_kws=None,
+        lnPiFreeEnergy_kws=None,
         merge_kws=None,
         tag_phases=None,
     ):
@@ -466,7 +465,7 @@ class PhaseCreator(object):
         lnz : int or sequence of ints, optional
             lnz value to evaluate `ref` at.  If not specified, use
             `ref.lnz`
-        ref : MaskedlnPiDelayed object
+        ref : MaskedData object
             Object to be segmented
         efac : float, optional
             Optional value to use in energetic merging of phases.
@@ -487,7 +486,7 @@ class PhaseCreator(object):
             Extra arguments to `phases_factory`
         segment_kws : mapping, optional
             Extra arguments to `self.segmenter.segment_lnpi`
-        FreeEnergylnPi_kws : mapping, optional
+        lnPiFreeEnergy_kws : mapping, optional
             Extra arguments to free energy calculation
         merge_kws : mapping, optional
             Extra arguments to merge
@@ -535,11 +534,11 @@ class PhaseCreator(object):
             labels = self.segmenter.segment_lnpi(lnpi=ref, **segment_kws)
 
             # analyze w = - lnPi
-            FreeEnergylnPi_kws = _combine_kws(
-                self.FreeEnergylnPi_kws, FreeEnergylnPi_kws, **connectivity_kws
+            lnPiFreeEnergy_kws = _combine_kws(
+                self.lnPiFreeEnergy_kws, lnPiFreeEnergy_kws, **connectivity_kws
             )
-            wlnpi = FreeEnergylnPi.from_labels(
-                data=ref.data, labels=labels, **FreeEnergylnPi_kws
+            wlnpi = wFreeEnergy.from_labels(
+                data=ref.data, labels=labels, **lnPiFreeEnergy_kws
             )
 
             if merge_phases:
@@ -601,13 +600,12 @@ class PhaseCreator(object):
         return BuildPhases_dmu(dlnz, self)
 
 
-class _BuildPhases(object):
+class BuildPhasesBase(object):
     """
-    class to build phases object from scalar mu's
+    Base class to build Phases objecs from scalar values of `lnz`.
     """
 
     def __init__(self, X, phase_creator):
-
         self._phase_creator = phase_creator
         self.X = X
 
@@ -639,12 +637,15 @@ class _BuildPhases(object):
         raise NotImplementedError
 
     def __call__(self, lnz_index, *args, **kwargs):
+        """
+        Build phases from scalar value of lnz.
+        """
         lnz = self._get_lnz(lnz_index)
         return self._phase_creator.build_phases(lnz=lnz, *args, **kwargs)
 
 
 # from .utils import get_lnz_iter
-class BuildPhases_mu(_BuildPhases):
+class BuildPhases_mu(BuildPhasesBase):
     """
     create phases from scalar value of mu for fixed value of mu for other species
 
@@ -666,7 +667,7 @@ class BuildPhases_mu(_BuildPhases):
         return lnz
 
 
-class BuildPhases_dmu(_BuildPhases):
+class BuildPhases_dmu(BuildPhasesBase):
     """
     create phases from scalar value of mu at fixed value of dmu for other species
     Parameters

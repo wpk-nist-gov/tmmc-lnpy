@@ -53,7 +53,7 @@ Set of routines to bracket solution of "thing"
 #         raise ValueError("efac must be positive")
 
 #     # Series representation of dw
-#     s = C.wlnPi.get_dw(idx, idx_nebr)
+#     s = C.wfe.get_dw(idx, idx_nebr)
 #     if step < 0:
 #         s = s.iloc[-1::-1]
 
@@ -69,7 +69,7 @@ Set of routines to bracket solution of "thing"
 #         def condition_left(p, new_lnz, dlnz_):
 #             done = (
 #                 idx in p._get_leve("phase")
-#                 and p.wlnPi_signle.get_dw(idx, idx_nebr) > efac
+#                 and p.wfe_signle.get_dw(idx, idx_nebr) > efac
 #             )
 #             return done, new_lnz, dlnz_
 
@@ -96,7 +96,7 @@ Set of routines to bracket solution of "thing"
 #         def condition_right(p, new_llnz, dlnz_):
 #             done = (
 #                 idx not in p._get_leve("phase")
-#                 or t.wlnPi_single.get_dw(idx, idx_nebr) < efac
+#                 or t.wfe_phases.get_dw(idx, idx_nebr) < efac
 #             )
 #             return new, new_lnz, dlnz_
 

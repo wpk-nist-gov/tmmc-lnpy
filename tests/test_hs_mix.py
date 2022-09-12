@@ -22,7 +22,7 @@ def tag_phases2(x):
 @pytest.fixture
 def ref():
     return (
-        lnPi.MaskedlnPi.from_table(
+        lnPi.MaskedData.from_table(
             path_data / "nahs_asym_mix.07_07_07.r1.lnpi_o.dat",
             lnz=np.array([0.5, 0.5]),
             state_kws={"beta": 1.0, "volume": 1.0},
@@ -43,6 +43,19 @@ def phase_creator(ref):
     )
 
 
+import lnPi.examples
+
+
+@pytest.fixture(params=[0, 1])
+def obj(request, ref, phase_creator):
+    if request.param == 0:
+        return lnPi.examples.Example(
+            ref=ref, phase_creator=phase_creator, build_phases=None
+        )
+    else:
+        return lnPi.examples.hsmix_example()
+
+
 @pytest.fixture
 def lnz2():
     return 0.5
@@ -54,8 +67,8 @@ def lnzs():
 
 
 @pytest.fixture
-def build_phases(phase_creator, lnz2):
-    return phase_creator.build_phases_mu([None, lnz2])
+def build_phases(obj, lnz2):
+    return obj.phase_creator.build_phases_mu([None, lnz2])
 
 
 def get_test_table(o, ref):
@@ -78,9 +91,10 @@ def get_test_table(o, ref):
     )  # .to_csv('data_0.csv', index=False)
 
 
-def test_collection(build_phases, ref, lnzs):
+def test_collection(obj, build_phases, lnzs):
+    ref = obj.ref
 
-    c = lnPi.CollectionlnPi.from_builder(lnzs, build_phases)
+    c = lnPi.MaskedDataCollection.from_builder(lnzs, build_phases)
     c.spinodal(2, build_phases, inplace=True, unstack=True)
     c.binodal(2, build_phases, inplace=True, unstack=True)
 
@@ -96,6 +110,6 @@ def test_collection(build_phases, ref, lnzs):
         pd.testing.assert_frame_equal(test, other)
 
         test = pd.read_csv(path_data / (path + "_dw.csv"))
-        other = obj.wlnPi.dw.to_frame().reset_index()
+        other = obj.wfe.dw.to_frame().reset_index()
 
         pd.testing.assert_frame_equal(test, other)

@@ -18,8 +18,7 @@ def tag_phases2(x):
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-@pytest.fixture
-def ref():
+def load_ref():
     ensemble = json.load(open(path_data / "water_MOF_ensemble.json", mode="r"))
     lnz = ensemble["betamu0"]
     box = ensemble["box"]
@@ -35,7 +34,7 @@ def ref():
 
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified
-    ref = lnPi.MaskedlnPi.from_data(
+    ref = lnPi.MaskedData.from_data(
         data=data["lnPi"].values,
         fill_value=np.nan,
         lnz=lnz,
@@ -46,6 +45,16 @@ def ref():
         extra_kws={"PE": pe, "other": pe},
     )
     return ref
+
+
+@pytest.fixture(params=[0, 1])
+def ref(request):
+    if request.param == 0:
+        return load_ref()
+    else:
+        import lnPi.examples
+
+        return lnPi.examples.load_example_maskddata("watermof")
 
 
 def get_test_table(o, ref):

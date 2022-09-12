@@ -515,3 +515,51 @@ def distance_matrix(mask, convention="image"):
     # remove padding
     s = (slice(None, -1),) * ndim
     return dist[s]
+
+
+def maskeddata_to_dataset(data, keys=("lnpi", "PE")):
+    """
+    Convert a :class:`~lnPi.MaskedData` object into as :class:`~xarray.Dataset`.
+
+    Parameters
+    ----------
+    data : MaskedData
+
+    Returns
+    -------
+    output : Dataset
+    """
+
+    return data.xce.table(keys=keys, default_keys=None)
+
+
+def dataset_to_maskeddata(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
+    """
+    Convert a :class:`~xarray.Dataset` to a :class:`~lnPi.MaskedData` object.
+
+    Parameters
+    ----------
+    ds : Dataset
+
+    lnpi_name, pe_name : str
+        Names of 'lnPi' and 'PE' parameters
+
+    extra_kws : mapping, optional
+        parameter `extra_kws`.  Note that if `pe_name` found in `ds`, then will add it to `extra_kws`.
+
+    Returns
+    -------
+    lnpi : MaskedData
+    """
+
+    from .maskeddata import MaskedData
+
+    data = ds[lnpi_name]
+
+    if extra_kws is None:
+        extra_kws = {}
+
+    if pe_name in ds:
+        extra_kws[pe_name] = ds[pe_name].values
+
+    return MaskedData.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
