@@ -36,9 +36,9 @@ pytest -x -v
 Take a look at the [basic usage](docs/notebooks/Basic_usage.ipynb)
 notebook for a quick introduction.
 
-## Licence
+## License
 
-See [LICENCE](LICENCE.txt)
+See [LICENSE](LICENSE)
 
 ### Credits
 
