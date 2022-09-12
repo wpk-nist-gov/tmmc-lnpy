@@ -48,9 +48,9 @@ def _get_filled(base, self, dlnz, fill_value=None):
     return _get_maskedarray(base, self, dlnz).filled(fill_value)
 
 
-class lnPiData(object):
+class lnPiArray:
     """
-    Wrapper on lnPi lnPiData
+    Wrapper on lnPi lnPiArray
 
     Parameters
     ----------
@@ -115,7 +115,7 @@ class lnPiData(object):
 
         Returns
         -------
-        out : lnPiData
+        out : lnPiArray
             New object with optionally updated parameters.
 
         """
@@ -150,7 +150,7 @@ class lnPiData(object):
             than 0 or None for no limit.
         Returns
         -------
-        out : lnPiData
+        out : lnPiArray
             object with padded data
         """
 
@@ -191,7 +191,7 @@ class lnPiData(object):
 
 
 @docfiller_shared
-class MaskedData(AccessorMixin):
+class lnPiMasked(AccessorMixin):
     """
     Masked array like wrapper for lnPi data.
 
@@ -206,7 +206,7 @@ class MaskedData(AccessorMixin):
 
     Notes
     -----
-    Note that in most cases, :class:`MaskedData` should not be called directly.
+    Note that in most cases, :class:`lnPiMasked` should not be called directly.
     Rather, a constructor like :meth:`from_data` should be used to construct the object.
 
     Note the the value of `lnz` is the value to reweight to.
@@ -226,7 +226,7 @@ class MaskedData(AccessorMixin):
     numpy.ma.MaskedArray
     """
 
-    _DataClass = lnPiData
+    _DataClass = lnPiArray
 
     def __init__(self, lnz, base, mask=None, copy=False):
         """ """
@@ -260,7 +260,7 @@ class MaskedData(AccessorMixin):
         copy=False,
     ):
         """
-        Create :class:`MaskedData` object from raw data.
+        Create :class:`lnPiMasked` object from raw data.
 
         Parameters
         ----------
@@ -277,7 +277,7 @@ class MaskedData(AccessorMixin):
 
         Returns
         -------
-        out : MaskedData
+        out : lnPiMasked
         """
 
         base = cls._DataClass(
@@ -333,7 +333,7 @@ class MaskedData(AccessorMixin):
 
     @property
     def shape(self):
-        """lnPiData shae"""
+        """lnPiArray shape"""
         return self._data.shape
 
     def __len__(self):
@@ -510,7 +510,7 @@ class MaskedData(AccessorMixin):
 
         See Also
         --------
-        lnPiData.pad
+        lnPiArray.pad
         """
 
         base = self._base.pad(axes=axes, ffill=ffill, bfill=bfill, limit=limit)
@@ -522,7 +522,7 @@ class MaskedData(AccessorMixin):
 
         See Also
         --------
-        lnPiData.zeromax
+        lnPiArray.zeromax
         """
 
         base = self._base.zeromax(mask=self._mask)
@@ -608,7 +608,7 @@ class MaskedData(AccessorMixin):
 
         Returns
         -------
-        lnpi : MaskedData instance
+        lnpi : lnPiMasked instance
 
 
         See Also
@@ -704,11 +704,11 @@ class MaskedData(AccessorMixin):
 
         Returns
         -------
-        outputs : list of MaskedData objects
+        outputs : list of lnPiMasked objects
 
         See Also
         --------
-        MaskedData.list_from_masks
+        lnPiMasked.list_from_masks
         labels_to_masks
         """
 
@@ -726,7 +726,7 @@ class MaskedData(AccessorMixin):
 from warnings import warn
 
 
-class MaskedlnPiDelayed(MaskedData):
+class MaskedlnPiDelayed(lnPiMasked):
     def __init__(self, *args, **kwargs):
-        warn("MaskedlnPiDelayed is deprecated.  Please use MaskedData instead")
+        warn("MaskedlnPiDelayed is deprecated.  Please use lnPiMasked instead")
         super().__init__(*args, **kwargs)

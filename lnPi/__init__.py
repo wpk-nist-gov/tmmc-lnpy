@@ -1,15 +1,15 @@
 from . import segment
-from .collection import MaskedDataCollection
 from .ensembles import xCanonical, xGrandCanonical
-from .localenergy import (
+from .lnpicollection import lnPiCollection
+
+# Legacy stuff
+from .lnpidata import MaskedlnPiDelayed, lnPiArray, lnPiMasked
+from .lnpienergy import (
     merge_regions,
     wFreeEnergy,
     wFreeEnergyCollection,
     wFreeEnergyPhases,
 )
-
-# Legacy stuff
-from .maskeddata import MaskedData, MaskedlnPiDelayed, lnPiData
 from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .options import OPTIONS, set_options
 from .segment import (
@@ -36,11 +36,11 @@ __email__ = "wpk@nist.gov"
 
 
 __all__ = [
-    "lnPiData",
-    "MaskedData",
+    "lnPiArray",
+    "lnPiMasked",
     "MaskedlnPiDelayed",
     "MaskedlnPiLegacy",
-    "MaskedDataCollection",
+    "lnPiCollection",
     "segment",
     "xGrandCanonical",
     "xCanonical",

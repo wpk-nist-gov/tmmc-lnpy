@@ -14,10 +14,10 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import xarray as xr
 
-# from .collection import MaskedDataCollection
-from .maskeddata import MaskedData
+# from .lnpicollection import lnPiCollection
+from .lnpidata import lnPiMasked
 from .segment import PhaseCreator
-from .utils import dataset_to_maskeddata
+from .utils import dataset_to_lnpimasked
 
 
 def json_to_dict(basename):
@@ -93,13 +93,13 @@ def load_example_maskddata(name):
     d = json_to_dict(basename)
     ds = xr.Dataset.from_dict(d)
 
-    ref = dataset_to_maskeddata(ds)
+    ref = dataset_to_lnpimasked(ds)
     return ref
 
 
 @dataclass
 class Example:
-    ref: MaskedData
+    ref: lnPiMasked
     phase_creator: PhaseCreator
     build_phases: Callable
 

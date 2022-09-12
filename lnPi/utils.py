@@ -517,13 +517,13 @@ def distance_matrix(mask, convention="image"):
     return dist[s]
 
 
-def maskeddata_to_dataset(data, keys=("lnpi", "PE")):
+def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
     """
-    Convert a :class:`~lnPi.MaskedData` object into as :class:`~xarray.Dataset`.
+    Convert a :class:`~lnPi.lnPiMasked` object into as :class:`~xarray.Dataset`.
 
     Parameters
     ----------
-    data : MaskedData
+    data : lnPiMasked
 
     Returns
     -------
@@ -533,9 +533,9 @@ def maskeddata_to_dataset(data, keys=("lnpi", "PE")):
     return data.xce.table(keys=keys, default_keys=None)
 
 
-def dataset_to_maskeddata(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
+def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
     """
-    Convert a :class:`~xarray.Dataset` to a :class:`~lnPi.MaskedData` object.
+    Convert a :class:`~xarray.Dataset` to a :class:`~lnPi.lnPiMasked` object.
 
     Parameters
     ----------
@@ -549,10 +549,10 @@ def dataset_to_maskeddata(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **
 
     Returns
     -------
-    lnpi : MaskedData
+    lnpi : lnPiMasked
     """
 
-    from .maskeddata import MaskedData
+    from .lnpidata import lnPiMasked
 
     data = ds[lnpi_name]
 
@@ -562,4 +562,4 @@ def dataset_to_maskeddata(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **
     if pe_name in ds:
         extra_kws[pe_name] = ds[pe_name].values
 
-    return MaskedData.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
+    return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)

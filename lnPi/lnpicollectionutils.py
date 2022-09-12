@@ -7,7 +7,7 @@ Set of helper utilities to work with single component system
 import numpy as np
 from scipy.optimize import brentq
 
-from .collection import MaskedDataCollection
+from .lnpicollection import lnPiCollection
 
 
 def get_lnz_min(
@@ -44,8 +44,8 @@ def get_lnz_min(
     dlnz : float, default=0.5
         how to change the chemical potential if `C` doesn't already
         bracket solution
-    ref : MaskedData, optional
-        optional MaskedData object to pass to build_phases
+    ref : lnPiMasked, optional
+        optional lnPiMasked object to pass to build_phases
     build_kws : dictionary, optional
         optional arguments to `build_phases`
     ntry : int, default=20
@@ -309,8 +309,8 @@ class _BaseLimit(object):
 
     @access.setter
     def access(self, val):
-        if not isinstance(val, MaskedDataCollection):
-            raise ValueError("access should be MaskedDataCollection")
+        if not isinstance(val, lnPiCollection):
+            raise ValueError("access should be lnPiCollection")
         self._access = val
 
     def _get_bound(self, sign, access=None, lnz_idx=None):
@@ -368,7 +368,7 @@ class _BaseLimit(object):
         self._lnz_list = self.get_lnz_list(lnz, lnz_idx)
 
 
-@MaskedDataCollection.decorate_accessor("bounds_lower", single_create=True)
+@lnPiCollection.decorate_accessor("bounds_lower", single_create=True)
 class LowerBounds(_BaseLimit):
 
     _bound_side = -1
@@ -423,7 +423,7 @@ class LowerBounds(_BaseLimit):
             return bounds, p, lnz_idx, info
 
 
-@MaskedDataCollection.decorate_accessor("bounds_upper", single_create=True)
+@lnPiCollection.decorate_accessor("bounds_upper", single_create=True)
 class UpperBounds(_BaseLimit):
     _bound_side = +1
 
@@ -562,7 +562,7 @@ def limited_collection(
     limit_course=False,
 ):
     """
-    build a MaskedDataCollection over a range of lnz values
+    build a lnPiCollection over a range of lnz values
 
     Parameters
     ----------
@@ -596,7 +596,7 @@ def limited_collection(
         collection_kws = {}
 
     # get_collection = partial(
-    #     MaskedDataCollection.from_builder,
+    #     lnPiCollection.from_builder,
     #     build_phases=build_phases,
     #     build_kws=build_kws, nmax=nmax, xarray_output=xarray_output,
     #     **collection_kws
@@ -607,7 +607,7 @@ def limited_collection(
     lnz_min, lnz_max = lnzs[0], lnzs[-1]
     if edge_distance_min is not None or dens_min is not None:
         # c_course = get_collection(lnzs[::course_step])
-        c_course = MaskedDataCollection.from_builder(
+        c_course = lnPiCollection.from_builder(
             lnzs[::course_step],
             build_phases=build_phases,
             build_kws=build_kws,
@@ -644,7 +644,7 @@ def limited_collection(
                 pass
 
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
-    c = MaskedDataCollection.from_builder(
+    c = lnPiCollection.from_builder(
         lnzs,
         build_phases=build_phases,
         build_kws=build_kws,

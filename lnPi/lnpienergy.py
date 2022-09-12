@@ -8,7 +8,7 @@ from skimage import segmentation
 
 from ._docstrings import docfiller_shared
 from .cached_decorators import gcached
-from .collection import MaskedDataCollection
+from .lnpicollection import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
@@ -568,17 +568,17 @@ def _get_w_data(index, w):
 
 class wFreeEnergyCollection(object):
     r"""
-    Calculate the transition free energies for a :class:`lnPi.MaskedDataCollection`.
+    Calculate the transition free energies for a :class:`lnPi.lnPiCollection`.
 
     :math:`w(N) = \beta f(N) = - \ln \Pi(N)`
 
     Parameters
     ----------
-    parent : MaskedDataCollection
+    parent : lnPiCollection
 
     Notes
     -----
-    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnPi.MaskedDataCollection.wfe`
+    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnPi.lnPiCollection.wfe`
     """
 
     def __init__(self, parent):
@@ -685,7 +685,7 @@ class wFreeEnergyCollection(object):
         return self.get_dwx(idx, idx_nebr).to_series()
 
 
-# @MaskedDataCollection.decorate_accessor("wfe_phases")
+# @lnPiCollection.decorate_accessor("wfe_phases")
 class wFreeEnergyPhases(wFreeEnergyCollection):
     """
     Stripped down version of :class:`wFreeEnergyCollection` for single phase grouping.
@@ -694,11 +694,11 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
     Parameters
     ----------
-    parent : MaskedDataCollection
+    parent : lnPiCollection
 
     Notes
     -----
-    This is accessed through :attr:`MaskedDataCollection.wfe_phases`
+    This is accessed through :attr:`lnPiCollection.wfe_phases`
 
     """
 
@@ -736,7 +736,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
         return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
 
 
-@MaskedDataCollection.decorate_accessor("wfe")
+@lnPiCollection.decorate_accessor("wfe")
 def wfe_accessor(parent):
     """
     Accessor to :class:`~lnPi.wFreeEnergyCollection` from `self.wfe`.
@@ -744,7 +744,7 @@ def wfe_accessor(parent):
     return wFreeEnergyCollection(parent)
 
 
-@MaskedDataCollection.decorate_accessor("wfe_phases")
+@lnPiCollection.decorate_accessor("wfe_phases")
 def wfe_phases_accessor(parent):
     """Accessor to :class:`~lnPi.wFreeEnergyPhases` from `self.wfe_phases`."""
     return wFreeEnergyPhases(parent)
@@ -754,7 +754,7 @@ from warnings import warn
 
 
 # create alias accessors
-@MaskedDataCollection.decorate_accessor("wlnPi")
+@lnPiCollection.decorate_accessor("wlnPi")
 def wlnPi_accessor(parent):
     """Deprecated accessor to :class:`~lnPi.wFreeEnergyCollection` from `self.wlnPi`.
 
@@ -764,7 +764,7 @@ def wlnPi_accessor(parent):
     return parent.wfe
 
 
-@MaskedDataCollection.decorate_accessor("wlnPi_single")
+@lnPiCollection.decorate_accessor("wlnPi_single")
 def wlnPi_single_accessor(parent):
     """Deprecated accessor to :class:`~lnPi.wFreeEnergyPhases` from `self.wlnPi_single`.
 

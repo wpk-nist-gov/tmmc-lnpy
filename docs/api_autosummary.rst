@@ -11,8 +11,8 @@ Masked lnPi objects
    :toctree: generated/
    :template: custom-class.rst
 
-   MaskedData
-   lnPiData
+   lnPiMasked
+   lnPiArray
 
 Collection of lnPi
 ==================
@@ -22,7 +22,7 @@ Collection of lnPi
    :toctree: generated/
    :template: custom-class.rst
 
-   MaskedDataCollection
+   lnPiCollection
 
 
 Ensemble properties
@@ -95,8 +95,8 @@ Stability
    :toctree: generated/
    :template: autosummary/accessor_attribute.rst
 
-   MaskedDataCollection.binodal
-   MaskedDataCollection.spinodal
+   lnPiCollection.binodal
+   lnPiCollection.spinodal
 
 
 Utilities

@@ -66,7 +66,7 @@ def ref():
     )["e"].values
 
     return (
-        lnPi.MaskedData.from_table(
+        lnPi.lnPiMasked.from_table(
             path_data / "ljsf.t072871.bulk.v512.r1.lnpi.dat",
             fill_value=np.nan,
             lnz=lnz,
@@ -154,7 +154,7 @@ def test_collection_properties(build_phases, test_table, obj):
     # by default, progress bar hides itself after completion.  use context manager to keep it
     # note that for this example (where only have a single phase), doesn't really make a difference
     with lnPi.set_options(tqdm_leave=True, joblib_use=False, tqdm_bar="text"):
-        o = lnPi.MaskedDataCollection.from_builder(lnzs, build_phases)
+        o = lnPi.lnPiCollection.from_builder(lnzs, build_phases)
 
     other = get_test_table(o, ref)
 
@@ -188,10 +188,10 @@ def test_nice_grid(obj):
     ref = obj.ref
     build_phases = obj.build_phases
 
-    import lnPi.collectionutils
+    import lnPi.lnpicollectionutils
 
     with lnPi.set_options(joblib_use=True):
-        o_course, o = lnPi.collectionutils.limited_collection(
+        o_course, o = lnPi.lnpicollectionutils.limited_collection(
             build_phases,
             dlnz=0.01,
             offsets=[-10, +10],

@@ -7,7 +7,7 @@ import numpy as np
 from scipy import optimize
 
 from .cached_decorators import gcached
-from .collection import MaskedDataCollection
+from .lnpicollection import lnPiCollection
 
 
 # ###############################################################################
@@ -32,7 +32,7 @@ def _initial_bracket_spinodal_right(
 
     Parameters
     ----------
-    ref : MaskedData, optional
+    ref : lnPiMasked, optional
     build_phases : callable
         scalar funciton to build phases
     C : lnPi_collection
@@ -326,7 +326,7 @@ def get_spinodal(
     _
         Parameters
         ----------
-        ref : MaskedData
+        ref : lnPiMasked
         C : lnPi_collection
             initial estimates to work from.  Function assumes C is in lnz sorted order
         idx, idx_nebr : int
@@ -527,7 +527,7 @@ class _BaseStability(object):
 
     Parameters
     ----------
-    collection: MaskedDataCollection
+    collection: lnPiCollection
         Used to bracket the location limit of stability
 
 
@@ -574,7 +574,7 @@ class _BaseStability(object):
 
     @gcached()
     def access(self):
-        """MaskedDataCollection view of stability"""
+        """lnPiCollection view of stability"""
         return self._get_access()
 
     def __getitem__(self, idx):
@@ -599,7 +599,7 @@ class _BaseStability(object):
 
 
 # NOTE : single create means this is only created once
-@MaskedDataCollection.decorate_accessor("spinodal", single_create=False)
+@lnPiCollection.decorate_accessor("spinodal", single_create=False)
 class Spinodals(_BaseStability):
     """
     Methods for calculation locations of spinodal
@@ -632,7 +632,7 @@ class Spinodals(_BaseStability):
             This should most likely be an instance of :class:`lnPi.BuildPhases_mu`
         efac : float, default=1.0
             Target value of `dw` to define spinodal.
-        ref : MaskedData, optional
+        ref : lnPiMasked, optional
         build_kws : dict, optional
             optional arguments to `build_phases`
         inplace : bool, default=True
@@ -643,7 +643,7 @@ class Spinodals(_BaseStability):
         as_dict : bool, default=True
             if True, return dict of form {phase_id[0] : phases object, ...}.
         unstack : bool, optional
-            if passed, create MaskedDataCollection objects with this unstack value.  If not passed,
+            if passed, create lnPiCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
         **kwargs : extra argument to `get_spinodal` function
 
@@ -651,7 +651,7 @@ class Spinodals(_BaseStability):
         -------
         out : output
             if inplace, return self.
-            if not inplace, and as dict, return dict, else return :class:`MaskedDataCollection` with phase_id in index
+            if not inplace, and as dict, return dict, else return :class:`lnPiCollection` with phase_id in index
         """
 
         if hasattr(self, "_items") and not force:
@@ -710,7 +710,7 @@ class Spinodals(_BaseStability):
             return out, info
 
 
-@MaskedDataCollection.decorate_accessor("binodal", single_create=False)
+@lnPiCollection.decorate_accessor("binodal", single_create=False)
 class Binodals(_BaseStability):
     """Routines to calculate binodal."""
 
@@ -768,7 +768,7 @@ class Binodals(_BaseStability):
         spinodals : optional
             if not passes, then use parent.spinodal
             Used for bounding binodal
-        ref : MaskedData, optional
+        ref : lnPiMasked, optional
         build_kws : dict, optional
             optional arguments to `build_phases`
         inplace : bool, default=True
@@ -779,7 +779,7 @@ class Binodals(_BaseStability):
         as_dict : bool, default=True
             if True, return dict of form {phase_id[0] : phases object, ...}
         unstack : bool, optional
-            if passed, create MaskedDataCollection objects with this unstack value.  If not passed,
+            if passed, create lnPiCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
         **kwargs : extra argument to `get_spinodal` function
 
@@ -787,7 +787,7 @@ class Binodals(_BaseStability):
         -------
         out : output
             if inplace, return self
-            if not inplace, and as dict, return dict, else return MaskedDataCollection with phase_id in index
+            if not inplace, and as dict, return dict, else return lnPiCollection with phase_id in index
         """
 
         if inplace and hasattr(self, "_items") and not force:
@@ -846,7 +846,7 @@ class Binodals(_BaseStability):
             return out, info
 
 
-@MaskedDataCollection.decorate_accessor("stability_append", single_create=False)
+@lnPiCollection.decorate_accessor("stability_append", single_create=False)
 def _stability_append(self):
     """
     add stability from collection to this collection

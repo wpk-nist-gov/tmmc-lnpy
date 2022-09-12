@@ -22,7 +22,7 @@ def tag_phases2(x):
 @pytest.fixture
 def ref():
     return (
-        lnPi.MaskedData.from_table(
+        lnPi.lnPiMasked.from_table(
             path_data / "nahs_asym_mix.07_07_07.r1.lnpi_o.dat",
             lnz=np.array([0.5, 0.5]),
             state_kws={"beta": 1.0, "volume": 1.0},
@@ -94,7 +94,7 @@ def get_test_table(o, ref):
 def test_collection(obj, build_phases, lnzs):
     ref = obj.ref
 
-    c = lnPi.MaskedDataCollection.from_builder(lnzs, build_phases)
+    c = lnPi.lnPiCollection.from_builder(lnzs, build_phases)
     c.spinodal(2, build_phases, inplace=True, unstack=True)
     c.binodal(2, build_phases, inplace=True, unstack=True)
 

@@ -17,8 +17,8 @@ import numpy as np
 from skimage import feature, morphology, segmentation
 
 from ._docstrings import _shared_docs, docfiller
-from .collection import MaskedDataCollection
-from .localenergy import wFreeEnergy
+from .lnpicollection import lnPiCollection
+from .lnpienergy import wFreeEnergy
 
 # * Common doc strings
 
@@ -292,7 +292,7 @@ class Segmenter(object):
 
         Parameters
         ----------
-        lnPi : MaskedData
+        lnPi : lnPiMasked
             Object to be segmented
         {markers}
         find_peaks : bool, default=True
@@ -347,16 +347,16 @@ class PhaseCreator(object):
     nmax_peak : int, optional
         if specified, the allowable number of peaks to locate.
         This can be useful for some cases.  These phases will be merged out at the end.
-    ref : MaskedData, optional
+    ref : lnPiMasked, optional
     segmenter : Segmenter object, optional
         segmenter object to create labels/masks. Defaults to using base segmenter.
     segment_kws : mapping, optional
         Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
     tag_phases : callable, optional
-        Optional funciton which takes a list of :class:`lnPi.MaskedData` objects
+        Optional funciton which takes a list of :class:`lnPi.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
-        Factory function for returning Collection from a list of :class:`lnPi.MaskedData` object
+        Factory function for returning Collection from a list of :class:`lnPi.lnPiMasked` object
     lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
@@ -372,7 +372,7 @@ class PhaseCreator(object):
         segmenter=None,
         segment_kws=None,
         tag_phases=None,
-        phases_factory=MaskedDataCollection.from_list,
+        phases_factory=lnPiCollection.from_list,
         lnPiFreeEnergy_kws=None,
         merge_kws=None,
     ):
@@ -465,7 +465,7 @@ class PhaseCreator(object):
         lnz : int or sequence of ints, optional
             lnz value to evaluate `ref` at.  If not specified, use
             `ref.lnz`
-        ref : MaskedData object
+        ref : lnPiMasked object
             Object to be segmented
         efac : float, optional
             Optional value to use in energetic merging of phases.

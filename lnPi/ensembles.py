@@ -8,8 +8,8 @@ import numpy as np
 import xarray as xr
 
 from .cached_decorators import gcached_use_cache as gcached
-from .collection import MaskedDataCollection
-from .maskeddata import MaskedData, MaskedlnPiDelayed
+from .lnpicollection import lnPiCollection
+from .lnpidata import MaskedlnPiDelayed, lnPiMasked
 from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .utils import dim_to_suffix_dataset
 
@@ -175,10 +175,10 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
     return decorator
 
 
-@MaskedData.decorate_accessor("xge")
+@lnPiMasked.decorate_accessor("xge")
 @MaskedlnPiDelayed.decorate_accessor("xge")
 @MaskedlnPiLegacy.decorate_accessor("xge")
-@MaskedDataCollection.decorate_accessor("xge")
+@lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
     """
     Accessor to :class:`~lnPi.xGrandCanonical`.
@@ -192,7 +192,7 @@ class xGrandCanonical:
 
 
     This class is primarily interacted with through the attributes ``xge`` attached
-    to :class:`~lnPi.MaskedData` and :class:`~lnPi.MaskedDataCollection`.
+    to :class:`~lnPi.lnPiMasked` and :class:`~lnPi.lnPiCollection`.
     """
 
     def __init__(self, parent):
@@ -609,7 +609,7 @@ class xGrandCanonical:
 
         Parameters
         ----------
-        ref : MaskedData
+        ref : lnPiMasked
             reference object to consider.
         val : float
 
@@ -662,7 +662,7 @@ class xGrandCanonical:
             PE = self._parent.extra_kws.get("PE", None)
 
         if PE is None:
-            raise AttributeError('must set "PE" in "extra_kws" of MaskedData')
+            raise AttributeError('must set "PE" in "extra_kws" of lnPiMasked')
         else:
             PE = xr.DataArray(PE, dims=self.dims_n)
         return self._mean_pi(PE)
@@ -755,8 +755,8 @@ class xGrandCanonical:
             keys of attributes or methods of `self` to include in ouput
         default_keys : sequence of str
             Default keys to consider.
-        ref : MaskedData, optional
-            If calculating `edge_distastance`, need a reference :class:`~lnPi.MaskedData` object.
+        ref : lnPiMasked, optional
+            If calculating `edge_distastance`, need a reference :class:`~lnPi.lnPiMasked` object.
         mask_stable : bool, default=False
             If True, remove any unstable values
         dim_to_suffix : sequence of hashables, optional
@@ -875,7 +875,7 @@ class xGrandCanonical:
 
 
 # NOTE: Using function accessor to override the docstring
-@MaskedData.decorate_accessor("xce")
+@lnPiMasked.decorate_accessor("xce")
 @MaskedlnPiDelayed.decorate_accessor("xce")
 @MaskedlnPiLegacy.decorate_accessor("xce")
 def xce_accessor(parent):
@@ -889,7 +889,7 @@ class xCanonical(object):
 
     Parameters
     ----------
-    parent : MaskedData
+    parent : lnPiMasked
     """
 
     def __init__(self, parent):
@@ -960,7 +960,7 @@ class xCanonical(object):
         # if betaPE available, use that:
         PE = self._parent.extra_kws.get("PE", None)
         if PE is None:
-            raise AttributeError('must set "PE" in "extra_kws" of MaskedData')
+            raise AttributeError('must set "PE" in "extra_kws" of lnPiMasked')
         x = self._xge
         coords = dict(x._wrapper.coords_n, **self._parent.state_kws)
         return xr.DataArray(PE, dims=x.dims_n, coords=coords, attrs=x._standard_attrs)

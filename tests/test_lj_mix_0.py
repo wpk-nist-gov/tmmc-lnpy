@@ -18,7 +18,7 @@ def ref():
     lnz = np.array([-2.5, -2.5])
 
     return (
-        lnPi.MaskedData.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
+        lnPi.lnPiMasked.from_table(path, state_kws=state_kws, lnz=lnz).zeromax().pad()
     )
 
 
@@ -75,7 +75,7 @@ def test_collection(obj):
         tqdm_len_build=10,
         tqdm_bar="text",
     ):
-        o = lnPi.MaskedDataCollection.from_builder(
+        o = lnPi.lnPiCollection.from_builder(
             lnz_values[:], phase_creator.build_phases, unstack=False
         )
 

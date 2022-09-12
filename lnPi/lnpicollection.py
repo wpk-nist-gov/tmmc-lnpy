@@ -370,19 +370,19 @@ class _Query(object):
         return self._parent.iloc[idx]
 
 
-class MaskedDataCollection(SeriesWrapper):
+class lnPiCollection(SeriesWrapper):
     r"""
-    Wrapper around :class:`pandas.Series` for collection of :class:`lnPi.MaskedData` objects.
+    Wrapper around :class:`pandas.Series` for collection of :class:`lnPi.lnPiMasked` objects.
 
 
     Parameters
     ----------
-    data : sequence of MaskedData
+    data : sequence of lnPiMasked
         :math:`\ln \Pi(N)` instances to consider.
     index : array-like, pandas.Index, pandas.MultiIndex, optional
         Index to apply to Series.
     xarray_output : bool, default = True
-        If True, then wrap MaskedDataCollection outputs in :class:`~xarray.DataArray`
+        If True, then wrap lnPiCollection outputs in :class:`~xarray.DataArray`
     concat_dim : str, optional
         Name of dimensions to concat results along.
         Also Used by :class:`~lnPi.xlnPi.xGrandCanonical`.
@@ -424,16 +424,14 @@ class MaskedDataCollection(SeriesWrapper):
         if unstack is not None:
             self._xarray_unstack = unstack
 
-        super(MaskedDataCollection, self).__init__(
-            data=data, index=index, *args, **kwargs
-        )
+        super(lnPiCollection, self).__init__(data=data, index=index, *args, **kwargs)
 
         # update index name:
         # self._series.index.name = self._concat_dim
 
     def new_like(self, data=None, index=None):
         """Create new object with optional new data/index."""
-        return super(MaskedDataCollection, self).new_like(
+        return super(lnPiCollection, self).new_like(
             data=data,
             index=index,
             concat_dim=self._concat_dim,
@@ -443,7 +441,7 @@ class MaskedDataCollection(SeriesWrapper):
         )
 
     def _verify_series(self, series):
-        super(MaskedDataCollection, self)._verify_series(series)
+        super(lnPiCollection, self)._verify_series(series)
         if self._verify:
             first = series.iloc[0]
             state_kws = first.state_kws
@@ -470,7 +468,7 @@ class MaskedDataCollection(SeriesWrapper):
 
     @property
     def state_kws(self):
-        """state_kws from first :class:`~lnPi.MaskedData`"""
+        """state_kws from first :class:`~lnPi.lnPiMasked`"""
         return self.iloc[0].state_kws
 
     @property
@@ -589,11 +587,11 @@ class MaskedDataCollection(SeriesWrapper):
     @classmethod
     def from_list(cls, items, index, *args, **kwargs):
         """
-        Create collection from list of :class:`lnPi.MaskedData` objects.
+        Create collection from list of :class:`lnPi.lnPiMasked` objects.
 
         Parameters
         ----------
-        items : sequence of MaskedData
+        items : sequence of lnPiMasked
             Sequence of lnPi
         index : sequence
             Sequence of phases ID for each lnPi
@@ -714,12 +712,12 @@ class MaskedDataCollection(SeriesWrapper):
         **kwargs
     ):
         r"""
-        Create from reference :class:`~lnPi.MaskedData` and labels array
+        Create from reference :class:`~lnPi.lnPiMasked` and labels array
 
 
         Parameters
         ----------
-        ref : MaskedData
+        ref : lnPiMasked
         labels : sequence of label arrays
             Each `labels[i]` will be used to construct multiple phases from single
             (reweighted)  :math:`ln \Pi(N)`
@@ -780,7 +778,7 @@ class MaskedDataCollection(SeriesWrapper):
 
         Parameters
         ----------
-        ref : MaskedData
+        ref : lnPiMasked
         da : DataArray or labels
         grouper : Hashable
             Name of dimension(s) to group along to give a single label array

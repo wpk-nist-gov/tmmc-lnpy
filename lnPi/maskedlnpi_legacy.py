@@ -60,7 +60,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         kwargs : arguments to np.ma.array
             e.g., mask=...
         """
-        warn("MaskedlnPiLegacy is deprecated.  Please use MaskedData instead")
+        warn("MaskedlnPiLegacy is deprecated.  Please use lnPiMasked instead")
 
         if data is not None and issubclass(data.dtype.type, np.floating):
             kwargs.setdefault("fill_value", np.nan)

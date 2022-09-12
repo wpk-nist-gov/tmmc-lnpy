@@ -135,7 +135,7 @@ def _solve_lnz_molfrac(
         lnz values bracketing solution
     phase_id : int
         target phase
-    ref : MaskedData
+    ref : lnPiMasked
         object to reweight
     component : int, optional
         if not specified, use build_phases.index
