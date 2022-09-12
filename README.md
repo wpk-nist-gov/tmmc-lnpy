@@ -40,6 +40,12 @@ notebook for a quick introduction.
 
 See [LICENSE](LICENSE)
 
+## TODO
+
+[ ] More documentation/examples
+[ ] Update Spinodal/Binodal accessor api
+[ ] Interface to thermoextrap
+
 ### Credits
 
 This package was created with
