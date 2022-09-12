@@ -7,7 +7,7 @@ import numpy as np
 from scipy import optimize
 
 from .cached_decorators import gcached
-from .lnpicollection import lnPiCollection
+from .lnpiseries import lnPiCollection
 
 
 # ###############################################################################
@@ -651,7 +651,7 @@ class Spinodals(_BaseStability):
         -------
         out : output
             if inplace, return self.
-            if not inplace, and as dict, return dict, else return :class:`lnPiCollection` with phase_id in index
+            if not inplace, and as dict, return dict, else return :class:`lnpy.lnPiCollection` with phase_id in index
         """
 
         if hasattr(self, "_items") and not force:

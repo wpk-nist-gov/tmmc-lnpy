@@ -133,7 +133,12 @@ class SeriesWrapper(AccessorMixin):
         return len(self.s)
 
     def append(
-        self, to_append, ignore_index=False, verify_integrity=True, inplace=False
+        self,
+        to_append,
+        ignore_index=False,
+        verify_integrity=True,
+        concat_kws=None,
+        inplace=False,
     ):
         """Interface to :meth:`pandas.Series.append`
 
@@ -144,6 +149,8 @@ class SeriesWrapper(AccessorMixin):
             Object to append
         ignore_index : bool, default=False
         verify_integrity : bool, default=True
+        concat_kws : mapping, optional
+            Extra arguments to
         inplace : bool, default = False
 
         See Also
@@ -153,9 +160,19 @@ class SeriesWrapper(AccessorMixin):
         if isinstance(to_append, self.__class__):
             to_append = to_append.series
 
-        s = self._series.append(
-            to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
+        if concat_kws is None:
+            concat_kws = {}
+
+        s = pd.concat(
+            (self.series, to_append),
+            ignore_index=ignore_index,
+            verify_integrity=verify_integrity,
+            **concat_kws
         )
+
+        # s = self._series.append(
+        #     to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
+        # )
 
         if inplace:
             self.series = s
@@ -371,6 +388,7 @@ class _Query(object):
 
 
 class lnPiCollection(SeriesWrapper):
+    # class lnPiCollection:
     r"""
     Wrapper around :class:`pandas.Series` for collection of :class:`lnpy.lnPiMasked` objects.
 
@@ -385,7 +403,7 @@ class lnPiCollection(SeriesWrapper):
         If True, then wrap lnPiCollection outputs in :class:`~xarray.DataArray`
     concat_dim : str, optional
         Name of dimensions to concat results along.
-        Also Used by :class:`~lnpy.xlnPi.xGrandCanonical`.
+        Also Used by :class:`~lnpy.ensembles.xGrandCanonical`.
     concat_coords : string, optional
         parameters `coords `to :func:`xarray.concat`
     unstack : bool, default=True
@@ -424,14 +442,14 @@ class lnPiCollection(SeriesWrapper):
         if unstack is not None:
             self._xarray_unstack = unstack
 
-        super(lnPiCollection, self).__init__(data=data, index=index, *args, **kwargs)
+        super().__init__(data=data, index=index, *args, **kwargs)
 
         # update index name:
         # self._series.index.name = self._concat_dim
 
     def new_like(self, data=None, index=None):
         """Create new object with optional new data/index."""
-        return super(lnPiCollection, self).new_like(
+        return super().new_like(
             data=data,
             index=index,
             concat_dim=self._concat_dim,
@@ -441,7 +459,7 @@ class lnPiCollection(SeriesWrapper):
         )
 
     def _verify_series(self, series):
-        super(lnPiCollection, self)._verify_series(series)
+        super()._verify_series(series)
         if self._verify:
             first = series.iloc[0]
             state_kws = first.state_kws

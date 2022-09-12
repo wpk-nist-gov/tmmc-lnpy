@@ -8,8 +8,8 @@ import numpy as np
 import xarray as xr
 
 from .cached_decorators import gcached_use_cache as gcached
-from .lnpicollection import lnPiCollection
 from .lnpidata import MaskedlnPiDelayed, lnPiMasked
+from .lnpiseries import lnPiCollection
 from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .utils import dim_to_suffix_dataset
 
@@ -48,7 +48,11 @@ def get_xrlnPiWrapper(
 class xlnPiWrapper:
     _use_cache = True
     """
-    this class just wraps lnPi with xarray functionality
+    This class just wraps lnPi with xarray functionality
+
+    Most likely, this shouldn't be accessed by the user.
+
+
     """
 
     def __init__(
@@ -446,8 +450,8 @@ class xGrandCanonical:
 
             {\rm var}(x, y) = \overline{(x - \overline{x}) (y - \overline{y})}
 
-        x and y can be arrays, or callables, in which case:
-        x = x(self, *args, **kwargs)
+        ``x`` and ``y`` can be arrays, or callables, in which case:
+        ``x = x(self, *args, **kwargs)``
 
         See Also
         --------

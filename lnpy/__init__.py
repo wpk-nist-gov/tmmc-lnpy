@@ -1,8 +1,4 @@
-from . import segment
 from .ensembles import xCanonical, xGrandCanonical
-from .lnpicollection import lnPiCollection
-
-# Legacy stuff
 from .lnpidata import MaskedlnPiDelayed, lnPiArray, lnPiMasked
 from .lnpienergy import (
     merge_regions,
@@ -10,6 +6,7 @@ from .lnpienergy import (
     wFreeEnergyCollection,
     wFreeEnergyPhases,
 )
+from .lnpiseries import lnPiCollection
 from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .options import OPTIONS, set_options
 from .segment import (
@@ -21,6 +18,9 @@ from .segment import (
 )
 from .stability import Binodals, Spinodals
 from .utils import dim_to_suffix
+
+# Legacy stuff
+
 
 # updated versioning scheme
 try:
@@ -43,12 +43,14 @@ __email__ = "wpk@nist.gov"
 
 
 __all__ = [
+    "__author__",
+    "__email__",
+    "__version__",
     "lnPiArray",
     "lnPiMasked",
+    "lnPiCollection",
     "MaskedlnPiDelayed",
     "MaskedlnPiLegacy",
-    "lnPiCollection",
-    "segment",
     "xGrandCanonical",
     "xCanonical",
     "wFreeEnergyPhases",

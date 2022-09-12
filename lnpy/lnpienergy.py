@@ -8,7 +8,7 @@ from skimage import segmentation
 
 from ._docstrings import docfiller_shared
 from .cached_decorators import gcached
-from .lnpicollection import lnPiCollection
+from .lnpiseries import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
@@ -698,7 +698,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
     Notes
     -----
-    This is accessed through :attr:`lnPiCollection.wfe_phases`
+    This is accessed through :attr:`lnpy.lnPiCollection.wfe_phases`
 
     """
 

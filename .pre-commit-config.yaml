@@ -11,6 +11,7 @@ repos:
     # -   id: check-yaml
     #     args: [--unsafe]
     -   id: check-added-large-files
+        args: ['--maxkb=600']
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1

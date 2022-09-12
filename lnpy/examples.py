@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import xarray as xr
 
-# from .lnpicollection import lnPiCollection
+# from .lnpiseries import lnPiCollection
 from .lnpidata import lnPiMasked
 from .segment import PhaseCreator
 from .utils import dataset_to_lnpimasked

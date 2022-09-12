@@ -125,7 +125,7 @@ _shared_docs = {
 
 
 def _prepare_shared_docs(shared_docs):
-    return {k: dedent(v).strip() for k, v in _shared_docs.items()}
+    return {k: dedent(v).strip() for k, v in shared_docs.items()}
 
 
 _shared_docs = _prepare_shared_docs(_shared_docs)

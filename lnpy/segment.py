@@ -16,9 +16,9 @@ import bottleneck
 import numpy as np
 from skimage import feature, morphology, segmentation
 
-from ._docstrings import _shared_docs, docfiller
-from .lnpicollection import lnPiCollection
+from ._docstrings import _prepare_shared_docs, _shared_docs, docfiller
 from .lnpienergy import wFreeEnergy
+from .lnpiseries import lnPiCollection
 
 # * Common doc strings
 
@@ -53,6 +53,7 @@ _shared_docs_local = {
         * indices : indices of peaks
         * mask : bool array marking peak locations
         * marker : array of ints
+
     """,
     "markers": """
     markers : int, or ndarray of int, same shape as image, optional
@@ -61,7 +62,10 @@ _shared_docs_local = {
     """,
 }
 
-docfiller_shared = docfiller(**dict(_shared_docs, **_shared_docs_local))
+_shared_docs_local = _prepare_shared_docs(_shared_docs_local)
+docfiller_shared = docfiller(**(dict(_shared_docs, **_shared_docs_local)))
+
+# docfiller_shared = docfiller(**dict(_shared_docs, **_prepare_shared_docs(_shared_docs_local)))
 
 
 @docfiller_shared
@@ -213,14 +217,15 @@ class Segmenter(object):
         {num_peaks_max}
         {peak_style}
         {mask_image}
+
         **kwargs
             Extra arguments to :func:`peak_local_max_adaptive`.
 
         Returns
         -------
         out :
-            - if ``style=='marker'``, then return label ar
-            - else, return indicies of peaks
+            If ``style=='marker'``, then return label array.  Otherwise,
+            return indicies of peaks.
 
         Notes
         -----
@@ -252,6 +257,7 @@ class Segmenter(object):
         ----------
         {data}
         {markers}
+
         {mask_image}
         connectivity : int
             connectivity to use in watershed
@@ -267,7 +273,6 @@ class Segmenter(object):
         See Also
         --------
         ~skimage.segmentation.watershed
-
         """
 
         if connectivity is None:
@@ -289,12 +294,12 @@ class Segmenter(object):
         """
         Perform segmentations of lnPi object using watershed on negative of lnPi data.
 
-
         Parameters
         ----------
         lnPi : lnPiMasked
             Object to be segmented
         {markers}
+
         find_peaks : bool, default=True
             If True, use :func:`peak_local_max_adaptive` to construct `markers`.
         {num_peaks_max}
@@ -356,7 +361,8 @@ class PhaseCreator(object):
         Optional funciton which takes a list of :class:`lnpy.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
-        Factory function for returning Collection from a list of :class:`lnpy.lnPiMasked` object
+        Factory function for returning Collection from a list of :class:`lnpy.lnPiMasked` object.
+        Defaults to :meth:`lnpy.lnPiCollection.from_list`.
     lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
@@ -372,10 +378,13 @@ class PhaseCreator(object):
         segmenter=None,
         segment_kws=None,
         tag_phases=None,
-        phases_factory=lnPiCollection.from_list,
+        phases_factory=None,
         lnPiFreeEnergy_kws=None,
         merge_kws=None,
     ):
+
+        if phases_factory is None:
+            phases_factory = lnPiCollection.from_list
 
         if nmax_peak is None:
             nmax_peak = nmax * 2
@@ -669,15 +678,16 @@ class BuildPhases_mu(BuildPhasesBase):
 
 class BuildPhases_dmu(BuildPhasesBase):
     """
-    create phases from scalar value of mu at fixed value of dmu for other species
+    Create phases from scalar value of mu at fixed value of dmu for other species
+
     Parameters
     ----------
     dlnz : list
         list with one element equal to None.  This is the component which will be varied
-        For example, dlnz=[dlnz0,None,dlnz2] implies use values of dlnz0,dlnz2 for components 0 and 2, and
-        vary component 1
+        For example, dlnz=[dlnz0,None,dlnz2] implies use values of dlnz0,dlnz2
+        for components 0 and 2, and vary component 1.
         dlnz_i = lnz_i - lnz_index, where lnz_index is the value varied.
-    phase_creator : PhaseCreator object
+    phase_creator : :class:`lnpy.PhaseCreator`
     """
 
     def __init__(self, dlnz, phase_creator):

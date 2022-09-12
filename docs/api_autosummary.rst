@@ -3,6 +3,7 @@ API Reference
 #############
 
 
+
 Masked lnPi objects
 ===================
 .. currentmodule:: lnpy
@@ -11,12 +12,14 @@ Masked lnPi objects
    :toctree: generated/
    :template: custom-class.rst
 
-   lnPiMasked
    lnPiArray
+   lnPiMasked
+
 
 Collection of lnPi
 ==================
 
+.. currentmodule:: lnpy
 
 .. autosummary::
    :toctree: generated/
@@ -27,6 +30,8 @@ Collection of lnPi
 
 Ensemble properties
 ===================
+
+.. currentmodule:: lnpy
 
 .. autosummary::
    :toctree: generated/
@@ -91,12 +96,9 @@ Stability
    Binodals
 
 
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_attribute.rst
+   lnPiCollection.spinodal - Accessor to :class:`Spinodals`
+   lnPiCollection.binodal - Accessor to :class:`Binodals`
 
-   lnPiCollection.binodal
-   lnPiCollection.spinodal
 
 
 Utilities

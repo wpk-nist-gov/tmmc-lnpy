@@ -7,7 +7,7 @@ Set of helper utilities to work with single component system
 import numpy as np
 from scipy.optimize import brentq
 
-from .lnpicollection import lnPiCollection
+from .lnpiseries import lnPiCollection
 
 
 def get_lnz_min(
