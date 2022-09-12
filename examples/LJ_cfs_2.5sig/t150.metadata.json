@@ -1,0 +1,11 @@
+{
+  "Fluid": "Lennard-Jones",
+  "Rcut": 2.5,
+  "Tail": "LFS",
+  "T*": 1.50,
+  "V*": 512.0,
+  "mu*": -7.50,
+  "mass": 16.041,
+  "eps_kB": 160.3,
+  "sigma": 3.741
+}

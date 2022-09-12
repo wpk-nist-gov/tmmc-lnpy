@@ -1,0 +1,7 @@
+METHOD:	Grand-canonical transition-matrix Monte Carlo
+V:	512
+TRUNCATION:	3
+Prob. of Disp. Move:	0.75
+Prob. of Ins/Del. Move:	0.25
+Biasing Function Update Frequency:	1.0E6
+Simulation Length:	8.0E9

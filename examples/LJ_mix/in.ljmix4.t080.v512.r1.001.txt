@@ -1,0 +1,56 @@
+NT_MIN        NT_MAX        D_NT
+   0           450           1
+
+N_SPECIES     N_DIM
+   2             3
+
+k_B T /eps
+  0.80000000E+00
+
+FILEPREFIX
+ljmix4.t080.v512.r1.001.
+
+GRPREFIX
+ljmix4.t080.v512.r1.
+
+seed
+ 1
+
+PROP_FREQ       MAX_DSP         DSP_ADJ_FREQ
+ 1000000        0.100E+01          10000
+
+WEIGHT_FREQ     SWPS_TARG       N2MAX_HITS
+ 1000000         15               10000
+
+EPS_11/kB       eps22/eps11     eps12/eps11
+ 0.16030E+03    0.10000E+01      0.100000000000E+01
+
+SIG_11(A)       sig22/sig11     sig12/sig11
+ 0.30000E+01    0.12500E+01     0.11250E+01
+
+lam_11/s_11     lam_22/s_22     lam_12/s_12
+ 0.30000E+01    0.30000E+01     0.30000E+01
+
+epsw_1/eps11    epsw_2/eps11
+ 0.20000E+01    0.20000E+01
+
+SIGW_1_f/sig11  SIGW_2_f/sig22
+ 0.10000E+01    0.10000E+01
+
+ln_xi(1)        ln_xi(2)
+-0.25000E+01   -0.25000E+01
+
+P_DISP          CONT_FLAG       n2max_list_flag
+ 0.600E+00        F               T
+
+LINKS_FLAG      N_grow_stgs
+  F                 6
+
+n_zbins(1)      n_zbinz(2)      minz_hits
+  200             200             2000000
+
+N_ID_STGS       SPLIT_FLAG
+   2              .TRUE.
+
+NT_SPLIT        MY_DIV          N_DIV        N_ID_STGS_PREP
+  84              1              12               5

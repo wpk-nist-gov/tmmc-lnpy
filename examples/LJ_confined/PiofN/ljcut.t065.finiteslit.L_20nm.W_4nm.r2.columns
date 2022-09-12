@@ -1,0 +1,15 @@
+*.canonicalensemble_properties.txt
+rho*, F*/N, S*/N, tag
+
+*.grandensemble_properties.txt
+rho*, F*/N, S*/N, mu*, ln(a), Omega*/N, pbulk*(mu*), gamma*, tag
+
+"tag" values:
+STABL = stable phase
+MSTBV = metastable vapor
+MSTBL = metastable liquid
+UNSTB = unstable
+UMSTB = un- or metastable
+
+*.single_isotherm.txt
+p/p0, mu*, <N_total>, <rho_inside>

@@ -1,0 +1,12 @@
+name: lnpy-env
+dependencies:
+  - python=3.8
+  - numpy
+#  - numba
+  - xarray
+  - scipy
+  - scikit-image
+  - joblib
+  - bottleneck
+  - tqdm
+  - importlib_resources
