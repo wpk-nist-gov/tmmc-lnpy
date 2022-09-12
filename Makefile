@@ -156,8 +156,7 @@ servedocs: docs ## compile the docs watching for changes
 # distribution
 ################################################################################
 dist: ## builds source and wheel package (run clean?)
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python -m build
 	ls -l dist
 
 .PHONY: release release-test conda-dist
@@ -173,6 +172,8 @@ conda-dist: ## build conda dist (run dist and clean?)
 	grayskull pypi lnpy ; \
 	conda-build .; \
 	echo 'upload now'
+
+
 
 
 ################################################################################
