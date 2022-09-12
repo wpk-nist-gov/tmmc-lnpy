@@ -1,0 +1,19 @@
+{
+    "Ewald_Parameters": {
+        "method": "DL_POLY",
+        "set": {
+            "alpha": "0.2846080984229412",
+            "kxmax": "9",
+            "kymax": "9",
+            "kzmax": "9"
+        },
+        "tolerance": 1e-05
+    },
+    "beta": 0.4009078501424201,
+    "betamu0": -14.5,
+    "box": [
+        34.02324,
+        34.02324,
+        34.02324
+    ]
+}

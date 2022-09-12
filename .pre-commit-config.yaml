@@ -11,6 +11,7 @@ repos:
     # -   id: check-yaml
     #     args: [--unsafe]
     -   id: check-added-large-files
+        args: ['--maxkb=600']
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
@@ -18,17 +19,18 @@ repos:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 22.6.0
+    rev: 22.8.0
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.5
+    rev: v0.3.6
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
     hooks:
       - id: flake8
+        exclude: ^tests
   # Note yet implemented
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v0.790  # Must match ci/requirements/*.yml

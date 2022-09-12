@@ -1,4 +1,4 @@
-name: lnPi-env
+name: lnpy-env
 dependencies:
   - python=3.8
   - numpy
@@ -7,7 +7,6 @@ dependencies:
   - scipy
   - scikit-image
   - joblib
-  - dask
-  - netcdf4
   - bottleneck
   - tqdm
+  - importlib_resources

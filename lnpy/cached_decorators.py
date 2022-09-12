@@ -2,11 +2,11 @@
 routines to define a cached class without needing to subclass Cached class
 """
 from __future__ import absolute_import
-from builtins import object
+
 from functools import wraps
 
+__all__ = ["cached", "cached_func", "cached_clear", "gcached"]
 
-__all__ = ['cached', 'cached_func', 'cached_clear', 'gcached']
 
 def gcached(key=None, prop=True):
     def wrapper(func):
@@ -15,6 +15,7 @@ def gcached(key=None, prop=True):
         else:
             wrapped = cached_func(key)(func)
         return wrapped
+
     return wrapper
 
 
@@ -23,12 +24,14 @@ def gcached_use_cache(key=None, prop=True):
     same as gcached, but only cache func/prop if
     has attribute self._use_cache and self._use_cache is True
     """
+
     def wrapper(func):
         if prop:
             wrapped = property(cached(key, check_use_cache=True)(func))
         else:
             wrapped = cached_func(key, check_use_cache=True)(func)
         return wrapped
+
     return wrapper
 
 
@@ -65,6 +68,7 @@ def cached(key=None, check_use_cache=False):
     cached_clear : corresponding decorator to clear cache
     cached_func : decorator for cache creation of function
     """
+
     def cached_lookup(func):
         if key is None:
             _key = func.__name__
@@ -73,8 +77,7 @@ def cached(key=None, check_use_cache=False):
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            if (not check_use_cache) or \
-               (getattr(self, '_use_cache', False)):
+            if (not check_use_cache) or (getattr(self, "_use_cache", False)):
                 try:
                     return self._cache[_key]
                 except AttributeError:
@@ -86,8 +89,8 @@ def cached(key=None, check_use_cache=False):
                 return ret
             else:
                 return func(self, *args, **kwargs)
-        return wrapper
 
+        return wrapper
 
     return cached_lookup
 
@@ -128,6 +131,7 @@ def cached_func(key=None, check_use_cache=False):
     cached : decorator for properties
 
     """
+
     def cached_lookup(func):
         if key is None:
             _key = func.__name__
@@ -136,8 +140,7 @@ def cached_func(key=None, check_use_cache=False):
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            if (not check_use_cache) or \
-               (getattr(self, '_use_cache', False)):
+            if (not check_use_cache) or (getattr(self, "_use_cache", False)):
                 key_func = (_key, args, frozenset(kwargs.items()))
 
                 try:
@@ -158,7 +161,6 @@ def cached_func(key=None, check_use_cache=False):
         return wrapper
 
     return cached_lookup
-
 
 
 def cached_clear(*keys):
@@ -196,12 +198,13 @@ def cached_clear(*keys):
     cached : corresponding decorator for cache creation of property
     cached_func : decorator for cache creation of function
     """
+
     def cached_clear(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            #self._clear_caches(*keys)
+            # self._clear_caches(*keys)
             # clear out keys
-            if len(keys) == 0 or not hasattr(self, '_cache'):
+            if len(keys) == 0 or not hasattr(self, "_cache"):
                 self._cache = dict()
             else:
                 for name in keys:
@@ -212,14 +215,12 @@ def cached_clear(*keys):
 
                 # functions
                 keys_tuples = [
-                    keys for k in self._cache
-                    if isinstance(k, tuple) and
-                    k[0] in keys]
+                    keys for k in self._cache if isinstance(k, tuple) and k[0] in keys
+                ]
                 for name in keys_tuples:
                     del self._cache[name]
             return func(self, *args, **kwargs)
+
         return wrapper
 
     return cached_clear
-
-

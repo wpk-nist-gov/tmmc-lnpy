@@ -1,4 +1,7 @@
 dependencies:
+  # other useful packages
+  - dask
+  - netcdf4
   # development
   - isort
   - black

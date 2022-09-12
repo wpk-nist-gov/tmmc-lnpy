@@ -1,37 +1,60 @@
+lnpy
 ====
-lnPi
-====
 
+|image|
 
-.. image:: https://img.shields.io/pypi/v/lnPi.svg
-        :target: https://pypi.python.org/pypi/lnPi
+.. raw:: html
 
-.. image:: https://img.shields.io/travis/wpk-nist-gov/lnPi.svg
-        :target: https://travis-ci.com/wpk-nist-gov/lnPi
+   <!-- [![Documentation Status](https://readthedocs.org/projects/lnpy/badge/?version=latest)](https://lnpy.readthedocs.io/en/latest/?badge=latest) -->
 
-.. image:: https://readthedocs.org/projects/lnPi/badge/?version=latest
-        :target: https://lnPi.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+Package to analyze :math:`\ln \Pi(N)` data from Transition Matrix Monte
+Carlo simulation
 
+Installation
+------------
 
+From Source
+~~~~~~~~~~~
 
+.. code:: console
 
-Package to analyze lnPi data from TMMC simulations
+   # clone repo
+   git clone {repo}
+   cd {repo}
 
+   # create needed environment
+   conda env create -n {optional-name] -f environment.yaml
 
-* Free software: NIST license
+   # activate environment
+   conda activate {optional-name/lnpy-env (default)}
 
+   # install in development mode
+   pip install -e . --no-deps
 
-Features
---------
+   # Optionally run tests.  This requires pytest
+   conda install pytest
 
-* Analysis of TMMC simulation data
+   pytest -x -v
 
-Credits
+Quick Intro
+-----------
+
+Take a look at the `basic usage <docs/notebooks/Basic_usage.ipynb>`__
+notebook for a quick introduction.
+
+Licence
 -------
 
-This package was created with Cookiecutter_ and the `wpk-nist-gov/cookiecutter-pypackage`_ Project template forked from `audreyr/cookiecutter-pypackage`_.
+See `LICENCE <./LICENCE>`__.
 
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`wpk-nist-gov/cookiecutter-pypackage`: https://github.com/wpk-nist-gov/cookiecutter-pypackage
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+Credits
+~~~~~~~
+
+This package was created with
+`Cookiecutter <https://github.com/audreyr/cookiecutter>`__ and the
+`wpk-nist-gov/cookiecutter-pypackage <https://github.com/wpk-nist-gov/cookiecutter-pypackage>`__
+Project template forked from
+`audreyr/cookiecutter-pypackage <https://github.com/audreyr/cookiecutter-pypackage>`__.
+
+.. |image| image:: https://img.shields.io/pypi/v/lnpy.svg
+   :target: https://pypi.python.org/pypi/lnpy
