@@ -42,9 +42,14 @@ See [LICENSE](LICENSE)
 
 ## TODO
 
-[ ] More documentation/examples
-[ ] Update Spinodal/Binodal accessor api
-[ ] Interface to thermoextrap
+- [ ] More documentation/examples
+- [ ] Update Spinodal/Binodal accessor api
+- [ ] Typing
+- [ ] Interface to thermoextrap
+- [ ] Most of the testing is regression testing. Should add some unit tests as well.
+- [ ] Strip out unused legacy code.
+
+
 
 ### Credits
 
