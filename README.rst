@@ -52,7 +52,6 @@ Note that the distrubution name `tmmc-lnpy` is different than the package name `
     ref = lnpy.examples("lj_sup")
 
 
-
 Credits
 ~~~~~~~
 
@@ -61,6 +60,3 @@ This package was created with
 `wpk-nist-gov/cookiecutter-pypackage <https://github.com/wpk-nist-gov/cookiecutter-pypackage>`__
 Project template forked from
 `audreyr/cookiecutter-pypackage <https://github.com/audreyr/cookiecutter-pypackage>`__.
-
-.. |image| image:: https://img.shields.io/pypi/v/lnpy.svg
-   :target: https://pypi.python.org/pypi/lnpy
