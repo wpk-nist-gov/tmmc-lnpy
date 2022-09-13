@@ -1,17 +1,32 @@
-# lnpy
+# tmmc-lnpy
 
-[![image](https://img.shields.io/pypi/v/lnpy.svg)](https://pypi.python.org/pypi/lnpy)
+A package to analyze $\ln \Pi(N)$ data from Transition Matrix Monte Carlo
+simulation.  The main output from TMMC simulations, $\ln \Pi(N)$, provides a means to calculate a host of thermodynamic
+properties.  Moreover, if $\ln \Pi(N)$ is calculated at a specific chemical potential, it can be reweighted to provide
+thermodynamic information at a different chemical potential
 
-<!-- [![Documentation Status](https://readthedocs.org/projects/lnpy/badge/?version=latest)](https://lnpy.readthedocs.io/en/latest/?badge=latest) -->
+``tmmc-lnpy`` provides a wide array of routines to analyze $\ln \Pi(N)$.  These include:
 
-Package to analyze $\ln \Pi(N)$ data from Transition Matrix Monte Carlo
-simulation
+* Reweighting to arbitrary chemical potential
+* Segmenting $\ln \Pi(N)$ (to identify unique phases)
+* Containers for interacting with several values of $\ln \Pi(N)$ in a vectorized way.
+* Calculating thermodynamic properties from these containers
+* Calculating limits of stability, and phase equilibrium
 
-## Installation
+# Status
 
-### From Source
+``tmmc-lnpy`` is actively used by it's author.  Pull requests are welcome!
+
+# Installation
 
 ``` console
+# from pypi
+pip install tmmc-lnpy
+
+# from conda
+conda install -c wpk-nist tmmc-lnpy
+
+# from source
 # clone repo
 git clone {repo}
 cd {repo}
@@ -31,16 +46,37 @@ conda install pytest
 pytest -x -v
 ```
 
-## Quick Intro
+# Testing
+
+Testing status is mostly regression tests right now.  Further test modules will be added in the near future.
+
+
+# Getting started
 
 Take a look at the [basic usage](docs/notebooks/Basic_usage.ipynb)
 notebook for a quick introduction.
 
-## License
+
+Note that the distribution name ``tmmc-lnpy`` is different than the import name ``lnpy`` due to name clashing on pypi.
+
+``` python
+import lnpy
+import lnpy.examples
+
+ref = lnpy.examples.load_example_maskddata('lj_sub')
+```
+
+# License
 
 See [LICENSE](LICENSE)
 
-## TODO
+
+# Related work
+
+Please checkout [feasst](https://github.com/usnistgov/feasst), a TMMC simulation package.  We hope to create routines to more
+directly interact with feasst output in the near future.
+
+# TODO
 
 - [ ] More documentation/examples
 - [ ] Update Spinodal/Binodal accessor api
@@ -50,8 +86,12 @@ See [LICENSE](LICENSE)
 - [ ] Strip out unused legacy code.
 
 
+# Contact
 
-### Credits
+The author can be reached at wpk@nist.gov
+
+
+# Credits
 
 This package was created with
 [Cookiecutter](https://github.com/audreyr/cookiecutter) and the
