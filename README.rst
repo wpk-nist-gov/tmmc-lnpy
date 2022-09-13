@@ -1,14 +1,8 @@
-lnpy
-====
-
-|image|
-
-.. raw:: html
-
-   <!-- [![Documentation Status](https://readthedocs.org/projects/lnpy/badge/?version=latest)](https://lnpy.readthedocs.io/en/latest/?badge=latest) -->
+tmmc-lnpy
+=========
 
 Package to analyze :math:`\ln \Pi(N)` data from Transition Matrix Monte
-Carlo simulation
+Carlo simulation.
 
 Installation
 ------------
@@ -18,7 +12,13 @@ From Source
 
 .. code:: console
 
-   # clone repo
+   # * From pip
+   pip install tmmc-lnpy
+
+   # * From conda/mamba
+   conda install -c wpk-nist tmmc-lnpy
+
+   # * From Source
    git clone {repo}
    cd {repo}
 
@@ -39,13 +39,19 @@ From Source
 Quick Intro
 -----------
 
-Take a look at the `basic usage <docs/notebooks/Basic_usage.ipynb>`__
+Take a look at the `basic usage <https://github.com/wpk-nist-gov/tmmc-lnpy/blob/master/docs/notebooks/Basic_usage.ipynb>`__
 notebook for a quick introduction.
 
-Licence
--------
+Note that the distrubution name `tmmc-lnpy` is different than the package name `lnpy`, due to name conflicts on pypi.  To load the package in python, do the following:
 
-See `LICENCE <./LICENCE>`__.
+.. code:: python
+
+    import lnpy
+    import lnpy.examples
+
+    ref = lnpy.examples("lj_sup")
+
+
 
 Credits
 ~~~~~~~

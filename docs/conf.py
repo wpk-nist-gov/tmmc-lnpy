@@ -157,7 +157,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "lnpy"
+project = "tmmc-lnpy"
 copyright = "2022, William P. Krekelberg"
 author = "William P. Krekelberg"
 
