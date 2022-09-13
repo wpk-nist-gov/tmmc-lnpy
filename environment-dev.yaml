@@ -1,38 +1,39 @@
 dependencies:
-  # other useful packages
-  - dask
-  - netcdf4
-  # development
-  - isort
-  - black
-  - blackdoc
-  - flake8
-  # testing
-  - pytest
-  - pytest-cov
-  - tox-conda
-  # specials
-  - pre-commit
-  # repl
-  - ipython
-  - ipykernel
-  # build
-  - build
-  - setuptools
-  - setuptools-scm
-  - setuptools_scm_git_archive
-  - twine
-  # conda specific
-  - conda-build
-  - anaconda-client
-  - greyskull
-  # doc stuff
-  - sphinx
-  - sphinx_rtd_theme
-  - recommonmark # if want markdown
-  - nbsphinx # if want notebooks
-  # lsp stuff
-  - autoflake
-  - pyls-mypy
-  - pyls-black
-  - pyls-isort
+- anaconda-client
+- autoflake
+- black
+- blackdoc
+- bottleneck
+- build
+- conda-build
+- dask
+- flake8
+- greyskull
+- importlib_resources
+- ipykernel
+- ipython
+- isort
+- joblib
+- nbsphinx
+- netcdf4
+- numpy
+- pre-commit
+- pyls-black
+- pyls-isort
+- pyls-mypy
+- pytest
+- pytest-cov
+- python=3.9
+- recommonmark
+- scikit-image
+- scipy
+- setuptools
+- setuptools-scm
+- setuptools_scm_git_archive
+- sphinx
+- sphinx_rtd_theme
+- tox-conda
+- tqdm
+- twine
+- xarray
+name: lnpy-env
