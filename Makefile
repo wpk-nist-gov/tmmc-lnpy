@@ -81,24 +81,27 @@ init: .git pre-commit-init ## run git-init pre-commit
 # virtual env
 ################################################################################
 .PHONY: conda-env conda-dev conda-all mamba-env mamba-dev mamba-all activate
-conda-env: ## conda create base env
-	conda env create -f environment.yaml
 
-conda-dev: ## conda update development dependencies
-	conda env update -n lnpy-env -f environment-dev.yaml
 
-conda-all: conda-env conda-dev ## conda create development env
+create-dev-yml:
+	conda-merge environment.yaml environment-tools.yaml > environment-dev.yaml
 
 mamba-env: ## mamba create base env
 	mamba env create -f environment.yaml
 
 mamba-dev: ## mamba update development dependencies
-	mamba env update -n lnpy-env -f environment-dev.yaml
+	mamba env create -f environment-dev.yaml
 
-mamba-all: mamba-env mamba-dev ## mamba create development env
+mamba-env-update:
+	mamba env update -f environment.yaml
+
+mamba-dev-update:
+	mamba env update -f environment-dev.yaml
 
 activate: ## activate base env
-	conda activate lnpy-env
+	mamba activate lnpy-env
+
+
 
 
 ################################################################################
