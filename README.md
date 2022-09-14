@@ -56,6 +56,8 @@ Testing status is mostly regression tests right now.  Further test modules will 
 Take a look at the [basic usage](docs/src/notebooks/Basic_usage.ipynb)
 notebook for a quick introduction.
 
+For a deeper dive, look at the [documentation](https://pages.nist.gov/tmmc-lnpy/)
+
 
 Note that the distribution name ``tmmc-lnpy`` is different than the import name ``lnpy`` due to name clashing on pypi.
 
