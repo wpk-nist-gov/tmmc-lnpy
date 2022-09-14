@@ -29,6 +29,7 @@ dependencies:
   # doc stuff
   - sphinx
   - sphinx_rtd_theme
+  - sphinx
   - recommonmark # if want markdown
   - nbsphinx # if want notebooks
   # lsp stuff

@@ -144,9 +144,7 @@ version: ## check version of package
 ################################################################################
 .PHONY: docs serverdocs
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/lnpy.rst
-	rm -f docs/modules.rst
-	rm -fr docs/generated
+	rm -fr docs/src/generated
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
