@@ -53,7 +53,7 @@ Testing status is mostly regression tests right now.  Further test modules will 
 
 # Getting started
 
-Take a look at the [basic usage](docs/notebooks/Basic_usage.ipynb)
+Take a look at the [basic usage](docs/src/notebooks/Basic_usage.ipynb)
 notebook for a quick introduction.
 
 
