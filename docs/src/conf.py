@@ -158,7 +158,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "tmmc-lnpy"
-copyright = "2022, William P. Krekelberg"
+# copyright = "2022, William P. Krekelberg"
 author = "William P. Krekelberg"
 
 # The version info for the project you're documenting, acts as replacement
@@ -196,6 +196,7 @@ todo_include_todos = False
 #
 # html_theme = 'alabaster'
 html_theme = "sphinx_rtd_theme"
+# html_theme = 'nature'
 
 
 # Theme options are theme-specific and customize the look and feel of a
