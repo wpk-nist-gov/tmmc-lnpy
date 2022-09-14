@@ -145,9 +145,9 @@ version: ## check version of package
 .PHONY: docs serverdocs
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -fr docs/src/generated
-	$(MAKE) -C docs/src clean
-	$(MAKE) -C docs/src html
-	$(BROWSER) docs/src/_build/html/index.html
+	$(MAKE) -C docs clean
+	$(MAKE) -C docs html
+	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
