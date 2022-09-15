@@ -54,7 +54,7 @@ nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
 
 
-You can view this notebook `on Github <https://github.com/wpk-nist-gov/lnpy/blob/master/doc/{{ docname }}>`_.
+You can view this notebook `on Github <https://github.com/usnistgov/tmmc-lnpy/blob/master/doc/{{ docname }}>`_.
 """
 
 # The kernelname to use.
@@ -187,6 +187,15 @@ pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
+
+# Custom Java/CSS stuff
+# def setup(app):
+#     # header and footer
+#     app.add_js_file('https://pages.nist.gov/nist-header-footer/js/jquery-1.9.0.min.js')
+#     app.add_js_file('https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js')
+#     app.add_css_file('https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css')
+#     app.add_js_file('leave_notice.js')
+#     return
 
 
 # -- Options for HTML output -------------------------------------------

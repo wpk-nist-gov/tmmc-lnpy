@@ -8,19 +8,19 @@ Installation
 Stable release
 --------------
 
-To install lnpy, run this command in your terminal:
+To install ``tmmc-lnpy``, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install lnpy
+    $ pip install tmmc-lnpy
 
-This is the preferred method to install lnpy, as it will always install the most recent stable release.
 
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
+Alternatively, install with conda or mamba:
 
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+.. code-block:: console
+
+   $ conda install -c wpk-nist tmmc-lnpy
+
 
 
 From sources
@@ -32,20 +32,23 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/wpk-nist-gov/lnpy
+    $ git clone {the repo}
 
-Or download the `tarball`_:
+To create a conda environment with the needed dependencies, use:
+
+.. conda-block:: console
+
+   $ conda env create -n {optional-env-name (defaults to lnpy-env)} -f environment.yaml
+
+
+To install an editable version of of ``tmmc-lnpy``, use to following:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/wpk-nist-gov/lnpy/tarball/master
-
-Once you have a copy of the source, you can install it with:
-
-.. code-block:: console
-
-    $ python setup.py install
+    $ pip install -e . --no-deps
 
 
-.. _Github repo: https://github.com/wpk-nist-gov/lnpy
-.. _tarball: https://github.com/wpk-nist-gov/lnpy/tarball/master
+
+
+
+.. _Github repo: https://github.com/usnistgov/tmmc-lnpy

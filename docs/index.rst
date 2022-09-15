@@ -1,4 +1,4 @@
-Welcome to lnpy's documentation!
+Welcome to ``tmmc-lnpy``'s documentation!
 ======================================
 
 .. toctree::
