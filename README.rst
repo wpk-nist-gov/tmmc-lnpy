@@ -4,6 +4,13 @@ tmmc-lnpy
 Package to analyze :math:`\ln \Pi(N)` data from Transition Matrix Monte
 Carlo simulation.
 
+Links
+-----
+
+* `Github repo <https://github.com/usnistgov/tmmc-lnpy>`__
+* `Documentation <https://pages.nist.gov/tmmc-lnpy/>`__
+
+
 Installation
 ------------
 
@@ -39,7 +46,7 @@ From Source
 Quick Intro
 -----------
 
-Take a look at the `basic usage <https://github.com/wpk-nist-gov/tmmc-lnpy/blob/master/docs/notebooks/Basic_usage.ipynb>`__
+Take a look at the `basic usage <https://github.com/usnistgov/tmmc-lnpy/blob/master/docs/notebooks/Basic_usage.ipynb>`__
 notebook for a quick introduction.
 
 Note that the distrubution name `tmmc-lnpy` is different than the package name `lnpy`, due to name conflicts on pypi.  To load the package in python, do the following:
