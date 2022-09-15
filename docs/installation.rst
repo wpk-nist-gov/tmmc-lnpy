@@ -22,6 +22,12 @@ Alternatively, install with conda or mamba:
    $ conda install -c wpk-nist tmmc-lnpy
 
 
+Other packages
+--------------
+If using ``tmmc-lnpy`` in a jupyter notebook, we recommend the following additional packages
+
+* ipywidgets
+* matplotlib
 
 From sources
 ------------
@@ -36,7 +42,7 @@ You can either clone the public repository:
 
 To create a conda environment with the needed dependencies, use:
 
-.. conda-block:: console
+.. code-block:: console
 
    $ conda env create -n {optional-env-name (defaults to lnpy-env)} -f environment.yaml
 
