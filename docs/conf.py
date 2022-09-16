@@ -71,8 +71,8 @@ autodoc_default_flags = [
 # # for scanpydoc's jinja filter
 # project_dir = pathlib.Path(__file__).parent.parent
 html_context = {
-    "github_user": "wpk-nist-gov",
-    "github_repo": "lnpy",
+    "github_user": "usnistgov",
+    "github_repo": "tmmc-lnpy",
     "github_version": "master",
 }
 
