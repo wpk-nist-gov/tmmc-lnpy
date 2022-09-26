@@ -12,11 +12,14 @@ dependencies:
 - importlib_resources
 - ipykernel
 - ipython
+- ipywidgets
 - isort
 - joblib
+- matplotlib
 - nbsphinx
 - netcdf4
 - numpy
+- pip
 - pre-commit
 - pyls-black
 - pyls-isort
@@ -32,8 +35,11 @@ dependencies:
 - setuptools_scm_git_archive
 - sphinx
 - sphinx_rtd_theme
+- sphinxcontrib-spelling
 - tox-conda
 - tqdm
 - twine
 - xarray
+- pip:
+  - pyenchant
 name: lnpy-env

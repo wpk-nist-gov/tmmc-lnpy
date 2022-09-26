@@ -49,7 +49,7 @@ Quick Intro
 Take a look at the `basic usage <https://github.com/usnistgov/tmmc-lnpy/blob/master/docs/notebooks/Basic_usage.ipynb>`__
 notebook for a quick introduction.
 
-Note that the distrubution name `tmmc-lnpy` is different than the package name `lnpy`, due to name conflicts on pypi.  To load the package in python, do the following:
+Note that the distribution name `tmmc-lnpy` is different than the package name `lnpy`, due to name conflicts on pypi.  To load the package in python, do the following:
 
 .. code:: python
 

@@ -231,7 +231,7 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
     Returns
     -------
     new_mask : array
-    New 'mask' array with specified convension.
+    New 'mask' array with specified convention.
     """
 
     if mask is None:
@@ -247,7 +247,7 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
 
 def masks_change_convention(masks, convention_in="image", convention_out="masked"):
     """
-    Perform convension change of sequence of masks
+    Perform convention change of sequence of masks
 
     Parameters
     ----------
@@ -267,7 +267,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
     Returns
     -------
     new_masks : list of arrays
-        New 'masks' array with specified convension.
+        New 'masks' array with specified convention.
     """
 
     convention_in = _convention_to_bool(convention_in)
@@ -487,7 +487,7 @@ def distance_matrix(mask, convention="image"):
     mask : array-like
         image mask
     convention : str or bool, default='image'
-        mask convetion
+        mask convention
 
     Returns
     -------

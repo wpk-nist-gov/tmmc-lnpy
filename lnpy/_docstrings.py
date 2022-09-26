@@ -97,7 +97,7 @@ _shared_docs = {
     """,
     "labels":
     """
-    labels : array-like of ints
+    labels : array-like of int
         Where `labels == k`, indicates regions where data corresponds to the kth label.
     """,
     "base":

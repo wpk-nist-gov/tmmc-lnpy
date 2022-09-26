@@ -214,7 +214,7 @@ def merge_regions(
     nfeature_max : int
         maximum number of features/phases to allow
     efac : float, default=0.5
-        Wnergy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
+        Energy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
         ``i`` and ``j`` will be merged together.
     force : bool, default=True
         if True, then keep going until nfeature <= nfeature_max
@@ -312,7 +312,7 @@ class wFreeEnergy(object):
     {mask_convention}
     connectivity : int, optional
         connectivity parameter for boundary construction
-    index : sequence of ints, optional
+    index : sequence of int, optional
         Optional index to apply to phases.
         Not yet fully supported.
 
@@ -493,7 +493,7 @@ class wFreeEnergy(object):
         nfeature_max : int
             maximum number of features/phases to allow
         efac : float, default=0.5
-            Wnergy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
+            Energy difference to merge on. When ``w_trans[i, j] - w_min[i] < efac``, phases
             ``i`` and ``j`` will be merged together.
         force : bool, default=True
             if True, then keep going until nfeature <= nfeature_max
@@ -681,7 +681,7 @@ class wFreeEnergyCollection(object):
         return out
 
     def get_dw(self, idx, idx_nebr=None):
-        """Sereis version of :meth:`get_dwx`"""
+        """Series version of :meth:`get_dwx`"""
         return self.get_dwx(idx, idx_nebr).to_series()
 
 

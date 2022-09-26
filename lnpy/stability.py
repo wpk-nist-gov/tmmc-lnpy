@@ -34,7 +34,7 @@ def _initial_bracket_spinodal_right(
     ----------
     ref : lnPiMasked, optional
     build_phases : callable
-        scalar funciton to build phases
+        scalar function to build phases
     C : lnPi_collection
         initial estimates to work from
     idx, idx_nebr : int
@@ -638,7 +638,7 @@ class Spinodals(_BaseStability):
         inplace : bool, default=True
             if True, add spinodal inplace, otherwise return spinodal object
         force : bool, optional
-            if True, force recalcuation of spinodal if alread set inplace.  Otherwise return already
+            if True, force recalculation of spinodal if already set inplace.  Otherwise return already
             calculated values
         as_dict : bool, default=True
             if True, return dict of form {phase_id[0] : phases object, ...}.
@@ -774,7 +774,7 @@ class Binodals(_BaseStability):
         inplace : bool, default=True
             if True, add spinodal inplace, otherwise return spinodal object
         force : bool, optional
-            if True, force recalcuation of spinodal if alread set inplace.  Otherwise return already
+            if True, force recalculation of spinodal if already set inplace.  Otherwise return already
             calculated values
         as_dict : bool, default=True
             if True, return dict of form {phase_id[0] : phases object, ...}

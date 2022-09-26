@@ -28,7 +28,7 @@ _shared_docs_local = {
         Image data to analyze
     """,
     "min_distance": """
-    min_distance : int or sequence of ints, default=(5, 10, 15, 20, 25)
+    min_distance : int or sequence of int, default=(5, 10, 15, 20, 25)
         min_distance parameter.  If sequence, then call
         :func:`~skimage.feature.peak_local_max` until number of peaks ``<=num_peaks_max``.
     """,
@@ -52,7 +52,7 @@ _shared_docs_local = {
 
         * indices : indices of peaks
         * mask : bool array marking peak locations
-        * marker : array of ints
+        * marker : array of int
 
     """,
     "markers": """
@@ -98,8 +98,8 @@ def peak_local_max_adaptive(
     {peak_style}
     {connectivity_morphology}
     indices : bool, optional, default=True
-        if True, return indicies of peaks.
-        if False, return array of ints of shape `data.shape` with peaks
+        if True, return indices of peaks.
+        if False, return array of int of shape `data.shape` with peaks
         marked by value > 0.
     errors : {{'ignore','raise','warn'}}, default='warn'
         - If raise, raise exception if npeaks > num_peaks_max
@@ -225,7 +225,7 @@ class Segmenter(object):
         -------
         out :
             If ``style=='marker'``, then return label array.  Otherwise,
-            return indicies of peaks.
+            return indices of peaks.
 
         Notes
         -----
@@ -267,7 +267,7 @@ class Segmenter(object):
 
         Returns
         -------
-        labels : array of ints
+        labels : array of int
             Values > 0 correspond to found regions
 
         See Also
@@ -358,7 +358,7 @@ class PhaseCreator(object):
     segment_kws : mapping, optional
         Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
     tag_phases : callable, optional
-        Optional funciton which takes a list of :class:`lnpy.lnPiMasked` objects
+        Optional function which takes a list of :class:`lnpy.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
         Factory function for returning Collection from a list of :class:`lnpy.lnPiMasked` object.
@@ -466,12 +466,12 @@ class PhaseCreator(object):
 
         * Optionally find the location of the maxima in lnPi.
         * Segment lnpi using watershed
-        * Merge phases which are energentically similar
+        * Merge phases which are energetically similar
         * Optionally merge phases which have the same `phase_id`
 
         Parameters
         ----------
-        lnz : int or sequence of ints, optional
+        lnz : int or sequence of int, optional
             lnz value to evaluate `ref` at.  If not specified, use
             `ref.lnz`
         ref : lnPiMasked object
@@ -500,7 +500,7 @@ class PhaseCreator(object):
         merge_kws : mapping, optional
             Extra arguments to merge
         tag_phases : callable, optional
-            Funciton to tag phases.  Defaults to `self.tag_phases`
+            Function to tag phases.  Defaults to `self.tag_phases`
 
         """
 

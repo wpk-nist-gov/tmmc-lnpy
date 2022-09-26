@@ -34,7 +34,7 @@ def get_lnz_min(
     C : CollectionPhases
         initial guess to work from.  This is assumed to be sorted in accending lnz order
     build_phases : callable
-        funciton to build new phases objects
+        function to build new phases objects
     phase_id : int, default=0
         phase id tag to consider.  If None, consider min over 'phases'
     component : int, optional

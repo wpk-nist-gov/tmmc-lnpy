@@ -289,7 +289,7 @@ class xGrandCanonical:
     @gcached()
     @xr_name(r"$\beta {\bf \mu}$")
     def betamu(self):
-        r"""Scaled checmical potential :math:`\beta \mu`"""
+        r"""Scaled chemical potential :math:`\beta \mu`"""
         return self._wrapper.wrap_lnz(self._parent._lnz_tot, coords=self._rec_coords)
 
     @property
@@ -609,7 +609,7 @@ class xGrandCanonical:
     @xr_name("distance from edge of cut value")
     def edge_distance_val(self, ref, val=None, max_frac=None, *args, **kwargs):
         """
-        Calulate min distance from where self.pi_norm > val to edge
+        Calculate min distance from where self.pi_norm > val to edge
 
         Parameters
         ----------
@@ -756,7 +756,7 @@ class xGrandCanonical:
         Parameters
         ----------
         keys : sequence of str, optional
-            keys of attributes or methods of `self` to include in ouput
+            keys of attributes or methods of `self` to include in output
         default_keys : sequence of str
             Default keys to consider.
         ref : lnPiMasked, optional
@@ -764,12 +764,12 @@ class xGrandCanonical:
         mask_stable : bool, default=False
             If True, remove any unstable values
         dim_to_suffix : sequence of hashables, optional
-            dimensions to remove from ouput.  These are instead added as suffix to variable names
+            dimensions to remove from output.  These are instead added as suffix to variable names
 
         Returns
         -------
         ds : Dataset
-            Contianing all the calculated properties in a single object
+            Containing all the calculated properties in a single object
 
         Notes
         -----
@@ -853,7 +853,7 @@ class xGrandCanonical:
         r"$\beta F(\mu,V,T)/n$", standard_name="helmholtz_free_energy_per_particle"
     )
     def betaF_n(self, lnpi_zero=None):
-        r"""Scaled Helmholtz free enenergy per particle :math:`\beta F / \overline{N}`."""
+        r"""Scaled Helmholtz free energy per particle :math:`\beta F / \overline{N}`."""
         return self.betaF(lnpi_zero) / self.ntot
 
     @xr_name(r"$\beta E(\mu,V,T)$", standard_name="total_energy")
@@ -947,14 +947,14 @@ class xCanonical(object):
         )
 
     def betaF(self, lnpi_zero=None):
-        r"""Scaled Helmoltz free energy :math:`\beta F`"""
+        r"""Scaled Helmholtz free energy :math:`\beta F`"""
         return self._betaF(lnpi_zero)
 
     @xr_name(
         r"$\beta F({\bf n},V,T)/n$", standard_name="helmholtz_free_energy_per_particle"
     )
     def betaF_n(self, lnpi_zero=None):
-        r"""Scaled Helmoltz free energy per particle :math:`\beta F / N`"""
+        r"""Scaled Helmholtz free energy per particle :math:`\beta F / N`"""
         return self.betaF(lnpi_zero) / self.ntot
 
     @gcached()
@@ -1065,7 +1065,7 @@ class xCanonical(object):
         default_keys : sequence of str
             Default keys to access.
         dim_to_suffix : str, sequence of str, optional
-            If passed, convert dimenensions in `dim_to_suffix` from dimensions in output to suffixes to variable names
+            If passed, convert dimensions in `dim_to_suffix` from dimensions in output to suffixes to variable names
 
 
         Returns
