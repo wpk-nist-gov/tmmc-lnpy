@@ -183,7 +183,7 @@ class lnPiArray:
         ----------
         mask : bool or array-like of bool
             Optional mask to apply to data.  Where `mask` is True,
-            data is exluded from calculating maximum.
+            data is excluded from calculating maximum.
         """
 
         data = self._data - np.ma.MaskedArray(self._data, mask).max()
@@ -214,7 +214,7 @@ class lnPiMasked(AccessorMixin):
     Basic terminology:
 
     * T : temperature.
-    * k : Boltzmanns constant.
+    * k : Boltzmann's constant.
     * beta : Inverse temperature `= 1/(k T)`.
     * mu : chemical potential.
     * lnz : log of activity `= ln(z)`.
@@ -416,7 +416,7 @@ class lnPiMasked(AccessorMixin):
 
     # @gcached(prop=False)
     def local_max(self, *args, **kwargs):
-        """Calculate index of maximu of masked data.
+        """Calculate index of maximum of masked data.
 
         Parameters
         ----------
@@ -691,7 +691,7 @@ class lnPiMasked(AccessorMixin):
         Parameters
         ----------
         {labels}
-        features : sequence of ints, optional
+        features : sequence of int, optional
             If specified, extract only those locations where ``labels == feature``
             for all values ``feature in features``.  That is, select a subset of
             unique label values.

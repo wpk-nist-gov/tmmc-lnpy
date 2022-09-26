@@ -591,7 +591,7 @@ class lnPiCollection(SeriesWrapper):
         return pi_norm, pi_sum, lnpi_zero
 
     def wrap_list_results(self, items):
-        """Unitility to wrap output in :class:xarray.DataArray"""
+        """Utility to wrap output in :class:xarray.DataArray"""
         if self._xarray_output:
             x = items[0]
             if isinstance(x, xr.DataArray):
