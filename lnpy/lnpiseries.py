@@ -220,7 +220,7 @@ class SeriesWrapper(AccessorMixin):
         """
         Wrapper around :meth:`pandas.Series.groupby`.
 
-        Paremters
+        Parameters
         ---------
         wrap : bool, default=False
             if True, try to wrap output in class of self
