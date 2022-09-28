@@ -20,20 +20,20 @@ dependencies:
   - ipykernel
   - ipywidgets
   # build
-  - build
-  - setuptools
   - setuptools-scm
-  - setuptools_scm_git_archive
-  - twine
+  # - build
+  # - setuptools
+  # - setuptools_scm_git_archive
+  # - twine
   # conda specific
-  - conda-build
-  - anaconda-client
-  - greyskull
+  # - conda-build
+  # - anaconda-client
+  # - greyskull
   # doc stuff
   - sphinx
   - sphinx_rtd_theme
   - sphinx
-  - recommonmark # if want markdown
+  # - recommonmark # if want markdown
   - nbsphinx # if want notebooks
   - sphinxcontrib-spelling
   # lsp stuff
