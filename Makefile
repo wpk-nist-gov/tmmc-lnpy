@@ -80,29 +80,25 @@ init: .git pre-commit-init ## run git-init pre-commit
 ################################################################################
 # virtual env
 ################################################################################
-.PHONY: conda-env conda-dev conda-all mamba-env mamba-dev mamba-all activate
+.PHONY: mamba-env mamba-dev mamba-env-update mamba-dev-update activate
 
-
-create-dev-yml:
+environment-dev.yaml: environment.yaml environment-tools.yaml
 	conda-merge environment.yaml environment-tools.yaml > environment-dev.yaml
 
-mamba-env: ## mamba create base env
+mamba-env: environment.yaml
 	mamba env create -f environment.yaml
 
-mamba-dev: ## mamba update development dependencies
+mamba-dev: environment-dev.yaml
 	mamba env create -f environment-dev.yaml
 
-mamba-env-update:
+mamba-env-update: environment.yaml
 	mamba env update -f environment.yaml
 
-mamba-dev-update:
+mamba-dev-update: environment-dev.yaml
 	mamba env update -f environment-dev.yaml
 
 activate: ## activate base env
-	mamba activate lnpy-env
-
-
-
+	conda activate {{ cookiecutter.project_slug }}-env
 
 ################################################################################
 # my convenience functions
@@ -117,6 +113,19 @@ user-autoenv-zsh: ## create .autoenv.zsh files
 
 user-all: user-venv user-autoenv-zsh ## runs user scripts
 
+
+################################################################################
+# versioning
+################################################################################
+.PHONY: version-scm version-import version
+version-scm: ## check version of package
+	python -m setuptools_scm
+
+version-import: ## check version from python import
+	python -c 'import lnpy; print(lnpy.__version__)'
+
+
+version: version-scm version-import
 
 ################################################################################
 # Testing
@@ -135,14 +144,27 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 
-
-version: ## check version of package
-	python -m setuptools_scm
-
 ################################################################################
 # Docs
 ################################################################################
-.PHONY: docs serverdocs
+.PHONY: create-docs-nist-pages
+# create docs-nist-pages directory with empty branch
+create-docs-nist-pages:
+	mkdir -p docs-nist-pages ; \
+	cd docs-nist-pages ; \
+	echo git clone git@github.com:usnistgov/tmmc-lnpy.git html ;\
+	echo "To push, use the following" ; \
+	echo "cd docs-nist-pages/html" ; \
+	echo "" ; \
+	echo git checkout --orphan nist-pages ; \
+	echo git reset --hard ; \
+	echo git commit --allow-empty -m "Initializing gh-pages branch" ; \
+	echo git push origin nist-pages ; \
+	echo git checkout master ; \
+
+
+
+.PHONY: docs serverdocs doc-spelling docs-nist-pages
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -fr docs/generated
 	$(MAKE) -C docs clean
@@ -152,31 +174,45 @@ docs: ## generate Sphinx HTML documentation, including API docs
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
-doc-spelling:
+docs-spelling:
 	sphinx-build -b spelling docs docs/_build
+
+docs-nist-pages:
+	tox -e docs-nist-pages
 
 ################################################################################
 # distribution
 ################################################################################
-dist: ## builds source and wheel package (run clean?)
-	python -m build
-	ls -l dist
+.PHONY: pypi-build pypi-release pypi-test-release pypi-dist
+pypi-build:
+	tox -e pypi-build
 
-.PHONY: release release-test conda-dist
-release: dist ## package and upload a release
-	twine upload dist/*
+pypi-release:
+	tox -e pypi-release
 
-release-test: dist ## package and upload to test
-	twine upload --repository testpypi dist/*
+pypi-test-release:
+	tox -e pypi-test-release
 
-conda-dist: ## build conda dist (run dist and clean?)
-	mkdir conda_dist; \
-	cd cond_dist; \
-	grayskull pypi lnpy ; \
-	conda-build .; \
-	echo 'upload now'
+pypi-dist:
+	pypi-build
+	pypi-release
 
 
+.PHONY: conda-grayksull conda-build conda-release conda-dist
+
+conda-grayskull:
+	tox -e grayskull
+
+conda-build:
+	tox -e conda-build
+
+conda-release:
+	echo 'prefix upload with .tox/conda-dist/'
+
+conda-dist:
+	conda-grayskull
+	conda-build
+	conda-release
 
 
 ################################################################################
