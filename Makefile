@@ -134,9 +134,6 @@ version: version-scm version-import
 test: ## run tests quickly with the default Python
 	pytest -x -v
 
-test-all: ## run tests on every Python version with tox
-	tox -- -x -v
-
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source lnpy -m pytest
 	coverage report -m
@@ -147,23 +144,6 @@ coverage: ## check code coverage quickly with the default Python
 ################################################################################
 # Docs
 ################################################################################
-.PHONY: create-docs-nist-pages
-# create docs-nist-pages directory with empty branch
-create-docs-nist-pages:
-	mkdir -p docs-nist-pages ; \
-	cd docs-nist-pages ; \
-	echo git clone git@github.com:usnistgov/tmmc-lnpy.git html ;\
-	echo "To push, use the following" ; \
-	echo "cd docs-nist-pages/html" ; \
-	echo "" ; \
-	echo git checkout --orphan nist-pages ; \
-	echo git reset --hard ; \
-	echo git commit --allow-empty -m "Initializing gh-pages branch" ; \
-	echo git push origin nist-pages ; \
-	echo git checkout master ; \
-
-
-
 .PHONY: docs serverdocs doc-spelling docs-nist-pages
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -fr docs/generated
@@ -177,43 +157,64 @@ servedocs: docs ## compile the docs watching for changes
 docs-spelling:
 	sphinx-build -b spelling docs docs/_build
 
+################################################################################
+# TOX
+################################################################################
+tox_posargs?=-v
+TOX=CONDA_EXE=mamba tox $(tox_posargs)
+
+## testing
+.PHONY: test-all
+test-all: ## run tests on every Python version with tox
+	$(TOX) -- $(posargs)
+
+## docs
+.PHONY: docs-build docs-release docs-nist-pages
+posargs=
+docs-build:
+	$(TOX) -e docs-build -- $(posargs)
+docs-release:
+	$(TOX) -e docs-release -- $(posargs)
+
 docs-nist-pages:
-	tox -e docs-nist-pages
-
-################################################################################
-# distribution
-################################################################################
-.PHONY: pypi-build pypi-release pypi-test-release pypi-dist
-pypi-build:
-	tox -e pypi-build
-
-pypi-release:
-	tox -e pypi-release
-
-pypi-test-release:
-	tox -e pypi-test-release
-
-pypi-dist:
-	pypi-build
-	pypi-release
+	$(TOX) -e docs-build,docs-release -- $(posargs)
 
 
-.PHONY: conda-grayksull conda-build conda-release conda-dist
+## distribution
+.PHONY: dist-pypi-build dist-pypi-testrelease dist-pypi-release dist-conda-recipe dist-conda-build
 
-conda-grayskull:
-	tox -e grayskull
 
-conda-build:
-	tox -e conda-build
+dist-pypi-build: ## build dist, can pass posargs=... and tox_posargs=...
+	$(TOX) -e $@ -- $(posargs)
 
-conda-release:
-	echo 'prefix upload with .tox/conda-dist/'
+dist-pypi-testrelease: ## test release on testpypi. can pass posargs=... and tox_posargs=...
+	$(TOX) -e $@ -- $(posargs)
 
-conda-dist:
-	conda-grayskull
-	conda-build
-	conda-release
+dist-pypi-release: ## release to pypi, can pass posargs=...
+	$(TOX) -e $@ -- $(posargs)
 
+dist-conda-recipe: ## build conda recipe can pass posargs=...
+	$(TOX) -e $@ -- $(posargs)
+
+dist-conda-build: ## build conda recipe can pass posargs=...
+	$(TOX) -e $@ -- $(pasargs)
+
+
+## test distribution
+.PHONY: test-dist-pypi-remote test-dist-conda-remote test-dist-pypi-local test-dist-conda-local
+
+py?=39
+test-dist-pypi-remote: ## test pypi install, can run as `make test-dist-pypi-remote py=39` to run test-dist-pypi-local-py39
+	$(TOX) -e $@-py$(py) -- $(posargs)
+
+test-dist-conda-remote: ## test conda install, can run as `make test-dist-conda-remote py=39` to run test-dist-conda-local-py39
+	$(TOX) -e $@-py$(py) -- $(poasargs)
+
+test-dist-pypi-local: ## test pypi install, can run as `make test-dist-pypi-local py=39 posargs=path-to-dist` to run test-dist-pypi-local-py39
+	$(TOX) -e $@-py$(py) -- $(posargs)
+
+test-dist-conda-local: ## test conda install, can run as `make test-dist-conda-local py=39 posargs=path-to-conda-dist` to run test-dist-conda-local-py39 -- path-to-conda-dist
+	$(TOX) -e $@-py$(py) -- $(poasargs)
 
 ################################################################################
 # installation
