@@ -619,6 +619,7 @@ class Spinodals(_BaseStability):
         force=False,
         as_dict=True,
         unstack=None,
+        raise_unconverged=True,
         **kwargs,
     ):
         """
@@ -645,6 +646,8 @@ class Spinodals(_BaseStability):
         unstack : bool, optional
             if passed, create lnPiCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
+        raise_unconverged : bool, default=True
+            If True, raise error if calculation does not converge.
         **kwargs : extra argument to `get_spinodal` function
 
         Returns
@@ -697,6 +700,10 @@ class Spinodals(_BaseStability):
             unstack = self._parent._xarray_unstack
         self.set_access_kws(unstack=unstack)
 
+        converged = all([x.converged for x in info.values()])
+        if raise_unconverged and not converged:
+            raise ValueError("Spinodal calculation did not converge")
+
         if inplace:
             self._items = out
             self._info = info
@@ -705,7 +712,8 @@ class Spinodals(_BaseStability):
             # else:
             return self
         else:
-            if not as_dict:
+            # total convergence:
+            if not as_dict and converged:
                 out = self._get_access(out)
             return out, info
 
@@ -755,6 +763,7 @@ class Binodals(_BaseStability):
         force=False,
         as_dict=True,
         unstack=None,
+        raise_unconverged=True,
         **kwargs,
     ):
         """
@@ -781,6 +790,8 @@ class Binodals(_BaseStability):
         unstack : bool, optional
             if passed, create lnPiCollection objects with this unstack value.  If not passed,
             use unstack parameter from parent object
+        raise_unconverged : bool, default=True
+            If True, raise error if calculation does not converge.
         **kwargs : extra argument to `get_spinodal` function
 
         Returns
@@ -827,6 +838,10 @@ class Binodals(_BaseStability):
             info[idx] = r
             index[idx] = ids
 
+        converged = all([x.converged for x in info.values()])
+        if raise_unconverged and not converged:
+            raise ValueError("Binodal calculation did not converge")
+
         if unstack is None:
             unstack = self._parent._xarray_unstack
         self.set_access_kws(unstack=unstack)
@@ -841,7 +856,7 @@ class Binodals(_BaseStability):
             # else:
             return self
         else:
-            if not as_dict:
+            if not as_dict and converged:
                 out = self._get_access(out)
             return out, info
 

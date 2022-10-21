@@ -10,6 +10,37 @@ from scipy.optimize import brentq
 from .lnpiseries import lnPiCollection
 
 
+def tag_phases_singlecomp(x):
+    """
+    Function to tag phases with a unique id.
+
+    This is for analyzing a single component system.
+    If multiple phases passed (length of input > 1), then
+    sort by ``argmax = x.local_argmax()``, i.e., the location of the maxima.
+    Otherwise, assign `phase_id = 0` if ``argmax < Nmax // 2`` where ``Nmax`` is
+    the maximum number of particles in lnPi.
+
+    Parameters
+    ----------
+    x : sequence of lnPiMasked instances
+        lnPi objects to be tagged.
+
+    Returns
+    -------
+    phase_id : sequence of int
+        Phase code for each element in ``x``.
+
+    """
+    if len(x) > 2:
+        raise ValueError("bad tag function")
+    else:
+        argmax0 = np.array([xx.local_argmax()[0] for xx in x])
+        if len(x) == 2:
+            return np.argsort(argmax0)
+        else:
+            return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
+
+
 def get_lnz_min(
     target,
     C,

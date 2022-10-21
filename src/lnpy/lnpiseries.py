@@ -20,9 +20,13 @@ class SeriesWrapper(AccessorMixin):
     """
 
     def __init__(
-        self, data=None, index=None, dtype=None, name=None, base_class="first"
+        self,
+        data=None,
+        index=None,
+        dtype=None,
+        name=None,
+        base_class="first",
     ):
-
         if isinstance(data, self.__class__):
             x = data
             data = x.s
@@ -93,7 +97,10 @@ class SeriesWrapper(AccessorMixin):
 
     def new_like(self, data=None, index=None, **kwargs):
         """Create new object with optional new data/index"""
-        return self.__class__(
+        if data is None:
+            data = self.s
+
+        return type(self)(
             data=data,
             index=index,
             dtype=self.s.dtype,
@@ -255,6 +262,11 @@ class SeriesWrapper(AccessorMixin):
         if not isinstance(drop, list):
             drop = [drop]
         by = allbut(self.index.names, *drop)
+
+        # To suppress annoying errors.
+        if len(by) == 1:
+            by = by[0]
+
         return self.groupby(by=by, **kwargs)
 
     @classmethod
@@ -408,6 +420,9 @@ class lnPiCollection(SeriesWrapper):
         parameters `coords `to :func:`xarray.concat`
     unstack : bool, default=True
         If True, then outputs will be unstacked using :meth:`xarray.DataArray.unstack`
+    single_state : bool, default=True
+        If True, verify that all data has same shape, and value of `state_kws`.
+        That is, all ``lnpi`` are for a single state.
     *args **kwargs
         Extra arguments to Series constructor
 
@@ -447,8 +462,9 @@ class lnPiCollection(SeriesWrapper):
         # update index name:
         # self._series.index.name = self._concat_dim
 
-    def new_like(self, data=None, index=None):
+    def new_like(self, data=None, index=None, **kws):
         """Create new object with optional new data/index."""
+
         return super().new_like(
             data=data,
             index=index,
