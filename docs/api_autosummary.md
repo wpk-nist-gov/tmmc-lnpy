@@ -1,13 +1,12 @@
-#############
-API Reference
-#############
+# API Reference
 
+## Masked lnPi objects
 
-
-Masked lnPi objects
-===================
+```{eval-rst}
 .. currentmodule:: lnpy
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
@@ -15,40 +14,47 @@ Masked lnPi objects
    lnPiArray
    lnPiMasked
 
+```
 
-Collection of lnPi
-==================
+## Collection of lnPi
 
+```{eval-rst}
 .. currentmodule:: lnpy
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
 
    lnPiCollection
 
+```
 
-Ensemble properties
-===================
+## Ensemble properties
 
+```{eval-rst}
 .. currentmodule:: lnpy
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
 
    xGrandCanonical
    xCanonical
+```
 
-===============
-Multiple phases
-===============
+### Multiple phases
 
-Local free energy calculation
-=============================
+## Local free energy calculation
 
+```{eval-rst}
 .. currentmodule:: lnpy
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
@@ -57,18 +63,20 @@ Local free energy calculation
    wFreeEnergyCollection
    wFreeEnergyPhases
 
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
    merge_regions
 
 
+```
 
-Segmentation
-============
+## Segmentation
 
-
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
@@ -78,16 +86,19 @@ Segmentation
 
    BuildPhases_mu
    BuildPhases_dmu
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
    peak_local_max_adaptive
 
+```
 
-Stability
-=========
+## Stability
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
    :template: custom-class.rst
@@ -100,12 +111,15 @@ Stability
    lnPiCollection.binodal - Accessor to :class:`Binodals`
 
 
+```
 
-Utilities
-=========
+## Utilities
 
+```{eval-rst}
 .. currentmodule:: lnpy
+```
 
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
@@ -114,3 +128,4 @@ Utilities
    utils.labels_to_masks
    utils.masks_to_labels
    utils.distance_matrix
+```
