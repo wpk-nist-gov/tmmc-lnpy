@@ -5,6 +5,8 @@ Legacy interface to :mod:`lnpy` (:mod:`lnPi`)
 
 from warnings import warn
 
+from numpy import VisibleDeprecationWarning
+
 from lnpy import __version__, options, segment, set_options
 from lnpy.lnpidata import lnPiMasked as MaskedlnPiDelayed
 from lnpy.lnpiseries import lnPiCollection as CollectionlnPi
@@ -24,7 +26,7 @@ CollectionlnPi    -> lnPiCollection
 """
 
 
-warn(msg, DeprecationWarning)
+warn(msg, VisibleDeprecationWarning)
 
 
 __all__ = [

@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-name = "lnpy"
+name = "tmmc-lnpy"
 authors = [{name = "William P. Krekelberg", email = "wpk@nist.gov"}]
 license = {text = "NIST license"}
 description = "Analysis of lnPi results from TMMC simulation"

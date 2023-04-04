@@ -194,3 +194,9 @@ def test_nice_grid(obj):
     other_fine = get_test_table(o, ref)
     test = pd.read_csv(path_data / "data_0_fine.csv")
     pd.testing.assert_frame_equal(other_fine, test)
+
+
+# def test_deprecation():
+#     from numpy import VisibleDeprecationWarning
+#     with pytest.warns(VisibleDeprecationWarning):
+#         import lnPi
