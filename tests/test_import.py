@@ -1,2 +1,2 @@
+import lnPi
 import lnpy
-import lnpy.stability

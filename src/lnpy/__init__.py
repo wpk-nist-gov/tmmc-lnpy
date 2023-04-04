@@ -1,3 +1,7 @@
+"""
+Public API (:mod:`lnpy`)
+========================
+"""
 from .ensembles import xCanonical, xGrandCanonical
 from .lnpidata import MaskedlnPiDelayed, lnPiArray, lnPiMasked
 from .lnpienergy import (

@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import numpy as np
@@ -103,7 +102,6 @@ def test_collection(obj, build_phases, lnzs):
         ("data_0_spin", c.spinodal.access),
         ("data_0_bino", c.binodal.access),
     ]:
-
         test = pd.read_csv(path_data / (path + ".csv"))
         other = get_test_table(obj, ref)
 

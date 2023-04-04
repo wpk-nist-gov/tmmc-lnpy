@@ -1,6 +1,4 @@
-"""
-routines to find constant molfracs
-"""
+"""routines to find constant molfracs"""
 
 import numpy as np
 from scipy import optimize
@@ -20,9 +18,7 @@ def _initial_bracket_molfrac(
     build_kws=None,
     ntry=20,
 ):
-    """
-    find bracket for molfrac
-    """
+    """Find bracket for molfrac"""
 
     lnz_idx = build_phases.index
     if component is None:
@@ -122,10 +118,10 @@ def _solve_lnz_molfrac(
     build_kws=None,
     ref=None,
     tol=1e-4,
-    **kwargs
+    **kwargs,
 ):
     """
-    calculate lnz which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
+    Calculate lnz which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
 
     Parameters
     ----------
@@ -147,7 +143,7 @@ def _solve_lnz_molfrac(
     **kwargs : extra arguments to scipy.optimize.brentq
 
     Returns
-    --------
+    -------
     output : lnPi_phases object
         object with desired molfraction
     info : solver info (optional, returned if full_output is `True`)
@@ -223,9 +219,8 @@ def find_lnz_molfrac(
     dfac=1.0,
     ntry=20,
     tol=1e-4,
-    **kwargs
+    **kwargs,
 ):
-
     left, right, info = _initial_bracket_molfrac(
         target=target,
         C=C,
@@ -249,6 +244,6 @@ def find_lnz_molfrac(
         build_kws=build_kws,
         ref=ref,
         tol=tol,
-        **kwargs
+        **kwargs,
     )
     return lnpi, r

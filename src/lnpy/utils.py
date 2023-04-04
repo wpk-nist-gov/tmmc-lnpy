@@ -1,6 +1,4 @@
-"""
-utility functions
-"""
+"""utility functions"""
 
 from functools import partial
 
@@ -48,7 +46,6 @@ def tqdm(*args, **kwargs):
 
 
 def get_tqdm(seq, len_min, leave=None, **kwargs):
-
     n = kwargs.get("total", None)
 
     if isinstance(len_min, str):
@@ -100,7 +97,7 @@ def parallel_map_build(func, items, *args, **kwargs):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(x, *args, **kwargs) for x in items)
     else:
         return [func(x, *args, **kwargs) for x in items]
@@ -120,7 +117,7 @@ def parallel_map_call(items, use_joblib, *args, **kwargs):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(_func_call)(x, *args, **kwargs) for x in items)
     else:
         return [x(*args, **kwargs) for x in items]
@@ -137,14 +134,13 @@ def parallel_map_attr(attr, use_joblib, items):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(x) for x in items)
     else:
         return [func(x) for x in items]
 
 
 def parallel_map_func_starargs(func, use_joblib, items, total=None):
-
     if total is None:
         total = len(items)
 
@@ -157,7 +153,7 @@ def parallel_map_func_starargs(func, use_joblib, items, total=None):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(*x) for x in items)
     else:
         return [func(*x) for x in items]
@@ -175,7 +171,7 @@ def allbut(levels, *names):
 def dim_to_suffix_dataarray(da, dim, join="_"):
     if dim in da.dims:
         return da.assign_coords(
-            **{dim: lambda x: ["{}{}{}".format(x.name, join, c) for c in x[dim].values]}
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}
         ).to_dataset(dim=dim)
     else:
         return da.to_dataset()
@@ -211,7 +207,7 @@ def _convention_to_bool(convention):
 
 def mask_change_convention(mask, convention_in="image", convention_out="masked"):
     """
-    convert an array from one 'mask' convention to another.
+    Convert an array from one 'mask' convention to another.
 
     Parameters
     ----------
@@ -287,10 +283,10 @@ def labels_to_masks(
     include_boundary=False,
     convention="image",
     check_features=True,
-    **kwargs
+    **kwargs,
 ):
     """
-    convert labels array to list of masks
+    Convert labels array to list of masks
 
     Parameters
     ----------
@@ -349,7 +345,7 @@ def labels_to_masks(
 
 def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwargs):
     """
-    convert list of masks to labels
+    Convert list of masks to labels
 
     Parameters
     ----------
@@ -394,7 +390,7 @@ def ffill(arr, axis=-1, limit=None):
 
 
 def bfill(arr, axis=-1, limit=None):
-    """inverse of ffill"""
+    """Inverse of ffill"""
     import bottleneck
 
     # work around for bottleneck 178
@@ -414,7 +410,7 @@ def bfill(arr, axis=-1, limit=None):
 
 def get_lnz_iter(lnz, x):
     """
-    create a lnz_iter object for varying a single lnz
+    Create a lnz_iter object for varying a single lnz
 
     Parameters
     ----------
@@ -453,7 +449,7 @@ def get_lnz_iter(lnz, x):
 
 def sort_lnPis(input, comp=0):
     """
-    sort list of lnPi  that component `comp` mol fraction increases
+    Sort list of lnPi  that component `comp` mol fraction increases
 
     Parameters
     ----------
@@ -479,7 +475,7 @@ def sort_lnPis(input, comp=0):
 
 def distance_matrix(mask, convention="image"):
     """
-    create matrix of distances from elements of mask
+    Create matrix of distances from elements of mask
     to nearest background point
 
     Parameters

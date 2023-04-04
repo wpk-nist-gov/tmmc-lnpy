@@ -1,6 +1,4 @@
 import json
-from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,7 +22,6 @@ path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
 
 def get_lnz(path):
     kB = 1.3806503e-23  # J/K
-    Na = 6.02214199e23  # 1/mol
     kg = 1.66054e-27  # 1/amu
     hPlanck = 6.62606876e-34  # Js
 
@@ -115,7 +112,6 @@ def obj(request, ref, phase_creator, build_phases):
             ref=ref, phase_creator=phase_creator, build_phases=build_phases
         )
     else:
-
         return lnpy.examples.lj_sub_example()
 
 

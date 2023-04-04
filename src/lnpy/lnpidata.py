@@ -1,5 +1,7 @@
-from __future__ import absolute_import
-
+"""
+lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
+======================================================
+"""
 ################################################################################
 # Delayed
 from functools import lru_cache
@@ -30,7 +32,7 @@ def _get_shift(shape, dlnz, dtype):
 
 @lru_cache(maxsize=20)
 def _get_data(base, dlnz):
-    if all((x == 0 for x in dlnz)):
+    if all(x == 0 for x in dlnz):
         return base._data
     else:
         return _get_shift(base.shape, dlnz, base._data.dtype) + base._data
@@ -135,7 +137,7 @@ class lnPiArray:
 
     def pad(self, axes=None, ffill=True, bfill=False, limit=None):
         """
-        pad nan values in underlying data to values
+        Pad nan values in underlying data to values
 
         Parameters
         ----------
@@ -148,6 +150,7 @@ class lnPiArray:
             If there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
             than 0 or None for no limit.
+
         Returns
         -------
         out : lnPiArray
@@ -177,7 +180,7 @@ class lnPiArray:
 
     def zeromax(self, mask=False):
         """
-        shift values such that lnpi.max() == 0
+        Shift values such that lnpi.max() == 0
 
         Parameters
         ----------
@@ -229,7 +232,6 @@ class lnPiMasked(AccessorMixin):
     _DataClass = lnPiArray
 
     def __init__(self, lnz, base, mask=None, copy=False):
-        """ """
         lnz = np.atleast_1d(lnz)
         assert lnz.shape == base._lnz.shape
 
@@ -296,7 +298,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def dtype(self):
-        """dtype of underling data"""
+        """Data type (dtype) of underling data"""
         return self._data.dtype
 
     def _clear_cache(self):
@@ -304,12 +306,12 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def state_kws(self):
-        """'State' variables."""
+        """State variables."""
         return self._base._state_kws
 
     @property
     def extra_kws(self):
-        """'Extra' parameters."""
+        """Extra parameters."""
         return self._base._extra_kws
 
     @property
@@ -333,7 +335,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def shape(self):
-        """lnPiArray shape"""
+        """Shape of lnPiArray"""
         return self._data.shape
 
     def __len__(self):
@@ -364,13 +366,13 @@ class lnPiMasked(AccessorMixin):
         return self.state_kws.get("beta", None)
 
     def __repr__(self):
-        return "<lnPi(lnz={})>".format(self._lnz)
+        return f"<lnPi(lnz={self._lnz})>"
 
     def __str__(self):
         return repr(self)
 
     def _index_dict(self, phase=None):
-        out = {"lnz_{}".format(i): v for i, v in enumerate(self.lnz)}
+        out = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
         if phase is not None:
             out["phase"] = phase
         # out.update(**self.state_kws)
@@ -398,7 +400,8 @@ class lnPiMasked(AccessorMixin):
 
     # @gcached(prop=False)
     def local_argmax(self, *args, **kwargs):
-        """Calculate index of maximum of masked data.
+        """
+        Calculate index of maximum of masked data.
 
         Parameters
         ----------
@@ -416,7 +419,8 @@ class lnPiMasked(AccessorMixin):
 
     # @gcached(prop=False)
     def local_max(self, *args, **kwargs):
-        """Calculate index of maximum of masked data.
+        """
+        Calculate index of maximum of masked data.
 
         Parameters
         ----------
@@ -438,7 +442,8 @@ class lnPiMasked(AccessorMixin):
 
     @gcached()
     def edge_distance_matrix(self):
-        """Matrix of distance from each element to a background (i.e., masked) point.
+        """
+        Matrix of distance from each element to a background (i.e., masked) point.
 
         See Also
         --------
@@ -449,7 +454,8 @@ class lnPiMasked(AccessorMixin):
         return distance_matrix(~self.mask)
 
     def edge_distance(self, ref, *args, **kwargs):
-        """Distance of local maximum value to nearest background point.
+        """
+        Distance of local maximum value to nearest background point.
 
         If `edge_distance` is too small, the value of properties calculated from this
         lnPi cannot be trusted.   This usually is due to the data being reweighted to
@@ -487,7 +493,7 @@ class lnPiMasked(AccessorMixin):
 
     def pad(self, axes=None, ffill=True, bfill=False, limit=None):
         """
-        pad nan values in underlying data to values
+        Pad nan values in underlying data to values
 
         Parameters
         ----------
@@ -518,7 +524,7 @@ class lnPiMasked(AccessorMixin):
 
     def zeromax(self):
         """
-        shift so that lnpi.max() == 0 on reference
+        Shift so that lnpi.max() == 0 on reference
 
         See Also
         --------
@@ -529,21 +535,15 @@ class lnPiMasked(AccessorMixin):
         return self.new_like(base=base)
 
     def reweight(self, lnz):
-        """
-        Create new object at specified value of `lnz`
-        """
+        """Create new object at specified value of `lnz`"""
         return self.new_like(lnz=lnz)
 
     def or_mask(self, mask, **kwargs):
-        """
-        new object with logical or of self.mask and mask
-        """
+        """New object with logical or of self.mask and mask"""
         return self.new_like(mask=(mask | self.mask))
 
     def and_mask(self, mask, **kwargs):
-        """
-        new object with logical and of self.mask and mask
-        """
+        """New object with logical and of self.mask and mask"""
         return self.copy_shallow(mask=(mask & self.mask))
 
     @classmethod
@@ -573,7 +573,7 @@ class lnPiMasked(AccessorMixin):
         ndim = len(lnz)
 
         if names is None:
-            names = ["n_{}".format(i) for i in range(ndim)] + ["lnpi"]
+            names = [f"n_{i}" for i in range(ndim)] + ["lnpi"]
 
         if csv_kws is None:
             csv_kws = {}
@@ -589,13 +589,13 @@ class lnPiMasked(AccessorMixin):
             lnz=lnz,
             lnz_data=lnz,
             state_kws=state_kws,
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
     def from_dataarray(cls, da, state_as_attrs=None, **kwargs):
         """
-        create a lnPi object from :class:`xarray.DataArray`
+        Create a lnPi object from :class:`xarray.DataArray`
 
         Parameters
         ----------
@@ -655,7 +655,7 @@ class lnPiMasked(AccessorMixin):
     @docfiller_shared
     def list_from_masks(self, masks, convention="image"):
         """
-        create list of lnpis corresponding to masks[i]
+        Create list of lnpis corresponding to masks[i]
 
         Parameters
         ----------
@@ -683,7 +683,7 @@ class lnPiMasked(AccessorMixin):
         features=None,
         include_boundary=False,
         check_features=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Create sequence of lnpis from labels array.
@@ -718,7 +718,7 @@ class lnPiMasked(AccessorMixin):
             include_boundary=include_boundary,
             convention=False,
             check_features=check_features,
-            **kwargs
+            **kwargs,
         )
         return self.list_from_masks(masks, convention=False)
 
@@ -727,6 +727,8 @@ from warnings import warn
 
 
 class MaskedlnPiDelayed(lnPiMasked):
+    """Depricated alias for lnPiMasked"""
+
     def __init__(self, *args, **kwargs):
         warn("MaskedlnPiDelayed is deprecated.  Please use lnPiMasked instead")
         super().__init__(*args, **kwargs)

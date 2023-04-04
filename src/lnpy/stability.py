@@ -1,6 +1,4 @@
-"""
-thermodynamic stability routines (i.e., spinodal/binodal)
-"""
+"""thermodynamic stability routines (i.e., spinodal/binodal)"""
 import itertools
 
 import numpy as np
@@ -27,7 +25,7 @@ def _initial_bracket_spinodal_right(
     build_kws=None,
 ):
     """
-    find initial bracketing lnpi_phases of phaseID==ID bracketing point where
+    Find initial bracketing lnpi_phases of phaseID==ID bracketing point where
     DeltabetaE_phaseIDS()[ID]==efac
 
     Parameters
@@ -78,7 +76,7 @@ def _initial_bracket_spinodal_right(
     left = None
     s_idx = s[s > 0.0]
     if len(s_idx) == 0:
-        raise ValueError("no phase {}".format(idx))
+        raise ValueError(f"no phase {idx}")
 
     ss = s_idx[s_idx > efac]
     if len(ss) > 0:
@@ -138,7 +136,7 @@ def _refine_bracket_spinodal_right(
     close_kws=None,
 ):
     """
-    find refined bracket with efac<DeltabetaE_left<vmax and
+    Find refined bracket with efac<DeltabetaE_left<vmax and
     vmin<DeltabetaE_right<efac
 
     Parameters
@@ -285,7 +283,7 @@ def _solve_spinodal(
 
 def _get_step(C, idx, idx_nebr):
     """
-    find step value on
+    Find step value on
 
     if DeltabetaE[-1,ID] - DeltabetaE[0,ID]<0 -> step=+1 (go right)
 
@@ -322,47 +320,47 @@ def get_spinodal(
     full_output=False,
 ):
     """
-        locate spinodal point for a given phaseID
-    _
-        Parameters
-        ----------
-        ref : lnPiMasked
-        C : lnPi_collection
-            initial estimates to work from.  Function assumes C is in lnz sorted order
-        idx, idx_nebr : int
-            from/to phase id
-        lnz_in : list
-            list with value of static chem pot, and None for variable. e.g.,
-            lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
-        efac : float, optional
-            cutoff value for spinodal
-        dlnz : float, optional
-            factor to kick back if C doesn't already have left and right bounds
-        vmin : float, optional
-            value denoting vmin, i.e., value of DeltabetaE if phaseID does not exist
-        vmax : float, optional
-            value indicating no transition, but phaseID==ID present
-        ntry : int (Default 20)
-            number of times to try kicking forward/backwards to find bracket
-        step : int or None (Default None)
-            if +1, step forward
-            if -1, step backward
-            if None, try to determine step
-        nmax : int (Default 20)
-            max number of steps to refine bracket
-        build_phases : callable, optional
-            function to create Phases.  Default is that fro get_default_PhaseCreator
-        build_kws : dict, optional
-            extra arguments to `build_phases`
-        close_kws : dict, optional
-            arguments to np.allclose
-        solve_kws : dict, optional
-            extra arguments to scipy.optimize.brentq
-        full_output : bool (Default False)
-            if true, return output info object
+    Locate spinodal point for a given phaseID
 
-        Returns
-        -------
+    Parameters
+    ----------
+    ref : lnPiMasked
+    C : lnPi_collection
+        initial estimates to work from.  Function assumes C is in lnz sorted order
+    idx, idx_nebr : int
+        from/to phase id
+    lnz_in : list
+        list with value of static chem pot, and None for variable. e.g.,
+        lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
+    efac : float, optional
+        cutoff value for spinodal
+    dlnz : float, optional
+        factor to kick back if C doesn't already have left and right bounds
+    vmin : float, optional
+        value denoting vmin, i.e., value of DeltabetaE if phaseID does not exist
+    vmax : float, optional
+        value indicating no transition, but phaseID==ID present
+    ntry : int (Default 20)
+        number of times to try kicking forward/backwards to find bracket
+    step : int or None (Default None)
+        if +1, step forward
+        if -1, step backward
+        if None, try to determine step
+    nmax : int (Default 20)
+        max number of steps to refine bracket
+    build_phases : callable, optional
+        function to create Phases.  Default is that fro get_default_PhaseCreator
+    build_kws : dict, optional
+        extra arguments to `build_phases`
+    close_kws : dict, optional
+        arguments to np.allclose
+    solve_kws : dict, optional
+        extra arguments to scipy.optimize.brentq
+    full_output : bool (Default False)
+        if true, return output info object
+
+    Returns
+    -------
         out : lnPi_phases object at spinodal point
         r :output info object (optional, returned if full_output is True)
 
@@ -433,7 +431,7 @@ def get_spinodal(
         if step == -1:
             left, right = right, left
 
-        a, b = [x._get_lnz(build_phases.index) for x in [left, right]]
+        a, b = (x._get_lnz(build_phases.index) for x in [left, right])
         lnz, r, spin = _solve_spinodal(
             ref=ref,
             idx=idx,
@@ -468,7 +466,7 @@ def get_binodal_point(
     **kwargs,
 ):
     """
-    calculate binodal point where Omega[ID[0]]==Omega[ID[1]]
+    Calculate binodal point where Omega[ID[0]]==Omega[ID[1]]
 
     Parameters
     ----------
@@ -522,7 +520,7 @@ def get_binodal_point(
 # Accessor classes/routines
 
 
-class _BaseStability(object):
+class _BaseStability:
     """
 
     Parameters
@@ -574,7 +572,7 @@ class _BaseStability(object):
 
     @gcached()
     def access(self):
-        """lnPiCollection view of stability"""
+        """View (:class:`lnpy.lnPiCollection`) of stability"""
         return self._get_access()
 
     def __getitem__(self, idx):
@@ -601,9 +599,7 @@ class _BaseStability(object):
 # NOTE : single create means this is only created once
 @lnPiCollection.decorate_accessor("spinodal", single_create=False)
 class Spinodals(_BaseStability):
-    """
-    Methods for calculation locations of spinodal
-    """
+    """Methods for calculation locations of spinodal"""
 
     _NAME = "spinodal"
 
@@ -735,7 +731,6 @@ class Binodals(_BaseStability):
         build_kws=None,
         **kwargs,
     ):
-
         if None in [lnz_min, lnz_max] and spinodals is None:
             spinodals = self._parent.spinodal
         if lnz_min is None:
@@ -864,7 +859,7 @@ class Binodals(_BaseStability):
 @lnPiCollection.decorate_accessor("stability_append", single_create=False)
 def _stability_append(self):
     """
-    add stability from collection to this collection
+    Add stability from collection to this collection
 
     Parameters
     ----------
@@ -881,7 +876,7 @@ def _stability_append(self):
 
     def func(other=None, append=True, sort=True, copy_stability=True):
         """
-        add stability from collection to this collection
+        Add stability from collection to this collection
 
         Parameters
         ----------

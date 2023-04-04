@@ -1,6 +1,4 @@
-"""
-Set of routines to bracket solution of "thing"
-"""
+"""Set of routines to bracket solution of "thing"."""
 
 
 # def _bracket(

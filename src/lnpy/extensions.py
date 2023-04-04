@@ -1,4 +1,5 @@
-"""Define accessor routines.
+"""
+Define accessor routines.
 
 This is inspired by xarray accessors.
 """
@@ -16,14 +17,13 @@ class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessorSingle(object):
+class _CachedAccessorSingle:
     """
     Custom property-like object (descriptor).
     this gets created once on call
     """
 
     def __init__(self, name, accessor):
-
         self.__doc__ = accessor.__doc__
 
         self._name = name
@@ -50,6 +50,7 @@ class _CachedAccessorSingle(object):
 from functools import wraps
 
 
+# TODO: add functionality to "set" the value
 def _CachedAccessorCleared(name, accessor):
     """
     Wrap accessor in a cached property
@@ -79,12 +80,12 @@ def _CachedAccessorWrapper(name, accessor, single_create=False):
         return _CachedAccessorCleared(name, accessor)
 
 
-class AccessorMixin(object):
+class AccessorMixin:
+    """Mixin for accessor."""
+
     @classmethod
     def _register_accessor(cls, name, accessor, single_create=False):
-        """
-        most general accessor
-        """
+        """Most general accessor"""
         if hasattr(cls, name):
             warnings.warn(
                 "registration of accessor %r under name %r for type %r is "
@@ -97,9 +98,7 @@ class AccessorMixin(object):
 
     @classmethod
     def register_accessor_flat(cls, names, single_create=True, subattr="flat"):
-        """
-        helper class to register stuff to top of CollectionPhases
-        """
+        """Helper class to register stuff to top of CollectionPhases"""
 
         if isinstance(names, str):
             names = [names]
@@ -153,6 +152,7 @@ class AccessorMixin(object):
         ...
         ...     def there(self):
         ...         return f"{type(self._parent)}"
+        ...
 
         >>> x = parent()
         >>> x.hello.there()
@@ -170,10 +170,8 @@ class AccessorMixin(object):
 # List access
 
 
-class _CallableListResultsCache(object):
-    """
-    if items of collection accessor are callable, then
-    """
+class _CallableListResultsCache:
+    """if items of collection accessor are callable, then"""
 
     def __init__(self, parent, items, desc=None):
         self.parent = parent
@@ -193,10 +191,8 @@ class _CallableListResultsCache(object):
         return results
 
 
-class _CallableListResultsNoCache(object):
-    """
-    if items of collection accessor are callable, then
-    """
+class _CallableListResultsNoCache:
+    """if items of collection accessor are callable, then"""
 
     def __init__(self, parent, items, desc=None):
         self.parent = parent
@@ -224,7 +220,7 @@ def _CallableListResults(parent, items, use_cache=False, desc=None):
     return cls(parent=parent, items=items, desc=desc)
 
 
-class _ListAccessor(object):
+class _ListAccessor:
     def __init__(self, parent, items, cache_list=None):
         self.parent = parent
         self.items = items
@@ -284,9 +280,7 @@ class _ListAccessor(object):
 
 
 def _CachedListPropertyWrapper(name, cache_list=None):
-    """
-    get top level property from items
-    """
+    """Get top level property from items"""
 
     if cache_list is not None and name in cache_list:
         cache = True
@@ -312,9 +306,7 @@ def _CachedListPropertyWrapper(name, cache_list=None):
 
 
 def _CachedListAccessorWrapper(name, cache_list=None):
-    """
-    Wrap List accessor in cached property
-    """
+    """Wrap List accessor in cached property"""
 
     @gcached(key=name, prop=True)
     def _get_prop(self):
@@ -325,12 +317,12 @@ def _CachedListAccessorWrapper(name, cache_list=None):
     return _get_prop
 
 
-class ListAccessorMixin(object):
+class ListAccessorMixin:
+    """Mixin for list accessor."""
+
     @classmethod
     def _register_listaccessor(cls, names, accessor_wrapper, **kwargs):
-        """
-        most general accessor
-        """
+        """Most general accessor"""
         if isinstance(names, str):
             names = [names]
         for name in names:
@@ -347,7 +339,7 @@ class ListAccessorMixin(object):
     @classmethod
     def register_listaccessor(cls, names, cache_list=None):
         """
-        creat an accessor to elements of parent class.
+        Create an accessor to elements of parent class.
 
         Examples
         --------
@@ -380,7 +372,7 @@ class ListAccessorMixin(object):
     @classmethod
     def register_listproperty(cls, names, cache_list=None):
         """
-        create an accessor to property
+        Create an accessor to property
 
         This is to give top level access to stuff
 

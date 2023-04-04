@@ -1,5 +1,7 @@
-from __future__ import absolute_import, division, print_function
-
+"""
+Ensemble averages (:mod:`~lnpy.ensembles`)
+==========================================
+"""
 from functools import lru_cache, wraps
 
 import numpy as np
@@ -46,14 +48,13 @@ def get_xrlnPiWrapper(
 
 
 class xlnPiWrapper:
-    _use_cache = True
     """
-    This class just wraps lnPi with xarray functionality
+    Wraps lnPi objects with xarray functionality
 
     Most likely, this shouldn't be accessed by the user.
-
-
     """
+
+    _use_cache = True
 
     def __init__(
         self,
@@ -64,7 +65,6 @@ class xlnPiWrapper:
         comp_name="component",
         phase_name="phase",
     ):
-
         self.shape = shape
         self.ndim = len(shape)
 
@@ -75,16 +75,14 @@ class xlnPiWrapper:
             self.dims_rec = [rec_name]
 
         self.n_name = n_name
-        self.dims_n = ["{}_{}".format(n_name, i) for i in range(self.ndim)]
-        self.dims_lnz = ["{}_{}".format(lnz_name, i) for i in range(self.ndim)]
+        self.dims_n = [f"{n_name}_{i}" for i in range(self.ndim)]
+        self.dims_lnz = [f"{lnz_name}_{i}" for i in range(self.ndim)]
         self.dims_comp = [comp_name]
 
     @gcached()
     def coords_n(self):
         return {
-            k: xr.DataArray(
-                _get_range(n), dims=k, attrs={"long_name": r"${}$".format(k)}
-            )
+            k: xr.DataArray(_get_range(n), dims=k, attrs={"long_name": rf"${k}$"})
             for k, n in zip(self.dims_n, self.shape)
         }
 
@@ -146,9 +144,7 @@ class xlnPiWrapper:
 # xlnPi
 # register xge property to collection classes
 def xr_name(long_name=None, name=None, unstack=True, **kws):
-    """
-    decorator to add name, longname to xarray output
-    """
+    """Decorator to add name, longname to xarray output"""
 
     def decorator(func):
         if name is None:
@@ -184,9 +180,7 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
 @MaskedlnPiLegacy.decorate_accessor("xge")
 @lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
-    """
-    Accessor to :class:`~lnpy.xGrandCanonical`.
-    """
+    """Accessor to :class:`~lnpy.xGrandCanonical`."""
     return xGrandCanonical(parent)
 
 
@@ -300,7 +294,8 @@ class xGrandCanonical:
 
     @xr_name(r"$\ln \Pi(n,\mu,V,T)$", unstack=False)
     def lnpi(self, fill_value=None):
-        r"""DataArray view of :math:`\ln \Pi(N)`
+        r"""
+        :class:`xarray.DataArray` view of :math:`\ln \Pi(N)`
 
         Notes
         -----
@@ -365,7 +360,6 @@ class xGrandCanonical:
         return prop
 
     def _array_or_callable_to_xarray(self, x, allow_extra_kws=True, *args, **kwargs):
-
         if callable(x):
             x = x(self, *args, **kwargs)
         elif allow_extra_kws:
@@ -377,7 +371,6 @@ class xGrandCanonical:
         return x
 
     def _mean_pi(self, x, *args, **kwargs):
-
         return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)
 
     @xr_name()
@@ -416,10 +409,12 @@ class xGrandCanonical:
         *args,
         **kwargs,
     ):
-        """
-        calculate central moments of the form sum(Pi * (\bar{x} - <\bar{x}>) ** n)
+        r"""
+        Calculate central moments of the form
 
-        Note that if you pass in the
+        .. math::
+
+            \sum_N \Pi(N)  (\bar{x}(N) - \langle \bar{x}(N) \rangle))^n
 
         """
 
@@ -442,7 +437,8 @@ class xGrandCanonical:
         return self._mean_pi(dx)
 
     def var_pi(self, x, y=None, *args, **kwargs):
-        r"""Calculate Grand Canonical variance from canonical properties.
+        r"""
+        Calculate Grand Canonical variance from canonical properties.
 
         Given x(N) and y(N), calculate
 
@@ -485,9 +481,7 @@ class xGrandCanonical:
         return xr.dot(self.pi_norm, xx, yy, dims=self.dims_n, **self._xarray_dot_kws)
 
     def pipe(self, func, *args, **kwargs):
-        """
-        Apply function to `self`
-        """
+        """Apply function to `self`"""
         return func(self, *args, **kwargs)
 
     @gcached()
@@ -577,7 +571,7 @@ class xGrandCanonical:
         return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)
 
     def lnpi_max(self, fill_value=None, add_n_coords=True):
-        r"""maximum value of :math:`\max_N \ln \Pi(N, ...)`"""
+        r"""Maximum value of :math:`\max_N \ln \Pi(N, ...)`"""
         out = self.lnpi(fill_value).isel(**self._sample_argmax_indexer_dict)
 
         # NOTE : This assumes each n value corresponds to index
@@ -639,7 +633,8 @@ class xGrandCanonical:
         return lnpi_zero - np.log(self.pi_sum)
 
     def betaOmega(self, lnpi_zero=None):
-        r"""Scaled grand potential :math:`\beta \Omega`.
+        r"""
+        Scaled grand potential :math:`\beta \Omega`.
 
         Parameters
         ----------
@@ -673,7 +668,8 @@ class xGrandCanonical:
 
     @xr_name(r"$\beta F(\mu,V,T)$", standard_name="helmholtz_free_energy")
     def betaF_alt(self, betaF_can, correction=True):
-        r"""Alternate scaled Helmholtz free energy :math:`\beta \overline{F}`.
+        r"""
+        Alternate scaled Helmholtz free energy :math:`\beta \overline{F}`.
 
         Calculated using
 
@@ -709,9 +705,7 @@ class xGrandCanonical:
     @gcached()
     @xr_name("mask_stable", description="True where state is most stable")
     def mask_stable(self):
-        """
-        Masks are True where values are stable. Only works for unstacked data.
-        """
+        """Masks are True where values are stable. Only works for unstacked data."""
         if not self._xarray_unstack:
             # raise Value'only mask with unstack')
             pv = self.betapV()
@@ -887,7 +881,7 @@ def xce_accessor(parent):
     return xCanonical(parent)
 
 
-class xCanonical(object):
+class xCanonical:
     """
     Canonical ensemble properties
 
@@ -901,7 +895,7 @@ class xCanonical(object):
         self._xge = parent.xge
 
     def lnpi(self, fill_value=None):
-        r"""DataArray view of :math:`\ln Pi(N)`"""
+        r""":class:`~xarray.DataArray` view of :math:`\ln Pi(N)`"""
         return self._xge.lnpi(fill_value=fill_value)
 
     @property
@@ -930,9 +924,7 @@ class xCanonical(object):
     @gcached(prop=False)
     @xr_name(r"$\beta F({\bf n},V,T)$", standard_name="helmholtz_free_energy")
     def _betaF(self, lnpi_zero=None):
-        """
-        Helmholtz free energy
-        """
+        """Helmholtz free energy"""
         x = self._parent.xge
 
         if lnpi_zero is None:
@@ -1018,9 +1010,7 @@ class xCanonical(object):
     @gcached(prop=False)
     @xr_name(r"$\beta\Omega({\bf n},V,T)$")
     def _betaOmega(self, lnpi_zero=None):
-        """
-        beta * Omega = betaF - lnz .dot. N
-        """
+        """Calculate beta * Omega = betaF - lnz .dot. N"""
         return self.betaF(lnpi_zero) - (self.betamu(lnpi_zero) * self.ncoords).sum(
             self._xge.dims_comp
         )

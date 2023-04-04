@@ -1,6 +1,4 @@
-"""
-define optional paremeters
-"""
+"""define optional paremeters"""
 
 import os
 
@@ -65,8 +63,9 @@ _VALIDATORS = {
 _SETTERS = {}
 
 
-class set_options(object):
-    """Set options for xarray in a controlled context.
+class set_options:
+    """
+    Set options for xarray in a controlled context.
     Currently supported options:
     - `tqdm_use` : if `True`, use progress bar where appropriate
     - `tqdm_len_calc` : min length for using bar in calculations of properties

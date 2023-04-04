@@ -79,7 +79,7 @@ def peak_local_max_adaptive(
     style="indices",
     connectivity=None,
     errors="warn",
-    **kwargs
+    **kwargs,
 ):
     """
     Find local max with fall backs min_distance and filter.
@@ -146,7 +146,7 @@ def peak_local_max_adaptive(
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
             # this option removed in future
-            **kwargs
+            **kwargs,
         )
 
         n = len(idx)
@@ -160,7 +160,7 @@ def peak_local_max_adaptive(
         if errors == "ignore":
             pass
         elif errors in ("raise", "ignore"):
-            message = "{} maxima found greater than {}".format(n, num_peaks_max)
+            message = f"{n} maxima found greater than {num_peaks_max}"
             if errors == "raise":
                 raise RuntimeError(message)
             else:
@@ -180,7 +180,7 @@ def peak_local_max_adaptive(
 
 
 @docfiller_shared
-class Segmenter(object):
+class Segmenter:
     """
     Data segmenter:
 
@@ -193,7 +193,6 @@ class Segmenter(object):
     """
 
     def __init__(self, min_distance=None, peak_kws=None, watershed_kws=None):
-
         if min_distance is None:
             min_distance = [1, 5, 10, 15, 20]
 
@@ -328,7 +327,7 @@ class Segmenter(object):
                     mask=~lnpi.mask,
                     num_peaks_max=num_peaks_max,
                     connectivity=connectivity,
-                    **peaks_kws
+                    **peaks_kws,
                 )
             else:
                 markers = num_peaks_max
@@ -341,7 +340,7 @@ class Segmenter(object):
         return labels
 
 
-class PhaseCreator(object):
+class PhaseCreator:
     """
     Helper class to create phases
 
@@ -382,7 +381,6 @@ class PhaseCreator(object):
         lnPiFreeEnergy_kws=None,
         merge_kws=None,
     ):
-
         if phases_factory is None:
             phases_factory = lnPiCollection.from_list
 
@@ -414,9 +412,7 @@ class PhaseCreator(object):
         self.merge_kws = merge_kws
 
     def _merge_phase_ids(sel, ref, phase_ids, lnpis):
-        """
-        perform merge of phase_ids/index
-        """
+        """Perform merge of phase_ids/index"""
         from scipy.spatial.distance import pdist
 
         if len(phase_ids) == 1:
@@ -538,7 +534,7 @@ class PhaseCreator(object):
                 self.segment_kws,
                 segment_kws,
                 num_peaks_max=nmax_peak,
-                **connectivity_kws
+                **connectivity_kws,
             )
             labels = self.segmenter.segment_lnpi(lnpi=ref, **segment_kws)
 
@@ -609,10 +605,8 @@ class PhaseCreator(object):
         return BuildPhases_dmu(dlnz, self)
 
 
-class BuildPhasesBase(object):
-    """
-    Base class to build Phases objecs from scalar values of `lnz`.
-    """
+class BuildPhasesBase:
+    """Base class to build Phases objecs from scalar values of `lnz`."""
 
     def __init__(self, X, phase_creator):
         self._phase_creator = phase_creator
@@ -646,9 +640,7 @@ class BuildPhasesBase(object):
         raise NotImplementedError
 
     def __call__(self, lnz_index, *args, **kwargs):
-        """
-        Build phases from scalar value of lnz.
-        """
+        """Build phases from scalar value of lnz."""
         lnz = self._get_lnz(lnz_index)
         return self._phase_creator.build_phases(lnz=lnz, *args, **kwargs)
 

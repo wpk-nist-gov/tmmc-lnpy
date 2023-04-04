@@ -8,7 +8,8 @@ from .options import OPTIONS
 
 
 def docfiller(*args, **kwargs):
-    """To fill common docs.
+    """
+    To fill common docs.
 
     Taken from pandas.utils._decorators
 

@@ -1,3 +1,7 @@
+"""
+Local free energy of lnPi (:mod:`lnpy.lnpienergy`)
+==================================================
+"""
 import itertools
 import warnings
 
@@ -15,7 +19,7 @@ from .utils import labels_to_masks, masks_change_convention, parallel_map_func_s
 
 def find_boundaries(masks, mode="thick", connectivity=None, **kws):
     """
-    find boundary region for masks
+    Find boundary region for masks
 
     Parameters
     ----------
@@ -162,7 +166,6 @@ def find_masked_extrema(
     out_arg = []
 
     for mask in masks:
-
         if mask is None or not np.any(mask):
             arg = fill_arg
             val = fill_val
@@ -299,7 +302,7 @@ def merge_regions(
 
 
 @docfiller_shared
-class wFreeEnergy(object):
+class wFreeEnergy:
     r"""
     Analysis of local free energy :math:`w = \beta f = - \ln \Pi`.
 
@@ -340,7 +343,7 @@ class wFreeEnergy(object):
 
     @property
     def nfeature(self):
-        """number of features/regions/phases"""
+        """Number of features/regions/phases"""
         return len(self.masks)
 
     @classmethod
@@ -352,10 +355,10 @@ class wFreeEnergy(object):
         connectivity=None,
         features=None,
         include_boundary=False,
-        **kwargs
+        **kwargs,
     ):
         """
-        create wFreeEnergy from labels
+        Create wFreeEnergy from labels
 
         Parameters
         ----------
@@ -385,21 +388,19 @@ class wFreeEnergy(object):
             features=features,
             convention="image",
             include_boundary=include_boundary,
-            **kwargs
+            **kwargs,
         )
         return cls(data=data, masks=masks, connectivity=connectivity)
 
     @gcached()
     def _data_max(self):
-        """
-        for lnPi data, find absolute argmax and max
-        """
+        """For lnPi data, find absolute argmax and max"""
         return find_masked_extrema(self.data, self.masks)
 
     @gcached(prop=False)
     def _boundary_max(self, method="exact"):
         """
-        find argmax along boundaries of regions.
+        Find argmax along boundaries of regions.
         Corresponds to argmin(w)
 
         if method == 'exact', then find the boundary of each region
@@ -436,7 +437,7 @@ class wFreeEnergy(object):
             keys = [(i, j) for i, j, _ in overlap.keys()]
             keys = list(set(keys))
 
-            for (i, j) in keys:
+            for i, j in keys:
                 vals = [valmax[i, j, index] for index in range(2)]
                 # take min value of maxes
                 if np.all(np.isnan(vals)):
@@ -454,12 +455,13 @@ class wFreeEnergy(object):
 
     @property
     def w_argmin(self):
-        """locations of the minimum of `w` in each phase/region"""
+        """Locations of the minimum of `w` in each phase/region"""
         return self._data_max[0]
 
     @property
     def w_tran(self):
-        """Minimum value of `w` (max `lnPi`) in the boundary between phases.
+        """
+        Minimum value of `w` (max `lnPi`) in the boundary between phases.
 
         `w_tran[i, j]` is the transition energy between phases `i` ans `j`.
         """
@@ -467,7 +469,7 @@ class wFreeEnergy(object):
 
     @property
     def w_argtran(self):
-        """location of `w_tran`"""
+        """Location of `w_tran`"""
         return self._boundary_max()[0]
 
     @gcached()
@@ -546,7 +548,7 @@ def _get_w_data(index, w):
     for idxs in zip(
         *[w_tran.index.get_level_values(_) for _ in ["phase", "phase_nebr"]]
     ):
-        i, j = [index_map[_] for _ in idxs]
+        i, j = (index_map[_] for _ in idxs)
 
         if (i, j) in v:
             val = v[i, j]
@@ -566,7 +568,7 @@ def _get_w_data(index, w):
     }  # [index_map, w.w_argtran]}
 
 
-class wFreeEnergyCollection(object):
+class wFreeEnergyCollection:
     r"""
     Calculate the transition free energies for a :class:`lnpy.lnPiCollection`.
 
@@ -620,12 +622,12 @@ class wFreeEnergyCollection(object):
 
     @property
     def w_argmin(self):
-        """location of :attr:`w_min`"""
+        """Location of :attr:`w_min`"""
         return self._data["w_argmin"]
 
     @property
     def w_argtran(self):
-        """location of :attr:`w_tran`"""
+        """Location of :attr:`w_tran`"""
         return self._data["w_argtran"]
 
     @property
@@ -635,12 +637,12 @@ class wFreeEnergyCollection(object):
 
     @property
     def dwx(self):
-        """xarray representation of :attr:`dw`"""
+        """:mod:`xarray` representation of :attr:`dw`"""
         return self.dw.to_xarray()
 
     def get_dwx(self, idx, idx_nebr=None):
         """
-        helper function to get the change in energy from
+        Helper function to get the change in energy from
         phase idx to idx_nebr.
 
         Parameters
@@ -738,9 +740,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
 @lnPiCollection.decorate_accessor("wfe")
 def wfe_accessor(parent):
-    """
-    Accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wfe`.
-    """
+    """Accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wfe`."""
     return wFreeEnergyCollection(parent)
 
 
@@ -756,7 +756,8 @@ from warnings import warn
 # create alias accessors
 @lnPiCollection.decorate_accessor("wlnPi")
 def wlnPi_accessor(parent):
-    """Deprecated accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wlnPi`.
+    """
+    Deprecated accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wlnPi`.
 
     Alias to `self.wfe`
     """
@@ -766,7 +767,8 @@ def wlnPi_accessor(parent):
 
 @lnPiCollection.decorate_accessor("wlnPi_single")
 def wlnPi_single_accessor(parent):
-    """Deprecated accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wlnPi_single`.
+    """
+    Deprecated accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wlnPi_single`.
 
     Alias to `self.wfe_single`
     """

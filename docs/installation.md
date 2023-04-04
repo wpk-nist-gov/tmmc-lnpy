@@ -5,45 +5,50 @@
 
 ## Stable release
 
-To install `tmmc-lnpy`, run this command in your terminal:
+To install tmmc-lnpy, run this command in your terminal:
 
 ```console
-$ pip install tmmc-lnpy
+$ pip install lnpy
 ```
 
-Alternatively, install with conda or mamba:
+or
 
 ```console
-$ conda install -c wpk-nist tmmc-lnpy
+$ conda install -c wpk-nist lnpy
 ```
 
-## Other packages
+This is the preferred method to install tmmc-lnpy, as it will always install the most recent stable release.
 
-If using `tmmc-lnpy` in a jupyter notebook, we recommend the following additional packages
-
-- ipywidgets
-- matplotlib
+If you don't have [pip] installed, this [Python installation guide] can guide
+you through the process.
 
 ## From sources
 
-The sources for lnpy can be downloaded from the [Github repo].
+The sources for tmmc-lnpy can be downloaded from the [Github repo].
 
 You can either clone the public repository:
 
 ```console
-$ git clone {the repo}
+$ git clone git://github.com/usnistgov/tmmc-lnpy.git
 ```
 
-To create a conda environment with the needed dependencies, use:
+Once you have a copy of the source, you can install it with:
 
 ```console
-$ conda env create -n {optional-env-name (defaults to lnpy-env)} -f environment.yaml
+$ pip install .
 ```
 
-To install an editable version of of `tmmc-lnpy`, use to following:
+To install dependencies with conda/mamba, use:
 
-```console
-$ pip install -e . --no-deps
 ```
+.. code-block:: console
+```
+
+> \$ conda/mamba env create -n \{name} -f environment.yaml
+> \$ pip install . --no-deps
+
+To install an editable version, add the `-e` option to pip.
 
 [github repo]: https://github.com/usnistgov/tmmc-lnpy
+[pip]: https://pip.pypa.io
+[python installation guide]: http://docs.python-guide.org/en/latest/starting/installation/

@@ -1,6 +1,4 @@
-"""
-Routines to load/run examples
-"""
+"""Routines to load/run examples"""
 
 try:
     import importlib_resources as resources
@@ -21,7 +19,8 @@ from .utils import dataset_to_lnpimasked
 
 
 def json_to_dict(basename):
-    """Load a json file into a dict.
+    """
+    Load a json file into a dict.
 
     All files names are relative to 'lnpy/data/'
 
@@ -99,6 +98,8 @@ def load_example_maskddata(name):
 
 @dataclass
 class Example:
+    """Dataclass to hold example data."""
+
     ref: lnPiMasked
     phase_creator: PhaseCreator
     build_phases: Callable
@@ -136,7 +137,6 @@ def tag_phases_single_comp_simple(x):
 
 
 def lj_sub_example():
-
     ref = load_example_maskddata("lj_sub")
 
     phase_creator = PhaseCreator(
