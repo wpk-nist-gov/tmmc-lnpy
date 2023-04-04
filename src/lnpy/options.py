@@ -1,4 +1,7 @@
-"""define optional paremeters"""
+"""
+Options (:mod:`~lnpy.options`)
+==============================
+"""
 
 import os
 
@@ -67,21 +70,29 @@ class set_options:
     """
     Set options for xarray in a controlled context.
     Currently supported options:
-    - `tqdm_use` : if `True`, use progress bar where appropriate
-    - `tqdm_len_calc` : min length for using bar in calculations of properties
-    - `tqdm_len_build` : min length for building Collection objects
-    - `tqdm_leave` : if True, leave bar after execution.  Default=False
-    - `joblib_use` : if `True`, use joblib
-    - `joblib_n_jobs` : number of processors to use, default=all processors
-    - `joblib_backend` : backend to use.  Default='multiprocessing'.
-    - `joblib_kws` : dictionary of arguments to joblib.Parallel.
-    - `joblib_len_calc` : min length to use parallel in calculations
-    - `joblib_len_build` : min lenght to use parallel in build
+
+    * `tqdm_use` : if `True`, use progress bar where appropriate
+    * `tqdm_len_calc` : min length for using bar in calculations of properties
+    * `tqdm_len_build` : min length for building Collection objects
+    * `tqdm_leave` : if True, leave bar after execution.  Default=False
+    * `joblib_use` : if `True`, use joblib
+    * `joblib_n_jobs` : number of processors to use, default=all processors
+    * `joblib_backend` : backend to use.  Default='multiprocessing'.
+    * `joblib_kws` : dictionary of arguments to joblib.Parallel.
+    * `joblib_len_calc` : min length to use parallel in calculations
+    * `joblib_len_build` : min length to use parallel in build
+
+    Examples
+    --------
     You can use ``set_options`` either as a context manager:
+
     >>> with xr.set_options(use_tqdm=True, tqdm_min_len_calc=50):
     ...     c.xge.betaOmega()
     ...
+
+
     Or to set global options:
+
     >>> xr.set_options(tqdm_min_len_calc=50)
     """
 

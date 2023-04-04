@@ -1,21 +1,18 @@
-# Welcome to `tmmc-lnpy`'s documentation!
+:::{include} ../README.md
+:end-before: <!-- end-docs -->
+:::
+
+# Navigation
 
 ```{toctree}
-:caption: 'Contents:'
 :maxdepth: 1
 
-readme
 installation
 notebooks/Basic_usage
-api_autosummary
+reference/index
 license
 contributing
 authors
 history
+navigation
 ```
-
-# Indices and tables
-
-- {ref}`genindex`
-- {ref}`modindex`
-- {ref}`search`

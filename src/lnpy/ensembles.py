@@ -180,17 +180,17 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
 @MaskedlnPiLegacy.decorate_accessor("xge")
 @lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
-    """Accessor to :class:`~lnpy.xGrandCanonical`."""
+    """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
     return xGrandCanonical(parent)
 
 
 class xGrandCanonical:
     """
-    :class:`DataArray` accessor to Grand Canonical properties from lnPi
+    :class:`~xarray.DataArray` accessor to Grand Canonical properties from lnPi
 
 
     This class is primarily interacted with through the attributes ``xge`` attached
-    to :class:`~lnpy.lnPiMasked` and :class:`~lnpy.lnPiCollection`.
+    to :class:`~lnpy.lnpidata.lnPiMasked` and :class:`~lnpy.lnpiseries.lnPiCollection`.
     """
 
     def __init__(self, parent):
@@ -380,20 +380,21 @@ class xGrandCanonical:
 
         Parameters
         ----------
-        x : array, callable, or str
+        x : array, DataArray, callable, or str
             If callable, should have form ``x = x(self, *args, **kwargs)``.
             If string, then set `x = self.parent.extra_kws[x]`.
             Otherwise, should be an array of same shape as single lnPi.
+            If x (or result of callable) is not a :class:`~xarray.DataArray`, try to
+            convert it to one.
         *args, **kwargs
             Extra arguments to `x` if passing callable
+
         Returns
         -------
         ave : DataArray
-        x can be an array or a callable
+            x can be an array or a callable of the form
+            ``f(self, *args, **kwargs)``
 
-        f(self, *args, **kwargs)
-
-        if x is not an xr.DataArray, try to convert it to one.
         """
         x = self._array_or_callable_to_xarray(x, *args, **kwargs)
         return self._mean_pi(x, *args, **kwargs)
@@ -754,10 +755,10 @@ class xGrandCanonical:
         default_keys : sequence of str
             Default keys to consider.
         ref : lnPiMasked, optional
-            If calculating `edge_distastance`, need a reference :class:`~lnpy.lnPiMasked` object.
+            If calculating `edge_distastance`, need a reference :class:`~lnpy.lnpidata.lnPiMasked` object.
         mask_stable : bool, default=False
             If True, remove any unstable values
-        dim_to_suffix : sequence of hashables, optional
+        dim_to_suffix : sequence of hashable, optional
             dimensions to remove from output.  These are instead added as suffix to variable names
 
         Returns
@@ -877,7 +878,7 @@ class xGrandCanonical:
 @MaskedlnPiDelayed.decorate_accessor("xce")
 @MaskedlnPiLegacy.decorate_accessor("xce")
 def xce_accessor(parent):
-    """Accessor to :class:`~lnpy.xCanonical`"""
+    """Accessor to :class:`~lnpy.ensembles.xCanonical`"""
     return xCanonical(parent)
 
 

@@ -1,6 +1,6 @@
 """
-Local free energy of lnPi (:mod:`lnpy.lnpienergy`)
-==================================================
+Local free energy of lnPi (:mod:`~lnpy.lnpienergy`)
+===================================================
 """
 import itertools
 import warnings
@@ -23,17 +23,18 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
 
     Parameters
     ----------
-    masks : list of arrays of bool
-        Convesions is `masks[i][index] == True`` if `index` is active for the ith mask
+    masks : list of array of bool
+        Convention is `masks[i][index] == True`` if `index` is active for the ith mask
     mode : str, default="thick"
         mode to use in :func:`skimage.segmentation.find_boundaries`
-    connectivity : int, default = masks[0].ndim
+    connectivity : int, optional
+        Defaults to ``masks[0].ndim``
 
 
     Returns
     -------
-    boundaries : list of arrays of bool, optional
-        If suppied, use these areas as boundaries.  Otherwise, calculate
+    boundaries : list of array of bool, optional
+        If supplied, use these areas as boundaries.  Otherwise, calculate
         boundaries using `segmentation.find_boundaries`
 
     See Also
@@ -63,10 +64,10 @@ def find_boundaries_overlap(
 
     Parameters
     ----------
-    masks : list of arrays of bool
-        Convesions is `masks[i][index] == True`` if `index` is active for the ith mask
-    boundaries : list of arrays of bool, optional
-        If suppied, use these areas as boundaries.  Otherwise, calculate
+    masks : list of array of bool
+        Convention is `masks[i][index] == True`` if `index` is active for the ith mask
+    boundaries : list of array of bool, optional
+        If supplied, use these areas as boundaries.  Otherwise, calculate
         boundaries using `find_boundaries`
     flag_none : bool, default=True
         if True, replace overlap with None if no overlap between regions
@@ -76,7 +77,7 @@ def find_boundaries_overlap(
 
     Returns
     -------
-    overlap : dict of masks
+    overlap : dict of array of bool
         overlap[i, j] = region of overlap between boundaries and masks in regions i and j
 
 
@@ -129,7 +130,7 @@ def find_masked_extrema(
     ----------
     data : ndarray
         input data to consider
-    masks : list of bool arrays
+    masks : list of ndarray of bool
         masks for data regions
     {mask_convention}
     extrema : {{'max','min}}
@@ -144,7 +145,7 @@ def find_masked_extrema(
 
     Returns
     -------
-    out_arg : list of indices
+    out_arg : list of int
         index of extrema, one for each `mask`
     out_val : ndarray
         value of extrema, one for each `mask`
@@ -199,7 +200,7 @@ def merge_regions(
     r"""
     Merge labels where free energy energy barrier < efac.
 
-    The scaled free energy :math:`w = \beta f = - \ln \Pi ` is analized.
+    The scaled free energy :math:`w = \beta f = - \ln \Pi ` is analyzed.
     Anywhere where :math:`\Delta w = \text{{w_tran}} - \text{{w_min}} < \text{{efac}}` will be merged into a single phase.  Here,
     ``w_trans`` is the transition energy between phases (i.e., the minimum value of `lnPi`` between regions`) and ``w_min`` is the minimum energy (the maximum `lnPi`) for a phase.
 
@@ -212,7 +213,7 @@ def merge_regions(
     This is the transitional free energy ()
     w_min : array
         Shape of array is ``(n, 1)``.
-    masks : sequence of bool arrays
+    masks : sequence of ndarray of bool
         Masks for each region using `convention`
     nfeature_max : int
         maximum number of features/phases to allow
@@ -228,7 +229,7 @@ def merge_regions(
 
     Returns
     -------
-    masks : list of bool arrays
+    masks : list of ndarray of bool
         output masks using `convention`
     w_trans : array
         transition energy for new masks
@@ -310,7 +311,7 @@ class wFreeEnergy:
     ----------
     data : ndarray
         lnPi data
-    masks : sequence of arrays of bool
+    masks : sequence of array of bool
         `masks[i]` is the mask indicating the `ith` phase.  See `convention`.
     {mask_convention}
     connectivity : int, optional
@@ -373,15 +374,15 @@ class wFreeEnergy:
         include_boundary : bool, default=False
             if True, include boundary regions in output mask
         **kwargs
-            Extra arguments to :func:`lnpy.utils.labels_to_masks`
+            Extra arguments to :func:`~lnpy.utils.labels_to_masks`
 
         Returns
         -------
-        out : wFreeEnergy instance
+        out : :class:`wFreeEnergy`
 
         See Also
         --------
-        lnPi.utils.labels_to_masks
+        lnpy.utils.labels_to_masks
         """
         masks, features = labels_to_masks(
             labels,
@@ -463,7 +464,7 @@ class wFreeEnergy:
         """
         Minimum value of `w` (max `lnPi`) in the boundary between phases.
 
-        `w_tran[i, j]` is the transition energy between phases `i` ans `j`.
+        `w_tran[i, j]` is the transition energy between phases `i` and `j`.
         """
         return np.nan_to_num(-self._boundary_max()[1], nan=np.inf)
 
@@ -506,7 +507,7 @@ class wFreeEnergy:
 
         Returns
         -------
-        masks : list of bool arrays
+        masks : list of ndarray of bool
             output masks using `convention`
         w_trans : array
             transition energy for new masks
@@ -570,7 +571,7 @@ def _get_w_data(index, w):
 
 class wFreeEnergyCollection:
     r"""
-    Calculate the transition free energies for a :class:`lnpy.lnPiCollection`.
+    Calculate the transition free energies for a :class:`lnpy.lnpiseries.lnPiCollection`.
 
     :math:`w(N) = \beta f(N) = - \ln \Pi(N)`
 
@@ -580,7 +581,7 @@ class wFreeEnergyCollection:
 
     Notes
     -----
-    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnpy.lnPiCollection.wfe`
+    An instance of :class:`wFreeEnergyCollection` is normally created from the accessor :meth:`lnpy.lnpiseries.lnPiCollection.wfe`
     """
 
     def __init__(self, parent):
@@ -700,7 +701,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
     Notes
     -----
-    This is accessed through :attr:`lnpy.lnPiCollection.wfe_phases`
+    This is accessed through :attr:`lnpy.lnpiseries.lnPiCollection.wfe_phases`
 
     """
 
@@ -740,13 +741,13 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
 @lnPiCollection.decorate_accessor("wfe")
 def wfe_accessor(parent):
-    """Accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wfe`."""
+    """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wfe`."""
     return wFreeEnergyCollection(parent)
 
 
 @lnPiCollection.decorate_accessor("wfe_phases")
 def wfe_phases_accessor(parent):
-    """Accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wfe_phases`."""
+    """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wfe_phases`."""
     return wFreeEnergyPhases(parent)
 
 
@@ -757,7 +758,7 @@ from warnings import warn
 @lnPiCollection.decorate_accessor("wlnPi")
 def wlnPi_accessor(parent):
     """
-    Deprecated accessor to :class:`~lnpy.wFreeEnergyCollection` from `self.wlnPi`.
+    Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wlnPi`.
 
     Alias to `self.wfe`
     """
@@ -768,7 +769,7 @@ def wlnPi_accessor(parent):
 @lnPiCollection.decorate_accessor("wlnPi_single")
 def wlnPi_single_accessor(parent):
     """
-    Deprecated accessor to :class:`~lnpy.wFreeEnergyPhases` from `self.wlnPi_single`.
+    Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wlnPi_single`.
 
     Alias to `self.wfe_single`
     """

@@ -1,4 +1,6 @@
 """
+Segmentation of lnPi (:mod:`~lnpy.segment`)
+===========================================
 Routines to segment lnPi
 
  1. find max/peaks in lnPi
@@ -27,10 +29,11 @@ _shared_docs_local = {
     data : array-like
         Image data to analyze
     """,
-    "min_distance": """
-    min_distance : int or sequence of int, default=(5, 10, 15, 20, 25)
+    "min_distance": r"""
+    min_distance : int or sequence of int, optional
         min_distance parameter.  If sequence, then call
         :func:`~skimage.feature.peak_local_max` until number of peaks ``<=num_peaks_max``.
+        Default value is ``(5, 10, 15, 20, 25)``.
     """,
     "connectivity_morphology": """
     connectivity : int, optional
@@ -43,7 +46,7 @@ _shared_docs_local = {
         Following the scipy convention, default is a one-connected array of the dimension of the image.
     """,
     "num_peaks_max": """
-    num_peaks_max : int, optional.
+    num_peaks_max : int, optional
         Max number of maxima/peaks to find. If not specified, any number of peaks allowed.
     """,
     "peak_style": """
@@ -51,13 +54,13 @@ _shared_docs_local = {
         Controls output style
 
         * indices : indices of peaks
-        * mask : bool array marking peak locations
+        * mask : array of bool marking peak locations
         * marker : array of int
 
     """,
     "markers": """
-    markers : int, or ndarray of int, same shape as image, optional
-        The desired number of markers, or an array marking the basins with the values to be assigned in the label matrix.
+    markers : int, or ndarray of int, optional
+        Same shape as image. The desired number of markers, or an array marking the basins with the values to be assigned in the label matrix.
         Zero means not a marker. If None (no markers given), the local minima of the image are used as markers.
     """,
 }
@@ -110,7 +113,7 @@ def peak_local_max_adaptive(
 
     Returns
     -------
-    out : indices or mask
+    out : array of int or list of array of bool
         Depending on the value of `indices`.
 
     Notes
@@ -222,7 +225,7 @@ class Segmenter:
 
         Returns
         -------
-        out :
+        ndarray of int or sequence of ndarray
             If ``style=='marker'``, then return label array.  Otherwise,
             return indices of peaks.
 
@@ -266,7 +269,7 @@ class Segmenter:
 
         Returns
         -------
-        labels : array of int
+        labels : ndarray of int
             Values > 0 correspond to found regions
 
         See Also
@@ -314,7 +317,7 @@ class Segmenter:
         See Also
         --------
         Segmenter.watershed
-        skimage.morphology.watershed
+        ~skimage.segmentation.watershed
 
         """
 
@@ -352,16 +355,16 @@ class PhaseCreator:
         if specified, the allowable number of peaks to locate.
         This can be useful for some cases.  These phases will be merged out at the end.
     ref : lnPiMasked, optional
-    segmenter : Segmenter object, optional
+    segmenter : :class:`Segmenter`, optional
         segmenter object to create labels/masks. Defaults to using base segmenter.
     segment_kws : mapping, optional
         Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
     tag_phases : callable, optional
-        Optional function which takes a list of :class:`lnpy.lnPiMasked` objects
+        Optional function which takes a list of :class:`~lnpy.lnpidata.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
-        Factory function for returning Collection from a list of :class:`lnpy.lnPiMasked` object.
-        Defaults to :meth:`lnpy.lnPiCollection.from_list`.
+        Factory function for returning Collection from a list of :class:`~lnpy.lnpidata.lnPiMasked` object.
+        Defaults to :meth:`~lnpy.lnpiseries.lnPiCollection.from_list`.
     lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
@@ -470,7 +473,7 @@ class PhaseCreator:
         lnz : int or sequence of int, optional
             lnz value to evaluate `ref` at.  If not specified, use
             `ref.lnz`
-        ref : lnPiMasked object
+        ref : lnPiMasked
             Object to be segmented
         efac : float, optional
             Optional value to use in energetic merging of phases.
@@ -482,7 +485,7 @@ class PhaseCreator:
         {connectivity_morphology}
         reweight_kws : mapping, optional
             Extra arguments to `ref.reweight`
-        merge_phase_ids : bool, default = True
+        merge_phase_ids : bool, default=True
             If True and calling `tag_phases` routine, merge phases with same phase_id.
         phases_factory : callable, optional
             Function to convert list of phases into Phases object.
@@ -606,7 +609,7 @@ class PhaseCreator:
 
 
 class BuildPhasesBase:
-    """Base class to build Phases objecs from scalar values of `lnz`."""
+    """Base class to build Phases objects from scalar values of `lnz`."""
 
     def __init__(self, X, phase_creator):
         self._phase_creator = phase_creator
@@ -656,7 +659,7 @@ class BuildPhases_mu(BuildPhasesBase):
         list with one element equal to None.  This is the component which will be varied
         For example, lnz=[lnz0, None, lnz2] implies use values of lnz0,lnz2 for components 0 and 2, and
         vary component 1
-    phase_creator : PhaseCreator object
+    phase_creator : :class:`PhaseCreator`
     """
 
     def __init__(self, lnz, phase_creator):
@@ -679,7 +682,7 @@ class BuildPhases_dmu(BuildPhasesBase):
         For example, dlnz=[dlnz0,None,dlnz2] implies use values of dlnz0,dlnz2
         for components 0 and 2, and vary component 1.
         dlnz_i = lnz_i - lnz_index, where lnz_index is the value varied.
-    phase_creator : :class:`lnpy.PhaseCreator`
+    phase_creator : :class:`~lnpy.segment.PhaseCreator`
     """
 
     def __init__(self, dlnz, phase_creator):

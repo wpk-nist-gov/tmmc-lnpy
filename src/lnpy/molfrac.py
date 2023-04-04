@@ -121,7 +121,7 @@ def _solve_lnz_molfrac(
     **kwargs,
 ):
     """
-    Calculate lnz which provides lnpi.molfracs_phaseIDs[phaseID,comp]==target
+    Calculate `lnz` which provides ``molfrac == target``.
 
     Parameters
     ----------
@@ -135,9 +135,9 @@ def _solve_lnz_molfrac(
         object to reweight
     component : int, optional
         if not specified, use build_phases.index
-    full_output : bool (Default False)
+    full_output : bool, default=False
         if True, return solve stats
-    tol : float (default 1e-4)
+    tol : float, default=1e-4
         solver tolerance
 
     **kwargs : extra arguments to scipy.optimize.brentq

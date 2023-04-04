@@ -1,6 +1,6 @@
 """
-Legacy interface to :mod:`lnpy`
-===============================
+Legacy interface to :mod:`lnpy` (:mod:`lnPi`)
+=============================================
 """
 
 from warnings import warn

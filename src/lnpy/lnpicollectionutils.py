@@ -20,7 +20,7 @@ def tag_phases_singlecomp(x):
 
     Parameters
     ----------
-    x : sequence of lnPiMasked instances
+    x : sequence of lnPiMasked
         lnPi objects to be tagged.
 
     Returns
@@ -61,7 +61,7 @@ def get_lnz_min(
     target : float
         target density of specified component
     C : CollectionPhases
-        initial guess to work from.  This is assumed to be sorted in accending lnz order
+        initial guess to work from.  This is assumed to be sorted in ascending `lnz` order
     build_phases : callable
         function to build new phases objects
     phase_id : int, default=0

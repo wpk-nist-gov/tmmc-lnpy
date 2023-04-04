@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
+
 import lnpy
 
 # -- General configuration ---------------------------------------------
@@ -206,8 +207,8 @@ napoleon_type_aliases = {
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
     # objects with namespace lnpy
-    "lnPiMasked": "~lnpy.lnPiMasked",
-    "lnPiCollection": "~lnpy.lnPiCollection",
+    "lnPiMasked": "~lnpy.lnpidata.lnPiMasked",
+    "lnPiCollection": "~lnpy.lnpiseries.lnPiCollection",
 }
 
 
@@ -290,8 +291,8 @@ html_theme_options = dict(
     use_repository_button=True,
     use_issues_button=True,
     home_page_in_toc=True,
-    show_toc_level=6,
-    show_navbar_depth=2,
+    show_toc_level=1,
+    show_navbar_depth=1,
 )
 # handle nist css/js from here.
 html_css_files = [

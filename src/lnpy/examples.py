@@ -1,4 +1,7 @@
-"""Routines to load/run examples"""
+"""
+Examples (:mod:`~lnpy.examples`)
+================================
+"""
 
 try:
     import importlib_resources as resources
@@ -100,20 +103,26 @@ def load_example_maskddata(name):
 class Example:
     """Dataclass to hold example data."""
 
+    #: Reference state :class:`~lnpy.lnpidata.lnPiMasked`.
     ref: lnPiMasked
+    #: :class:`~lnpy.segment.PhaseCreator` instance
     phase_creator: PhaseCreator
+    #: Callable to build phases.
     build_phases: Callable
 
     def to_dict(self):
+        """Transform class to dictionary."""
         return asdict(self)
 
     def unpack(self, keys=None):
+        """Unpack keys."""
         if keys is None:
             keys = ["ref", "phase_creator", "build_phases"]
         return (getattr(self, k) for k in keys)
 
 
 def lj_sup_example():
+    """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
     ref = load_example_maskddata("lj_sup")
 
     phase_creator = PhaseCreator(
@@ -137,6 +146,7 @@ def tag_phases_single_comp_simple(x):
 
 
 def lj_sub_example():
+    """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
     ref = load_example_maskddata("lj_sub")
 
     phase_creator = PhaseCreator(
@@ -153,6 +163,7 @@ def lj_sub_example():
 
 
 def ljmix_sup_example():
+    """Create an :class:`Example` instance for a Lennard-Jones mixture (supercritical)."""
     ref = load_example_maskddata("ljmix_sup")
 
     phase_creator = PhaseCreator(
@@ -165,6 +176,8 @@ def ljmix_sup_example():
 
 
 def hsmix_example():
+    """Create an :class:`Example` instance for a hard-sphere mixture."""
+
     def tag_phases(x):
         if len(x) > 2:
             raise ValueError("bad tag function")

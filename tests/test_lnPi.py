@@ -7,7 +7,6 @@ import pytest
 
 import lnPi
 
-
 path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
 
 

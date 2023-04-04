@@ -56,7 +56,7 @@ class lnPiArray:
 
     Parameters
     ----------
-    lnz : float or sequence of floats
+    lnz : float or sequence of float
     """
 
     @docfiller_shared
@@ -266,9 +266,9 @@ class lnPiMasked(AccessorMixin):
 
         Parameters
         ----------
-        lnz : float or sequence of floats
+        lnz : float or sequence of float
             Value of `lnz` to reweight data to.
-        lnz_data : float or sequence of floats
+        lnz_data : float or sequence of float
             Value of `lnz` at which `data` was collected
         {data}
         {mask_masked}
@@ -298,7 +298,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def dtype(self):
-        """Data type (dtype) of underling data"""
+        """Type (dtype) of underling data"""
         return self._data.dtype
 
     def _clear_cache(self):
@@ -510,7 +510,7 @@ class lnPiMasked(AccessorMixin):
 
         Returns
         -------
-        out : lnPi
+        out : lnPiMasked
             padded object
 
 
@@ -555,7 +555,7 @@ class lnPiMasked(AccessorMixin):
 
         Parameters
         ----------
-        path : string like
+        path : path-like
             file object to be read
         lnz : array-like
             beta*(chemical potential) for each component
@@ -563,10 +563,10 @@ class lnPiMasked(AccessorMixin):
             define state variables, like volume, beta
         sep : string, optional
             separator for file read
-        names : column names
+        names : sequence of str
         csv_kws : dict, optional
             optional arguments to `pandas.read_csv`
-        kwargs  : extra arguments
+        **kwargs
             Passed to lnPi constructor
         """
         lnz = np.atleast_1d(lnz)
@@ -608,7 +608,7 @@ class lnPiMasked(AccessorMixin):
 
         Returns
         -------
-        lnpi : lnPiMasked instance
+        lnPiMasked
 
 
         See Also
@@ -669,7 +669,7 @@ class lnPiMasked(AccessorMixin):
 
         See Also
         --------
-        masks_change_convention
+        lnpy.utils.masks_change_convention
         """
 
         return [
@@ -704,12 +704,12 @@ class lnPiMasked(AccessorMixin):
 
         Returns
         -------
-        outputs : list of lnPiMasked objects
+        outputs : list of lnPiMasked
 
         See Also
         --------
         lnPiMasked.list_from_masks
-        labels_to_masks
+        lnpy.utils.labels_to_masks
         """
 
         masks, features = labels_to_masks(
@@ -727,7 +727,7 @@ from warnings import warn
 
 
 class MaskedlnPiDelayed(lnPiMasked):
-    """Depricated alias for lnPiMasked"""
+    """Deprecated alias for lnPiMasked"""
 
     def __init__(self, *args, **kwargs):
         warn("MaskedlnPiDelayed is deprecated.  Please use lnPiMasked instead")

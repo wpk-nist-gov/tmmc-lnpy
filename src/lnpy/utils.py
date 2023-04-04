@@ -1,4 +1,7 @@
-"""utility functions"""
+"""
+Utility functions (:mod:`~lnpy.utils`)
+======================================
+"""
 
 from functools import partial
 
@@ -191,7 +194,7 @@ def dim_to_suffix(ds, dim="component", join="_"):
     elif isinstance(ds, xr.Dataset):
         f = dim_to_suffix_dataset
     else:
-        raise ValueError("ds must be `DataArray` or `Dataset`")
+        raise ValueError("`ds` must be `DataArray` or `Dataset`")
     return f(ds, dim=dim, join=join)
 
 
@@ -213,21 +216,21 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
     ----------
     mask : array-like
         Masking array.
-    convention_in, convention_out : string or bool or None.
+    convention_in, convention_out : string or bool or None
         Convention for input and output.
         Convention for mask.  Allowable values are:
 
-        * 'image' or True : `True` values included, `False` values excluded.
+        * ``'image' ``or ``True`` : `True` values included, `False` values excluded.
           This is the normal convention in :mod:`scipy.ndimage`.
-        * 'masked' or False:  `False` values are included, `True` values are excluded.
+        * ``'masked'`` or ``False``:  `False` values are included, `True` values are excluded.
           This is the convention in :mod:`numpy.ma`
 
-        If `None`, then pass return input `mask`
+        If ``None``, then pass return input `mask`
 
     Returns
     -------
-    new_mask : array
-    New 'mask' array with specified convention.
+    new_mask : ndarray
+        New 'mask' array with specified convention.
     """
 
     if mask is None:
@@ -249,7 +252,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
     ----------
     masks : sequence of array-like
         masks[i] is the 'ith' mask
-    convention_in, convention_out : string or bool or None.
+    convention_in, convention_out : string or bool or None
         Convention for input and output.
         Convention for mask.  Allowable values are:
 
@@ -262,7 +265,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
 
     Returns
     -------
-    new_masks : list of arrays
+    new_masks : list of array
         New 'masks' array with specified convention.
     """
 
@@ -290,7 +293,7 @@ def labels_to_masks(
 
     Parameters
     ----------
-    labels : array of labels to analyze
+    labels : array-like of int
         Each unique value `i` in `labels` indicates a mask.
         That is ``labels == i``.
     features : array-like, optional
@@ -298,7 +301,7 @@ def labels_to_masks(
         mask[i] corresponds to labels == feature[i].
     include_boundary : bool, default=False
         if True, include boundary regions in output mask
-    convention : {'image','masked'} or bool.
+    convention : {'image','masked'} or bool
         convention for output masks
     check_features : bool, default=True
         if True, and supply features, then make sure each feature is in labels
@@ -309,8 +312,9 @@ def labels_to_masks(
 
     Returns
     -------
-    output : list of masks of same shape as labels
-        mask for each feature
+    output : list of array of bool
+        List of mask arrays, each with same shape as ``labels``.
+        Mask for each feature.
     features : list
         features
 
@@ -349,9 +353,10 @@ def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwarg
 
     Parameters
     ----------
-    masks : list-like of masks
-
-    features : value for each feature, optional
+    masks : list of array-like of bool
+        List of mask arrays.
+    features : array-like of int, optional
+        Value for each feature.
         labels[mask[i]] = features[i] + feature_offset
         Default = range(1, len(masks) + 1)
 
@@ -360,7 +365,8 @@ def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwarg
 
     Returns
     -------
-    labels : array of labels
+    ndarray
+        Label array.
 
 
     See Also
@@ -424,8 +430,9 @@ def get_lnz_iter(lnz, x):
 
     Returns
     -------
-    ouptut : array of shape (len(x),len(lnz))
-       array with rows [lnz0,lnz1,lnz2]
+    ndarray
+        Shape ``(len(x),len(lnz))``.
+        array with rows [lnz0,lnz1,lnz2]
     """
 
     z = np.zeros_like(x)
@@ -449,19 +456,20 @@ def get_lnz_iter(lnz, x):
 
 def sort_lnPis(input, comp=0):
     """
-    Sort list of lnPi  that component `comp` mol fraction increases
+    Sort list of lnPi  that component `comp` mole fraction increases
 
     Parameters
     ----------
-    input : list of lnPi objects
+    input : list of lnPiMasked
 
 
-    comp : int (Default 0)
+    comp : int, default=0
      component to sort along
 
     Returns
     -------
-    output : list of lnPi objects in sorted order
+    output : list of lnPiMasked
+        Objects in sorted order.
     """
 
     molfrac_comp = np.array([x.molfrac[comp] for x in input])
@@ -487,13 +495,14 @@ def distance_matrix(mask, convention="image"):
 
     Returns
     -------
-    distance : array of same shape as mask
-        distance from possible feature elements to background
+    distance : ndarray
+        Same shape as mask.
+        Distance from possible feature elements to background
 
 
     See Also
     --------
-    scipy.ndimage.distance_transform_edt
+    ~scipy.ndimage.distance_transform_edt
     """
 
     mask = np.asarray(mask, dtype=bool)
@@ -515,7 +524,7 @@ def distance_matrix(mask, convention="image"):
 
 def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
     """
-    Convert a :class:`~lnpy.lnPiMasked` object into as :class:`~xarray.Dataset`.
+    Convert a :class:`~lnpy.lnpidata.lnPiMasked` object into as :class:`~xarray.Dataset`.
 
     Parameters
     ----------
@@ -531,15 +540,13 @@ def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
 
 def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
     """
-    Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnPiMasked` object.
+    Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnpidata.lnPiMasked` object.
 
     Parameters
     ----------
-    ds : Dataset
-
+    ds : :class:`~xarray.Dataset`
     lnpi_name, pe_name : str
         Names of 'lnPi' and 'PE' parameters
-
     extra_kws : mapping, optional
         parameter `extra_kws`.  Note that if `pe_name` found in `ds`, then will add it to `extra_kws`.
 

@@ -1,4 +1,7 @@
-"""Alternative to ListIndex.  Will wrap stuff in Series"""
+"""
+Collection of lnPi objects (:mod:`~lnpy.lnpiseries`)
+====================================================
+"""
 
 import numpy as np
 import pandas as pd
@@ -56,7 +59,7 @@ class SeriesWrapper(AccessorMixin):
 
     @property
     def s(self):
-        """Alias to `self.series`"""
+        """Alias to :meth:`series`"""
         return self.series
 
     def __iter__(self):
@@ -72,7 +75,7 @@ class SeriesWrapper(AccessorMixin):
 
     @property
     def items(self):
-        """Alias to `self.values`"""
+        """Alias to :attr:`values`"""
         return self.values
 
     @property
@@ -141,7 +144,7 @@ class SeriesWrapper(AccessorMixin):
         inplace=False,
     ):
         """
-        Interface to :meth:`pandas.Series.append`
+        Interface to :func:`pandas.concat`
 
 
         Parameters
@@ -152,11 +155,11 @@ class SeriesWrapper(AccessorMixin):
         verify_integrity : bool, default=True
         concat_kws : mapping, optional
             Extra arguments to
-        inplace : bool, default = False
+        inplace : bool, default=False
 
         See Also
         --------
-        pandas.Series.append
+        pandas.concat
         """
         if isinstance(to_append, self.__class__):
             to_append = to_append.series
@@ -396,7 +399,7 @@ class _Query:
 class lnPiCollection(SeriesWrapper):
     # class lnPiCollection:
     r"""
-    Wrapper around :class:`pandas.Series` for collection of :class:`lnpy.lnPiMasked` objects.
+    Wrapper around :class:`pandas.Series` for collection of :class:`~lnpy.lnpidata.lnPiMasked` objects.
 
 
     Parameters
@@ -405,7 +408,7 @@ class lnPiCollection(SeriesWrapper):
         :math:`\ln \Pi(N)` instances to consider.
     index : array-like, pandas.Index, pandas.MultiIndex, optional
         Index to apply to Series.
-    xarray_output : bool, default = True
+    xarray_output : bool, default=True
         If True, then wrap lnPiCollection outputs in :class:`~xarray.DataArray`
     concat_dim : str, optional
         Name of dimensions to concat results along.
@@ -495,7 +498,7 @@ class lnPiCollection(SeriesWrapper):
 
     @property
     def state_kws(self):
-        """state_kws from first :class:`~lnpy.lnPiMasked`"""
+        """state_kws from first :class:`~lnpy.lnpidata.lnPiMasked`"""
         return self.iloc[0].state_kws
 
     @property
@@ -506,7 +509,7 @@ class lnPiCollection(SeriesWrapper):
     @gcached()
     def index_frame(self):
         """
-        Values (from :class:`xarray.DataFrame`) for each sample.
+        Values (from :class:`xarray.DataArray`) for each sample.
 
         includes a column 'lnz_index' which is the unique lnz values
         regardless of phase
@@ -612,7 +615,7 @@ class lnPiCollection(SeriesWrapper):
     @classmethod
     def from_list(cls, items, index, *args, **kwargs):
         """
-        Create collection from list of :class:`lnpy.lnPiMasked` objects.
+        Create collection from list of :class:`~lnpy.lnpidata.lnPiMasked` objects.
 
         Parameters
         ----------
@@ -626,7 +629,7 @@ class lnPiCollection(SeriesWrapper):
             Extra keyword arguments to `cls`
         Returns
         -------
-        output : class instance
+        lnPiCollection
         """
         df = pd.DataFrame(
             [lnpi._index_dict(phase) for lnpi, phase in zip(items, index)]
@@ -652,9 +655,9 @@ class lnPiCollection(SeriesWrapper):
 
         Parameters
         ----------
-        lnzs : 1-D sequence
-            lnz value for the varying value
-        ref : lnpi_phases object
+        lnzs : sequence of float
+            One dimensional array of lnz value for the varying component.
+        ref : lnPiMasked
             lnpi_phases to reweight to get list of lnpi's
         build_phases : callable
             Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
@@ -662,14 +665,14 @@ class lnPiCollection(SeriesWrapper):
             optional arguments to `build_phases`
         Returns
         -------
-        out : Collection object
+        lnPiCollection
 
 
         See Also
         --------
-        ~lnpy.segment.Segmenter.build_phases
-        ~lnpy.segment.Segmenter.build_phases_mu
-        ~lnpy.segment.Segmenter.build_phases_dmu
+        ~lnpy.segment.PhaseCreator.build_phases
+        ~lnpy.segment.PhaseCreator.build_phases_mu
+        ~lnpy.segment.PhaseCreator.build_phases_dmu
 
         """
         if build_kws is None:
@@ -735,13 +738,13 @@ class lnPiCollection(SeriesWrapper):
         **kwargs,
     ):
         r"""
-        Create from reference :class:`~lnpy.lnPiMasked` and labels array
+        Create from reference :class:`~lnpy.lnpidata.lnPiMasked` and labels array
 
 
         Parameters
         ----------
         ref : lnPiMasked
-        labels : sequence of label arrays
+        labels : array-like of int
             Each `labels[i]` will be used to construct multiple phases from single
             (reweighted)  :math:`ln \Pi(N)`
         lnzs : sequence
@@ -749,13 +752,13 @@ class lnPiCollection(SeriesWrapper):
         features : int, optional
         include_boundary : bool, default=False
         labels_kws : mapping, optional
-        check_features : bool, default = True
+        check_features : bool, default=True
         **kwargs
             Extra arguments past to :meth:`from_list`
 
         See Also
         --------
-        labels_to_masks
+        ~lnpy.utils.labels_to_masks
         from_list
         """
 
@@ -802,7 +805,8 @@ class lnPiCollection(SeriesWrapper):
         Parameters
         ----------
         ref : lnPiMasked
-        da : DataArray or labels
+        da : DataArray or int
+            Labels.
         grouper : Hashable
             Name of dimension(s) to group along to give a single label array
 

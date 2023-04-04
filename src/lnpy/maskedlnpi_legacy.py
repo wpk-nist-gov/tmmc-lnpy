@@ -1,12 +1,12 @@
 """
-Legacy lnPi array routines (:mod:`lnpy.maskedlnpi_legacy`)
-==========================================================
+Legacy lnPi array routines (:mod:`~lnpy.maskedlnpi_legacy`)
+===========================================================
 """
 from warnings import warn
 
 import numpy as np
 import pandas as pd
-from scipy.ndimage import filters
+from scipy import ndimage
 
 from .cached_decorators import gcached
 from .extensions import AccessorMixin
@@ -18,50 +18,35 @@ from .utils import labels_to_masks, masks_change_convention
 
 
 class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
-    """
-    class to store masked ln[Pi(n0,n1,...)].
+    r"""
+    Class to store masked version of :math:`\ln\Pi(N)`.
     shape is (N0,N1,...) where Ni is the span of each dimension)
 
-    Attributes
+    Constructor
+
+    Parameters
     ----------
-    self : masked array containing lnPi
-    lnz : log(absolute activity) = beta * (chemical potential) for each component
-    coords : coordinate array (ndim,N0,N1,...)
-    pi : exp(lnPi)
-    grand : grand potential (-pV) of system
-    argmax_local : local argmax (in np.where output form)
-    zeromax : set lnPi = lnPi - lnPi.max()
-    pad : fill in masked points by interpolation
-    adjust : zeromax and/or pad
-    reweight : create new lnPi at new mu
-    smooth : create smoothed object
+    data : array-like
+        data for lnPi
+    lnz : array-like, optional
+        if None, set lnz=np.zeros(data.ndim)
+    state_kws : dict, optional
+        dictionary of state values, such as ``volume`` and ``beta``.
+        These parameters will be pushed to ``self.xge`` coordinates.
+    extra_kws : dict, optional
+        this defines extra parameters to pass along.
+        Note that for potential energy calculations, extra_kws should contain
+        `PE` (total potential energy for each N vector).
+    zeromax : bool, default=False
+        if True, shift lnPi = lnPi - lnPi.max()
+    pad : bool, default=False
+        if True, pad masked region by interpolation
+    **kwargs
+        Extra arguments to :class:`numpy.ma.MaskedArray`
+        e.g., mask=...
     """
 
     def __new__(cls, data=None, lnz=None, state_kws=None, extra_kws=None, **kwargs):
-        """
-        Constructor
-
-        Parameters
-        ----------
-        data : array-like
-         data for lnPi
-
-        lnz : array-like (Default None)
-            if None, set lnz=np.zeros(data.ndim)
-        state_kws : dict, optional
-            dictionary of state values, such as `volume` and `beta`.
-            These parameters will be pushed to `self.xge` coordinates.
-        extra_kws : dict, optional
-            this defines extra parameters to pass along.
-            Note that for potential energy calculations, extra_kws should contain
-            `PE` (total potentail energy for each N vector).
-        zeromax : bool (Default False)
-            if True, shift lnPi = lnPi - lnPi.max()
-        pad : bool (Default False)
-            if True, pad masked region by interpolation
-        kwargs : arguments to np.ma.array
-            e.g., mask=...
-        """
         warn("MaskedlnPiLegacy is deprecated.  Please use lnPiMasked instead")
 
         if data is not None and issubclass(data.dtype.type, np.floating):
@@ -73,7 +58,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         #     fv = np.nan
         # obj.set_fill_value(fv)
 
-        # make sure to broadcase mask if it is just False
+        # make sure to broadcast mask if it is just False
         if obj.mask is False:
             obj.mask = False
 
@@ -254,7 +239,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
         Returns
         -------
-        out : lnPi
+        out : object
             padded object
         """
         import bottleneck
@@ -319,16 +304,16 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         lnz : array-like
             chem. pot. for new state point
 
-        zeromax : bool (Default False)
+        zeromax : bool, default=False
 
-        pad : bool (Default False)
+        pad : bool, default=False
 
         phases : dict
 
 
         Returns
         -------
-        lnPi(lnz)
+        object
         """
 
         lnz = np.atleast_1d(lnz)
@@ -370,12 +355,19 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
         Parameters
         ----------
-        inplace : bool (Default False)
+        inplace : bool, default=False
          if True, do inplace modification.
-        mode, truncate : arguments to filters.gaussian_filter
+        mode : str, default='nearest'
+            Arguments to ``gaussian_filter``
+        truncate : int, default=4
+            Argument to ``gaussian_filter``
 
-        **kwargs : (Default sigma=4, mode='nearest',truncate=4)
-         arguments to filters.gaussian_filter
+        **kwargs
+            Extra arguments to ``gaussian_filter``.
+
+        See Also
+        --------
+        ~scipy.ndimage.gaussian_filter
         """
 
         if inplace:
@@ -384,7 +376,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         else:
             new = self.copy()
 
-        filters.gaussian_filter(
+        ndimage.gaussian_filter(
             new.data,
             output=new.data,
             mode=mode,
@@ -451,7 +443,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
         Parameters
         ----------
-        path : string like
+        path : path-like
             file object to be read
         lnz : array-like
             beta*(chemical potential) for each component
@@ -459,10 +451,10 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
             define state variables, like volume, beta
         sep : string, optional
             separator for file read
-        names : column names
+        names : sequence of str
         csv_kws : dict, optional
             optional arguments to `pandas.read_csv`
-        kwargs  : extra arguments
+        **kwargs
             Passed to lnPi constructor
         """
         lnz = np.atleast_1d(lnz)
@@ -529,7 +521,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         Parameters
         ----------
         masks : list
-            masks[i] is the mask for i'th lnpi
+            masks[i] is the mask for lnpi index `i`.
         convention : str or bool
             convention of input masks
         Returns
