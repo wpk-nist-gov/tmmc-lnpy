@@ -1,7 +1,4 @@
-"""
-routines to define a cached class without needing to subclass Cached class
-"""
-from __future__ import absolute_import
+"""Routines to define a cached class without needing to subclass Cached class"""
 
 from functools import wraps
 
@@ -21,7 +18,7 @@ def gcached(key=None, prop=True):
 
 def gcached_use_cache(key=None, prop=True):
     """
-    same as gcached, but only cache func/prop if
+    Same as gcached, but only cache func/prop if
     has attribute self._use_cache and self._use_cache is True
     """
 
@@ -36,7 +33,8 @@ def gcached_use_cache(key=None, prop=True):
 
 
 def cached(key=None, check_use_cache=False):
-    """Decorator to cache a property within a class
+    """
+    Decorator to cache a property within a class
 
     Requires the Class to have a cache dict called ``_cache``.
 
@@ -57,7 +55,7 @@ def cached(key=None, check_use_cache=False):
                # _cache with the key: 'keyname'
                size = 10.0
 
-            #no aguments implies give cache function name
+            #no arguments implies give cache function name
             @property
             @cached()
             def myprop(self):
@@ -96,7 +94,8 @@ def cached(key=None, check_use_cache=False):
 
 
 def cached_func(key=None, check_use_cache=False):
-    """Decorator to cache a function within a class
+    """
+    Decorator to cache a function within a class
 
     Requires the Class to have a cache dict called ``_cache``.
 
@@ -117,14 +116,14 @@ def cached_func(key=None, check_use_cache=False):
                return long_calc(self,val)
                # if already executed result in _cache[('keyname',) + args]
 
-            #no aguments implies give cache function name
+            #no arguments implies give cache function name
             @property
             @cached()
             def myprop(self):
                 #results in _cache['myprop']
 
 
-    See also
+    See Also
     --------
     cached_clear : corresponding decorator to remove cache
 

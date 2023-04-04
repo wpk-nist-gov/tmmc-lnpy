@@ -1,9 +1,45 @@
-# tmmc-lnpy
+[![Repo][repo-badge]][repo-link]
+[![Docs][docs-badge]][docs-link]
+[![PyPI license][license-badge]][license-link]
+[![PyPI version][pypi-badge]][pypi-link]
+[![Conda (channel only)][conda-badge]][conda-link]
+[![Code style: black][black-badge]][black-link]
+
+
+[black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg
+[black-link]: https://github.com/ambv/black
+[pypi-badge]: https://img.shields.io/pypi/v/tmmc-lnpy
+<!-- [pypi-badge]: https://badge.fury.io/py/tmmc-lnpy -->
+[pypi-link]: https://pypi.org/project/tmmc-lnpy
+[docs-badge]: https://img.shields.io/badge/docs-sphinx-informational
+[docs-link]: https://pages.nist.gov/tmmc-lnpy/
+[repo-badge]: https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff
+[repo-link]: https://github.com/usnistgov/tmmc-lnpy
+[conda-badge]: https://img.shields.io/conda/v/wpk-nist/tmmc-lnpy
+[conda-link]: https://anaconda.org/wpk-nist/tmmc-lnpy
+<!-- Use total link so works from anywhere -->
+[license-badge]: https://img.shields.io/pypi/l/cmomy?color=informational
+[license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/master/LICENSE
+<!-- For more badges, see https://shields.io/category/other and https://naereen.github.io/badges/ -->
+
+[numpy]: https://numpy.org
+[Numba]: https://numba.pydata.org/
+[xarray]: https://docs.xarray.dev/en/stable/
+
+
+# `tmmc-lnpy`
+
+## Overview
 
 A package to analyze $\ln \Pi(N)$ data from Transition Matrix Monte Carlo
 simulation.  The main output from TMMC simulations, $\ln \Pi(N)$, provides a means to calculate a host of thermodynamic
 properties.  Moreover, if $\ln \Pi(N)$ is calculated at a specific chemical potential, it can be reweighted to provide
 thermodynamic information at a different chemical potential
+
+
+
+
+## Features
 
 ``tmmc-lnpy`` provides a wide array of routines to analyze $\ln \Pi(N)$.  These include:
 
@@ -13,51 +49,27 @@ thermodynamic information at a different chemical potential
 * Calculating thermodynamic properties from these containers
 * Calculating limits of stability, and phase equilibrium
 
-# Status
 
-``tmmc-lnpy`` is actively used by it's author.  Pull requests are welcome!
+## Status
 
-# Installation
+This package is actively used by the author.  Please feel free to create a pull request for wanted features and suggestions!
 
-``` console
-# from pypi
+
+## Quick start
+
+Use one of the following
+
+``` bash
 pip install tmmc-lnpy
-
-# from conda
-conda install -c wpk-nist tmmc-lnpy
-
-# from source
-# clone repo
-git clone {repo}
-cd {repo}
-
-# create needed environment
-conda env create -n {optional-name] -f environment.yaml
-
-# activate environment
-conda activate {optional-name/lnpy-env (default)}
-
-# install in development mode
-pip install -e . --no-deps
-
-# Optionally run tests.  This requires pytest
-conda install pytest
-
-pytest -x -v
 ```
 
-# Testing
+or
 
-Testing status is mostly regression tests right now.  Further test modules will be added in the near future.
+``` bash
+conda install -c wpk-nist tmmc-lnpy
+```
 
-
-# Getting started
-
-Take a look at the [basic usage](docs/src/notebooks/Basic_usage.ipynb)
-notebook for a quick introduction.
-
-For a deeper dive, look at the [documentation](https://pages.nist.gov/tmmc-lnpy/)
-
+## Example usage
 
 Note that the distribution name ``tmmc-lnpy`` is different than the import name ``lnpy`` due to name clashing on pypi.
 
@@ -68,32 +80,26 @@ import lnpy.examples
 ref = lnpy.examples.load_example_maskddata('lj_sub')
 ```
 
-# License
 
-See [LICENSE](LICENSE)
+<!-- end-docs -->
 
+## Documentation
 
-# Related work
+See the [documentation][docs-link] for a look at `tmmc-lnpy` in action.
 
-Please checkout [feasst](https://github.com/usnistgov/feasst), a TMMC simulation package.  We hope to create routines to more
-directly interact with feasst output in the near future.
+## License
 
-# TODO
+This is free software.  See [LICENSE][license-link].
 
-- [ ] More documentation/examples
-- [ ] Update Spinodal/Binodal accessor api
-- [ ] Typing
-- [ ] Interface to thermoextrap
-- [ ] Most of the testing is regression testing. Should add some unit tests as well.
-- [ ] Strip out unused legacy code.
+## Related work
 
+This package is used for with [thermoextrap](https://github.com/usnistgov/thermo-extrap) to analyze thermodynamically extrapolated macro state probability distributions.
 
-# Contact
+## Contact
 
-The author can be reached at wpk@nist.gov
+The author can be reached at wpk@nist.gov.
 
-
-# Credits
+## Credits
 
 This package was created with
 [Cookiecutter](https://github.com/audreyr/cookiecutter) and the

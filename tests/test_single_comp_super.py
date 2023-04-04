@@ -12,7 +12,6 @@ path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
 
 def get_lnz(path):
     kB = 1.3806503e-23  # J/K
-    Na = 6.02214199e23  # 1/mol
     kg = 1.66054e-27  # 1/amu
     hPlanck = 6.62606876e-34  # Js
 
@@ -49,7 +48,7 @@ def ref():
     pe = pd.read_csv(
         path_data / "ljsf.t150.bulk.v512.r1.energy.dat",
         header=None,
-        sep="\s+",
+        sep="\\s+",
         names=["n", "e"],
     )["e"].values
 

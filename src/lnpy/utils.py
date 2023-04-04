@@ -1,5 +1,6 @@
 """
-utility functions
+Utility functions (:mod:`~lnpy.utils`)
+======================================
 """
 
 from functools import partial
@@ -48,7 +49,6 @@ def tqdm(*args, **kwargs):
 
 
 def get_tqdm(seq, len_min, leave=None, **kwargs):
-
     n = kwargs.get("total", None)
 
     if isinstance(len_min, str):
@@ -100,7 +100,7 @@ def parallel_map_build(func, items, *args, **kwargs):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(x, *args, **kwargs) for x in items)
     else:
         return [func(x, *args, **kwargs) for x in items]
@@ -120,7 +120,7 @@ def parallel_map_call(items, use_joblib, *args, **kwargs):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(_func_call)(x, *args, **kwargs) for x in items)
     else:
         return [x(*args, **kwargs) for x in items]
@@ -137,14 +137,13 @@ def parallel_map_attr(attr, use_joblib, items):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(x) for x in items)
     else:
         return [func(x) for x in items]
 
 
 def parallel_map_func_starargs(func, use_joblib, items, total=None):
-
     if total is None:
         total = len(items)
 
@@ -157,7 +156,7 @@ def parallel_map_func_starargs(func, use_joblib, items, total=None):
         return Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"]
+            **OPTIONS["joblib_kws"],
         )(delayed(func)(*x) for x in items)
     else:
         return [func(*x) for x in items]
@@ -175,7 +174,7 @@ def allbut(levels, *names):
 def dim_to_suffix_dataarray(da, dim, join="_"):
     if dim in da.dims:
         return da.assign_coords(
-            **{dim: lambda x: ["{}{}{}".format(x.name, join, c) for c in x[dim].values]}
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}
         ).to_dataset(dim=dim)
     else:
         return da.to_dataset()
@@ -195,7 +194,7 @@ def dim_to_suffix(ds, dim="component", join="_"):
     elif isinstance(ds, xr.Dataset):
         f = dim_to_suffix_dataset
     else:
-        raise ValueError("ds must be `DataArray` or `Dataset`")
+        raise ValueError("`ds` must be `DataArray` or `Dataset`")
     return f(ds, dim=dim, join=join)
 
 
@@ -211,27 +210,27 @@ def _convention_to_bool(convention):
 
 def mask_change_convention(mask, convention_in="image", convention_out="masked"):
     """
-    convert an array from one 'mask' convention to another.
+    Convert an array from one 'mask' convention to another.
 
     Parameters
     ----------
     mask : array-like
         Masking array.
-    convention_in, convention_out : string or bool or None.
+    convention_in, convention_out : string or bool or None
         Convention for input and output.
         Convention for mask.  Allowable values are:
 
-        * 'image' or True : `True` values included, `False` values excluded.
+        * ``'image' ``or ``True`` : `True` values included, `False` values excluded.
           This is the normal convention in :mod:`scipy.ndimage`.
-        * 'masked' or False:  `False` values are included, `True` values are excluded.
+        * ``'masked'`` or ``False``:  `False` values are included, `True` values are excluded.
           This is the convention in :mod:`numpy.ma`
 
-        If `None`, then pass return input `mask`
+        If ``None``, then pass return input `mask`
 
     Returns
     -------
-    new_mask : array
-    New 'mask' array with specified convention.
+    new_mask : ndarray
+        New 'mask' array with specified convention.
     """
 
     if mask is None:
@@ -253,7 +252,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
     ----------
     masks : sequence of array-like
         masks[i] is the 'ith' mask
-    convention_in, convention_out : string or bool or None.
+    convention_in, convention_out : string or bool or None
         Convention for input and output.
         Convention for mask.  Allowable values are:
 
@@ -266,7 +265,7 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
 
     Returns
     -------
-    new_masks : list of arrays
+    new_masks : list of array
         New 'masks' array with specified convention.
     """
 
@@ -287,14 +286,14 @@ def labels_to_masks(
     include_boundary=False,
     convention="image",
     check_features=True,
-    **kwargs
+    **kwargs,
 ):
     """
-    convert labels array to list of masks
+    Convert labels array to list of masks
 
     Parameters
     ----------
-    labels : array of labels to analyze
+    labels : array-like of int
         Each unique value `i` in `labels` indicates a mask.
         That is ``labels == i``.
     features : array-like, optional
@@ -302,7 +301,7 @@ def labels_to_masks(
         mask[i] corresponds to labels == feature[i].
     include_boundary : bool, default=False
         if True, include boundary regions in output mask
-    convention : {'image','masked'} or bool.
+    convention : {'image','masked'} or bool
         convention for output masks
     check_features : bool, default=True
         if True, and supply features, then make sure each feature is in labels
@@ -313,8 +312,9 @@ def labels_to_masks(
 
     Returns
     -------
-    output : list of masks of same shape as labels
-        mask for each feature
+    output : list of array of bool
+        List of mask arrays, each with same shape as ``labels``.
+        Mask for each feature.
     features : list
         features
 
@@ -349,13 +349,14 @@ def labels_to_masks(
 
 def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwargs):
     """
-    convert list of masks to labels
+    Convert list of masks to labels
 
     Parameters
     ----------
-    masks : list-like of masks
-
-    features : value for each feature, optional
+    masks : list of array-like of bool
+        List of mask arrays.
+    features : array-like of int, optional
+        Value for each feature.
         labels[mask[i]] = features[i] + feature_offset
         Default = range(1, len(masks) + 1)
 
@@ -364,7 +365,8 @@ def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwarg
 
     Returns
     -------
-    labels : array of labels
+    ndarray
+        Label array.
 
 
     See Also
@@ -394,7 +396,7 @@ def ffill(arr, axis=-1, limit=None):
 
 
 def bfill(arr, axis=-1, limit=None):
-    """inverse of ffill"""
+    """Inverse of ffill"""
     import bottleneck
 
     # work around for bottleneck 178
@@ -414,7 +416,7 @@ def bfill(arr, axis=-1, limit=None):
 
 def get_lnz_iter(lnz, x):
     """
-    create a lnz_iter object for varying a single lnz
+    Create a lnz_iter object for varying a single lnz
 
     Parameters
     ----------
@@ -428,8 +430,9 @@ def get_lnz_iter(lnz, x):
 
     Returns
     -------
-    ouptut : array of shape (len(x),len(lnz))
-       array with rows [lnz0,lnz1,lnz2]
+    ndarray
+        Shape ``(len(x),len(lnz))``.
+        array with rows [lnz0,lnz1,lnz2]
     """
 
     z = np.zeros_like(x)
@@ -453,19 +456,20 @@ def get_lnz_iter(lnz, x):
 
 def sort_lnPis(input, comp=0):
     """
-    sort list of lnPi  that component `comp` mol fraction increases
+    Sort list of lnPi  that component `comp` mole fraction increases
 
     Parameters
     ----------
-    input : list of lnPi objects
+    input : list of lnPiMasked
 
 
-    comp : int (Default 0)
+    comp : int, default=0
      component to sort along
 
     Returns
     -------
-    output : list of lnPi objects in sorted order
+    output : list of lnPiMasked
+        Objects in sorted order.
     """
 
     molfrac_comp = np.array([x.molfrac[comp] for x in input])
@@ -479,7 +483,7 @@ def sort_lnPis(input, comp=0):
 
 def distance_matrix(mask, convention="image"):
     """
-    create matrix of distances from elements of mask
+    Create matrix of distances from elements of mask
     to nearest background point
 
     Parameters
@@ -491,13 +495,14 @@ def distance_matrix(mask, convention="image"):
 
     Returns
     -------
-    distance : array of same shape as mask
-        distance from possible feature elements to background
+    distance : ndarray
+        Same shape as mask.
+        Distance from possible feature elements to background
 
 
     See Also
     --------
-    scipy.ndimage.distance_transform_edt
+    ~scipy.ndimage.distance_transform_edt
     """
 
     mask = np.asarray(mask, dtype=bool)
@@ -519,7 +524,7 @@ def distance_matrix(mask, convention="image"):
 
 def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
     """
-    Convert a :class:`~lnpy.lnPiMasked` object into as :class:`~xarray.Dataset`.
+    Convert a :class:`~lnpy.lnpidata.lnPiMasked` object into as :class:`~xarray.Dataset`.
 
     Parameters
     ----------
@@ -535,15 +540,13 @@ def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
 
 def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
     """
-    Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnPiMasked` object.
+    Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnpidata.lnPiMasked` object.
 
     Parameters
     ----------
-    ds : Dataset
-
+    ds : :class:`~xarray.Dataset`
     lnpi_name, pe_name : str
         Names of 'lnPi' and 'PE' parameters
-
     extra_kws : mapping, optional
         parameter `extra_kws`.  Note that if `pe_name` found in `ds`, then will add it to `extra_kws`.
 

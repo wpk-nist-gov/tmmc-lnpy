@@ -1,0 +1,12 @@
+dependencies:
+- bottleneck
+- importlib_resources
+- joblib
+- numpy
+- pytest
+- python>=3.8,<3.11
+- scikit-image
+- scipy
+- tqdm
+- xarray
+name: lnpy-env

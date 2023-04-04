@@ -19,7 +19,7 @@ def tag_phases2(x):
 
 
 def load_ref():
-    ensemble = json.load(open(path_data / "water_MOF_ensemble.json", mode="r"))
+    ensemble = json.load(open(path_data / "water_MOF_ensemble.json"))
     lnz = ensemble["betamu0"]
     box = ensemble["box"]
     state_kws = {
@@ -78,7 +78,6 @@ def get_test_table(o, ref):
 
 
 def do_test(phase_creator, ref, fname):
-
     p = phase_creator.build_phases()
 
     other = get_test_table(p, ref)

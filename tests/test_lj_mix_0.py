@@ -11,7 +11,6 @@ path_data = Path(__file__).parent / "../examples/LJ_mix"
 
 @pytest.fixture
 def ref():
-
     path = path_data / "ljmix4_full.t080.v512.r1.lnpi_o.dat.gz"
     temp = 0.8
     state_kws = {"temp": temp, "beta": 1.0 / temp, "volume": 512}

@@ -1,6 +1,4 @@
-"""
-Set of helper utilities to work with single component system
-"""
+"""Set of helper utilities to work with single component system"""
 
 # from functools import partial
 
@@ -8,6 +6,37 @@ import numpy as np
 from scipy.optimize import brentq
 
 from .lnpiseries import lnPiCollection
+
+
+def tag_phases_singlecomp(x):
+    """
+    Function to tag phases with a unique id.
+
+    This is for analyzing a single component system.
+    If multiple phases passed (length of input > 1), then
+    sort by ``argmax = x.local_argmax()``, i.e., the location of the maxima.
+    Otherwise, assign `phase_id = 0` if ``argmax < Nmax // 2`` where ``Nmax`` is
+    the maximum number of particles in lnPi.
+
+    Parameters
+    ----------
+    x : sequence of lnPiMasked
+        lnPi objects to be tagged.
+
+    Returns
+    -------
+    phase_id : sequence of int
+        Phase code for each element in ``x``.
+
+    """
+    if len(x) > 2:
+        raise ValueError("bad tag function")
+    else:
+        argmax0 = np.array([xx.local_argmax()[0] for xx in x])
+        if len(x) == 2:
+            return np.argsort(argmax0)
+        else:
+            return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
 def get_lnz_min(
@@ -25,14 +54,14 @@ def get_lnz_min(
     full_output=True,
 ):
     """
-    solve for target density
+    Solve for target density
 
     Parameters
     ----------
     target : float
         target density of specified component
     C : CollectionPhases
-        initial guess to work from.  This is assumed to be sorted in accending lnz order
+        initial guess to work from.  This is assumed to be sorted in ascending `lnz` order
     build_phases : callable
         function to build new phases objects
     phase_id : int, default=0
@@ -62,7 +91,7 @@ def get_lnz_min(
     """
 
     if phase_id is not None and phase_id not in C.index.get_level_values("phase"):
-        raise ValueError("no phase {}".format(phase_id))
+        raise ValueError(f"no phase {phase_id}")
 
     lnz_idx = build_phases.index
     if isinstance(component, str) and component.lower() == "none":
@@ -169,9 +198,7 @@ def get_lnz_max(
     build_kws=None,
     full_output=True,
 ):
-    """
-    find max lnz by bisection
-    """
+    """Find max lnz by bisection"""
 
     if build_kws is None:
         build_kws = {}
@@ -282,7 +309,7 @@ def get_lnz_max(
         return left
 
 
-class _BaseLimit(object):
+class _BaseLimit:
     _bound_side = None  # -1 for lower bound, +1 for upper bound
 
     def __init__(self, parent):
@@ -370,6 +397,7 @@ class _BaseLimit(object):
 
 @lnPiCollection.decorate_accessor("bounds_lower", single_create=True)
 class LowerBounds(_BaseLimit):
+    """Class to hold lower bounds."""
 
     _bound_side = -1
 
@@ -388,7 +416,6 @@ class LowerBounds(_BaseLimit):
         inplace=True,
         force=False,
     ):
-
         if hasattr(self, "_access") and not force:
             p = self.access
             info = self._info
@@ -425,6 +452,8 @@ class LowerBounds(_BaseLimit):
 
 @lnPiCollection.decorate_accessor("bounds_upper", single_create=True)
 class UpperBounds(_BaseLimit):
+    """Class to hold upper bounds."""
+
     _bound_side = +1
 
     def __call__(
@@ -441,7 +470,6 @@ class UpperBounds(_BaseLimit):
         inplace=True,
         force=False,
     ):
-
         if hasattr(self, "_access") and not force:
             p = self.access
             info = self._info
@@ -487,7 +515,7 @@ def build_grid(
     outlier=False,
 ):
     """
-    build a grid of values
+    Uuild a grid of values
 
 
     Parameters
@@ -562,7 +590,7 @@ def limited_collection(
     limit_course=False,
 ):
     """
-    build a lnPiCollection over a range of lnz values
+    Build a lnPiCollection over a range of lnz values
 
     Parameters
     ----------
@@ -656,7 +684,7 @@ def limited_collection(
     if c_course is None:
         c_course = c
     elif limit_course:
-        slnz = "lnz_{}".format(build_phases.index)
+        slnz = f"lnz_{build_phases.index}"
         q = f"{slnz} >= {lnz_min} and {slnz} <= {lnz_max}"
         c_course = c_course.query(q)
 

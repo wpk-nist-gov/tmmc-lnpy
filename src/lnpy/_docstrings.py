@@ -8,7 +8,8 @@ from .options import OPTIONS
 
 
 def docfiller(*args, **kwargs):
-    """To fill common docs.
+    """
+    To fill common docs.
 
     Taken from pandas.utils._decorators
 
@@ -38,7 +39,7 @@ _shared_docs = {
     """,
     "lnz":
     """
-    lnz: float or sequence of floats
+    lnz: float or sequence of float
         Value(s) of ``lnz`` (log of activity)
     """,
     "state_kws":
@@ -71,17 +72,17 @@ _shared_docs = {
     """,
     "mask_masked":
     """
-    mask : bool or array-like, optional
+    mask : bool or array-like of bool, optional
         Where `mask` is `True`, values are "masked out".
     """,
     "mask_image":
     """
-    mask : bool or array-like, optional
+    mask : bool or array-like of bool, optional
         This uses the "image" convention.  Where `mask` is `True`, values are include.
     """,
     "masks_masked":
     """
-    masks : sequence of array-like of bools
+    masks : sequence of array-like of bool
         Value of `masks[i]` is the mask for ith lnPi.
         masks[i] is True where values are "masked out".
     """,
@@ -102,7 +103,7 @@ _shared_docs = {
     """,
     "base":
     """
-    base : Data
+    base : object
         lnPi data object.
     """,
     "peak_kws":
