@@ -1,10 +1,11 @@
 [build-system]
 requires = [
-    "setuptools>=61.2",
-    "setuptools_scm[toml]>=3.4",
-    "setuptools_scm_git_archive",
-]
+         "setuptools>=61.2",
+         "setuptools_scm[toml]>=3.4",]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "999"
 
 
 [project]
@@ -41,42 +42,27 @@ dependencies = [
 ] # additional packages
 
 [project.urls]
-homepage = "https://github.com/usnistgov/tmmc-lnpy"
-documentation = "https://pages.nist.gov/tmmc-lnpy/"
+Homepage = "https://github.com/usnistgov/tmmc-lnpy"
+Documentation = "https://pages.nist.gov/tmmc-lnpy/"
+Source = "https://github.com/usnistgov/tmmc-lnpy"
 
 [project.optional-dependencies]
 test = [
     "pytest",
 ]
-# dev = []
-# docs = []
 
 [tool.setuptools]
-zip-safe = true # if using mypy, must be False
+zip-safe = true
 include-package-data = true
 license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
+namespaces = true
 where = ["src"]
-# include = []
-# exclude = []
-namespaces = false
-
-[tool.setuptools.package-data]
-lnpy = ["src/lnpy/data/*"]
-
-# To add package data
-# [tool.setuptools.package-data]
-# lnpy = [
-#     "py.typed"
-# ]
-
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md", "HISTORY.md", "LICENSE"], content-type = "text/markdown"}
 
-[tool.setuptools_scm]
-fallback_version = "999"
 
 [tool.aliases]
 test = "pytest"
