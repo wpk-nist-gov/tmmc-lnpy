@@ -51,14 +51,17 @@ test = [
     "pytest",
 ]
 
-[tool.setuptools]
-zip-safe = true
-include-package-data = true
-license-files = ["LICENSE"]
+## Defer this to setup.cfg
+## Will transition when everything works (grayskull in particular)
+## and will remove setup.py
+# [tool.setuptools]
+# zip-safe = true
+# include-package-data = true
+# license-files = ["LICENSE"]
 
-[tool.setuptools.packages.find]
-namespaces = true
-where = ["src"]
+# [tool.setuptools.packages.find]
+# namespaces = true
+# where = ["src"]
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md", "HISTORY.md", "LICENSE"], content-type = "text/markdown"}
