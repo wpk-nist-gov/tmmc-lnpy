@@ -1,11 +1,9 @@
 [build-system]
 requires = [
-         "setuptools>=61.2",
-         "setuptools_scm[toml]>=3.4",]
+    "setuptools>=61.2",
+    "setuptools_scm[toml]>=7.0",
+]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
-fallback_version = "999"
 
 
 [project]
@@ -118,7 +116,7 @@ select = [
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 # fixable = ["A", "B", "C", "D", "E", "F", "..."]
-unfixable = ['D']
+unfixable = []
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
