@@ -40,30 +40,35 @@ dependencies = [
 ] # additional packages
 
 [project.urls]
-Homepage = "https://github.com/usnistgov/tmmc-lnpy"
-Documentation = "https://pages.nist.gov/tmmc-lnpy/"
-Source = "https://github.com/usnistgov/tmmc-lnpy"
+homepage = "https://github.com/usnistgov/tmmc-lnpy"
+documentation = "https://pages.nist.gov/tmmc-lnpy/"
 
 [project.optional-dependencies]
 test = [
     "pytest",
 ]
+# dev = []
+# docs = []
 
 ## Defer this to setup.cfg
 ## Will transition when everything works (grayskull in particular)
 ## and will remove setup.py
 # [tool.setuptools]
-# zip-safe = true
+# zip-safe = true # if using mypy, must be False
 # include-package-data = true
 # license-files = ["LICENSE"]
 
 # [tool.setuptools.packages.find]
 # namespaces = true
 # where = ["src"]
+## include = []
+## exclude = []
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md", "HISTORY.md", "LICENSE"], content-type = "text/markdown"}
 
+[tool.setuptools_scm]
+fallback_version = "999"
 
 [tool.aliases]
 test = "pytest"
