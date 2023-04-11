@@ -8,7 +8,7 @@
 :maxdepth: 1
 
 installation
-notebooks/Basic_usage
+examples/index
 reference/index
 license
 contributing
