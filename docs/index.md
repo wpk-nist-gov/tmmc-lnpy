@@ -1,6 +1,6 @@
-:::{include} ../README.md
+```{include} ../README.md
 :end-before: <!-- end-docs -->
-:::
+```
 
 # Navigation
 

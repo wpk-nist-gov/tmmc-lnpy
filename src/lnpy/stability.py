@@ -711,7 +711,7 @@ class Spinodals(StabilityBase):
             unstack = self._parent._xarray_unstack
         self.set_access_kws(unstack=unstack)
 
-        converged = all([x.converged for x in info.values()])
+        converged = all(x.converged for x in info.values())
         if raise_unconverged and not converged:
             raise ValueError("Spinodal calculation did not converge")
 
@@ -849,7 +849,7 @@ class Binodals(StabilityBase):
             info[idx] = r
             index[idx] = ids
 
-        converged = all([x.converged for x in info.values()])
+        converged = all(x.converged for x in info.values())
         if raise_unconverged and not converged:
             raise ValueError("Binodal calculation did not converge")
 

@@ -7,7 +7,7 @@ import pytest
 
 import lnPi
 
-path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
+path_data = Path(__file__).parent / "../examples/archived/LJ_cfs_2.5sig"
 
 
 def get_lnz(path):

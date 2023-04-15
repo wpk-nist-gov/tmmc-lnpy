@@ -6,7 +6,7 @@ import pytest
 
 import lnpy
 
-path_data = Path(__file__).parent / "../examples/LJ_mix"
+path_data = Path(__file__).parent / "../examples/archived/LJ_mix"
 
 
 @pytest.fixture

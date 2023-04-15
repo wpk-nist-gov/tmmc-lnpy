@@ -49,26 +49,26 @@ Made available from {mod}`~lnpy.lnpiseries`
     ~lnpy.segment
     ~lnpy.segment.PhaseCreator
 
-:::
+```
 
 ## Ensemble properties
 
-:::{eval-rst}
+```{eval-rst}
 .. autosummary::
 
     ~lnpy.ensembles
 
-:::
+```
 
 ## Options
 
 Mode available from {mod}`~lnpy.options`
 
-:::{eval-rst}
+```{eval-rst}
 .. currentmodule:: lnpy.options
 
 .. autosummary::
 
     set_options
 
-:::
+```
