@@ -10,7 +10,7 @@ api-other
 api-legacy
 ```
 
-# Modules
+## Modules
 
 ```{eval-rst}
 

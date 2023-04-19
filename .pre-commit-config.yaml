@@ -19,10 +19,6 @@ repos:
       - id: check-merge-conflict
       - id: check-symlinks
       - id: check-toml
-  - repo: https://github.com/pre-commit/pre-commit
-    rev: v3.2.2
-    hooks:
-      - id: validate_manifest
   #* Formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: "v3.0.0-alpha.6"
@@ -31,7 +27,7 @@ repos:
         stages: [commit]
         additional_dependencies:
           - prettier-plugin-toml
-        exclude: ^docs/reference/|^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
+        exclude: ^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
   #* Linting
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.

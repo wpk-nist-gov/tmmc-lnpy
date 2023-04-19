@@ -1,5 +1,6 @@
-[![Repo][repo-badge]][repo-link]
-[![Docs][docs-badge]][docs-link]
+# `tmmc-lnpy`
+
+[![Repo][repo-badge]][repo-link] [![Docs][docs-badge]][docs-link]
 [![PyPI license][license-badge]][license-link]
 [![PyPI version][pypi-badge]][pypi-link]
 [![Conda (channel only)][conda-badge]][conda-link]
@@ -24,34 +25,35 @@
 [license-badge]: https://img.shields.io/pypi/l/cmomy?color=informational
 [license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/master/LICENSE
 
-<!-- For more badges, see https://shields.io/category/other and https://naereen.github.io/badges/ -->
-
-[numpy]: https://numpy.org
-[Numba]: https://numba.pydata.org/
-[xarray]: https://docs.xarray.dev/en/stable/
-
-# `tmmc-lnpy`
+<!-- For more badges see
+https://shields.io/category/other
+https://naereen.github.io/badges/
+-->
 
 ## Overview
 
 A package to analyze $\ln \Pi(N)$ data from Transition Matrix Monte Carlo
-simulation. The main output from TMMC simulations, $\ln \Pi(N)$, provides a means to calculate a host of thermodynamic
-properties. Moreover, if $\ln \Pi(N)$ is calculated at a specific chemical potential, it can be reweighted to provide
+simulation. The main output from TMMC simulations, $\ln \Pi(N)$, provides a
+means to calculate a host of thermodynamic properties. Moreover, if $\ln \Pi(N)$
+is calculated at a specific chemical potential, it can be reweighted to provide
 thermodynamic information at a different chemical potential
 
 ## Features
 
-`tmmc-lnpy` provides a wide array of routines to analyze $\ln \Pi(N)$. These include:
+`tmmc-lnpy` provides a wide array of routines to analyze $\ln \Pi(N)$. These
+include:
 
--   Reweighting to arbitrary chemical potential
--   Segmenting $\ln \Pi(N)$ (to identify unique phases)
--   Containers for interacting with several values of $\ln \Pi(N)$ in a vectorized way.
--   Calculating thermodynamic properties from these containers
--   Calculating limits of stability, and phase equilibrium
+- Reweighting to arbitrary chemical potential
+- Segmenting $\ln \Pi(N)$ (to identify unique phases)
+- Containers for interacting with several values of $\ln \Pi(N)$ in a vectorized
+  way.
+- Calculating thermodynamic properties from these containers
+- Calculating limits of stability, and phase equilibrium
 
 ## Status
 
-This package is actively used by the author. Please feel free to create a pull request for wanted features and suggestions!
+This package is actively used by the author. Please feel free to create a pull
+request for wanted features and suggestions!
 
 ## Quick start
 
@@ -69,7 +71,8 @@ conda install -c wpk-nist tmmc-lnpy
 
 ## Example usage
 
-Note that the distribution name `tmmc-lnpy` is different than the import name `lnpy` due to name clashing on pypi.
+Note that the distribution name `tmmc-lnpy` is different than the import name
+`lnpy` due to name clashing on pypi.
 
 ```python
 import lnpy
@@ -90,7 +93,9 @@ This is free software. See [LICENSE][license-link].
 
 ## Related work
 
-This package is used for with [thermoextrap](https://github.com/usnistgov/thermo-extrap) to analyze thermodynamically extrapolated macro state probability distributions.
+This package is used for with
+[thermoextrap](https://github.com/usnistgov/thermo-extrap) to analyze
+thermodynamically extrapolated macro state probability distributions.
 
 ## Contact
 

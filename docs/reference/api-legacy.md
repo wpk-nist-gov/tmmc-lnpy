@@ -1,6 +1,8 @@
 # Legacy API
 
-For backward compatibility, we also provide the module {mod}`lnPi`.  This module is standalone (i.e., it is not a submodule of {mod}`lnpy`), so can be imported using
+For backward compatibility, we also provide the module {mod}`lnPi`. This module
+is standalone (i.e., it is not a submodule of {mod}`lnpy`), so can be imported
+using
 
 ```python
 import lnPi
