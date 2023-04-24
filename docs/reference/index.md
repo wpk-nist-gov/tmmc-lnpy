@@ -1,6 +1,6 @@
 # API reference
 
-:::{toctree}
+```{toctree}
 :maxdepth: 1
 :hidden:
 
@@ -8,11 +8,11 @@ api-public
 api-modules
 api-other
 api-legacy
-:::
+```
 
-# Modules
+## Modules
 
-:::{eval-rst}
+```{eval-rst}
 
 .. autosummary::
 
@@ -27,4 +27,4 @@ api-legacy
     lnpy.examples
     lnpy.maskedlnpi_legacy
 
-:::
+```
