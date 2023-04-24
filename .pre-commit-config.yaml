@@ -28,6 +28,12 @@ repos:
         additional_dependencies:
           - prettier-plugin-toml
         exclude: ^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
+  #** markdown
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.6.0
+    hooks:
+      - id: markdownlint-cli2
+        args: ["--style prettier"]
   #* Linting
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
@@ -57,12 +63,11 @@ repos:
         additional_dependencies: [black]
 
   #* Commit message
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v2.1.1
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.0.1
     hooks:
-      - id: conventional-pre-commit
+      - id: commitizen
         stages: [commit-msg]
-        args: [] # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
 
   #* Manual Linting
   - repo: local
@@ -119,10 +124,3 @@ repos:
         additional_dependencies: [tomli]
         args: [-I, docs/spelling_wordlist.txt]
         stages: [manual]
-  #** markdown
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.6.0
-    hooks:
-      - id: markdownlint-cli2
-        stages: [manual]
-        args: ["--style prettier"]

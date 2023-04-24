@@ -1,4 +1,4 @@
-# `tmmc-lnpy`
+<!-- markdownlint-disable MD041 -->
 
 [![Repo][repo-badge]][repo-link] [![Docs][docs-badge]][docs-link]
 [![PyPI license][license-badge]][license-link]
@@ -6,12 +6,16 @@
 [![Conda (channel only)][conda-badge]][conda-link]
 [![Code style: black][black-badge]][black-link]
 
+<!--
+  For more badges, see
+  https://shields.io/category/other
+  https://naereen.github.io/badges/
+  [pypi-badge]: https://badge.fury.io/py/tmmc-lnpy
+-->
+
 [black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg
-[black-link]: https://github.com/ambv/black
+[black-link]: https://github.com/psf/black
 [pypi-badge]: https://img.shields.io/pypi/v/tmmc-lnpy
-
-<!-- [pypi-badge]: https://badge.fury.io/py/tmmc-lnpy -->
-
 [pypi-link]: https://pypi.org/project/tmmc-lnpy
 [docs-badge]: https://img.shields.io/badge/docs-sphinx-informational
 [docs-link]: https://pages.nist.gov/tmmc-lnpy/
@@ -19,16 +23,14 @@
 [repo-link]: https://github.com/usnistgov/tmmc-lnpy
 [conda-badge]: https://img.shields.io/conda/v/wpk-nist/tmmc-lnpy
 [conda-link]: https://anaconda.org/wpk-nist/tmmc-lnpy
-
-<!-- Use total link so works from anywhere -->
-
 [license-badge]: https://img.shields.io/pypi/l/cmomy?color=informational
-[license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/master/LICENSE
+[license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/main/LICENSE
 
-<!-- For more badges see
-https://shields.io/category/other
-https://naereen.github.io/badges/
--->
+<!-- other links -->
+
+# `tmmc-lnpy`
+
+A Python package for stuff.
 
 ## Overview
 

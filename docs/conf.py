@@ -422,6 +422,8 @@ intersphinx_mapping = {
     "skimage": ("https://scikit-image.org/docs/stable", None),
 }
 
+linkcheck_ignore = ["https://doi.org/"]
+
 
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain, info):
