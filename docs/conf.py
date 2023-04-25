@@ -422,7 +422,12 @@ intersphinx_mapping = {
     "skimage": ("https://scikit-image.org/docs/stable", None),
 }
 
-linkcheck_ignore = ["https://doi.org/"]
+linkcheck_ignore = [
+    "https://doi.org/",
+    "http://dx.doi.org/",
+    "https://pubs.acs.org/",
+    "https://aip.scitation.org/",
+]
 
 
 # based on numpy doc/source/conf.py
