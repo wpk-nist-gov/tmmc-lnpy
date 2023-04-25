@@ -9,7 +9,7 @@ dependencies:
   - matplotlib
   - numpy
   - pip
-  - python>=3.8,<3.11
+  - python>=3.8,<=3.11
   - scikit-image
   - scipy
   - setuptools-scm
