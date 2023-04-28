@@ -8,10 +8,10 @@ import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
+from module_utilities import cached
 from skimage import segmentation
 
 from ._docstrings import docfiller_shared
-from .cached_decorators import gcached
 from .lnpiseries import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
@@ -393,12 +393,12 @@ class wFreeEnergy:
         )
         return cls(data=data, masks=masks, connectivity=connectivity)
 
-    @gcached()
+    @cached.prop
     def _data_max(self):
         """For lnPi data, find absolute argmax and max"""
         return find_masked_extrema(self.data, self.masks)
 
-    @gcached(prop=False)
+    @cached.meth
     def _boundary_max(self, method="exact"):
         """
         Find argmax along boundaries of regions.
@@ -473,7 +473,7 @@ class wFreeEnergy:
         """Location of `w_tran`"""
         return self._boundary_max()[0]
 
-    @gcached()
+    @cached.prop
     def delta_w(self):
         """Transition energy ``delta_w[i, j] = w_tran[i, j] - w_min[i]``."""
         return self.w_tran - self.w_min
@@ -599,7 +599,7 @@ class wFreeEnergyCollection:
             )
         return indexes, ws
 
-    @gcached()
+    @cached.prop
     def _data(self):
         indexes, ws = self._get_items_ws()
         seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wFreeEnergyCollection")
@@ -705,7 +705,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
     """
 
-    @gcached()
+    @cached.prop
     def dwx(self):
         index = list(self._parent.index.get_level_values("phase"))
         masks = [x.mask for x in self._parent]
@@ -716,7 +716,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
-    @gcached()
+    @cached.prop
     def dw(self):
         """Series representation of delta_w"""
         return self.dwx.to_series()

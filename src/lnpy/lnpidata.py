@@ -8,9 +8,9 @@ from functools import lru_cache
 
 import numpy as np
 import pandas as pd
+from module_utilities import cached
 
 from ._docstrings import docfiller_shared
-from .cached_decorators import gcached
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
 
@@ -398,7 +398,7 @@ class lnPiMasked(AccessorMixin):
     def _lnz_tot(self):
         return self.lnz
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_argmax(self, *args, **kwargs):
         """
         Calculate index of maximum of masked data.
@@ -417,7 +417,7 @@ class lnPiMasked(AccessorMixin):
         """
         return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_max(self, *args, **kwargs):
         """
         Calculate index of maximum of masked data.
@@ -435,12 +435,12 @@ class lnPiMasked(AccessorMixin):
         """
         return self.ma[self.local_argmax(*args, **kwargs)]
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_maxmask(self, *args, **kwargs):
         """Calculate mask where ``self.ma == self.local_max()``"""
         return self.ma == self.local_max(*args, **kwargs)
 
-    @gcached()
+    @cached.prop
     def edge_distance_matrix(self):
         """
         Matrix of distance from each element to a background (i.e., masked) point.

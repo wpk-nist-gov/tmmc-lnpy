@@ -9,3 +9,4 @@ dependencies:
   - bottleneck
   - tqdm
   - importlib_resources
+  - module-utilities

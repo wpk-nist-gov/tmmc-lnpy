@@ -2,6 +2,7 @@ dependencies:
   - bottleneck
   - importlib_resources
   - joblib
+  - module-utilities
   - numpy
   - pytest
   - python>=3.8,<=3.11

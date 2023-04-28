@@ -6,9 +6,9 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from module_utilities import cached
 from scipy import ndimage
 
-from .cached_decorators import gcached
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
 
@@ -173,19 +173,19 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     def __str__(self):
         return f"MaskedlnPi(lnz={str(self.lnz)})"
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_argmax(self, *args, **kwargs):
         return np.unravel_index(self.argmax(*args, **kwargs), self.shape)
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_max(self, *args, **kwargs):
         return self[self.local_argmax(*args, **kwargs)]
 
-    # @gcached(prop=False)
+    # @cached.meth
     def local_maxmask(self, *args, **kwargs):
         return self == self.local_max(*args, **kwargs)
 
-    @gcached()
+    @cached.prop
     def edge_distance_matrix(self):
         """Matrix of distance from upper bound"""
         from .utils import distance_matrix
@@ -196,7 +196,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
 
     # make these top level
-    # @gcached()
+    # @cached.prop
     # @property
     # def pi(self):
     #     """
@@ -205,11 +205,11 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     #     pi = np.exp(self - self.local_max())
     #     return pi
 
-    # @gcached()
+    # @cached.prop
     # def pi_sum(self):
     #     return self.pi.sum()
 
-    # @gcached(prop=False)
+    # @cached.meth
     # def betaOmega(self, lnpi_zero=None):
     #     if lnpi_zero is None:
     #         lnpi_zero = self.data.ravel()[0]
