@@ -16,59 +16,50 @@ from functools import lru_cache
 
 import bottleneck
 import numpy as np
+from module_utilities.docfiller import DocFiller
 from skimage import feature, morphology, segmentation
 
-from ._docstrings import _prepare_shared_docs, _shared_docs, docfiller
+from ._docstrings import DOCFILLER_SHARED
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
 
 # * Common doc strings
+_docstrings_local = r"""
+Parameters
+----------
+data : array-like
+    Image data to analyze
+min_distance : int or sequence of int, optional
+    min_distance parameter.  If sequence, then call
+    :func:`~skimage.feature.peak_local_max` until number of peaks ``<=num_peaks_max``.
+    Default value is ``(5, 10, 15, 20, 25)``.
+connectivity_morphology | connectivity : int, optional
+    Maximum number of orthogonal hops to consider a pixel/voxel as a neighbor.
+    Accepted values are ranging from 1 to ``input.ndim``. If ``None``, a full
+    connectivity of ``input.ndim`` is used.
+connectivity_watershed | connectivity : ndarray, optional
+    An array with the same number of dimensions as image whose non-zero
+    elements indicate neighbors for connection. Following the scipy convention,
+    default is a one-connected array of the dimension of the image.
+num_peaks_max : int, optional
+    Max number of maxima/peaks to find. If not specified, any number of peaks allowed.
+peak_style | style : {'indices', 'mask', 'marker'}
+    Controls output style
 
-_shared_docs_local = {
-    "data": """
-    data : array-like
-        Image data to analyze
-    """,
-    "min_distance": r"""
-    min_distance : int or sequence of int, optional
-        min_distance parameter.  If sequence, then call
-        :func:`~skimage.feature.peak_local_max` until number of peaks ``<=num_peaks_max``.
-        Default value is ``(5, 10, 15, 20, 25)``.
-    """,
-    "connectivity_morphology": """
-    connectivity : int, optional
-        Maximum number of orthogonal hops to consider a pixel/voxel as a neighbor.
-        Accepted values are ranging from 1 to ``input.ndim``. If ``None``, a full connectivity of ``input.ndim`` is used.
-    """,
-    "connectivity_watershed": """
-    connectivity : ndarray, optional
-        An array with the same number of dimensions as image whose non-zero elements indicate neighbors for connection.
-        Following the scipy convention, default is a one-connected array of the dimension of the image.
-    """,
-    "num_peaks_max": """
-    num_peaks_max : int, optional
-        Max number of maxima/peaks to find. If not specified, any number of peaks allowed.
-    """,
-    "peak_style": """
-    style : {'indices', 'mask', 'marker'}
-        Controls output style
+    * indices : indices of peaks
+    * mask : array of bool marking peak locations
+    * marker : array of int
+markers : int, or ndarray of int, optional
+    Same shape as image. The desired number of markers, or an array marking the
+    basins with the values to be assigned in the label matrix. Zero means not a
+    marker. If None (no markers given), the local minima of the image are used
+    as markers.
+"""
 
-        * indices : indices of peaks
-        * mask : array of bool marking peak locations
-        * marker : array of int
 
-    """,
-    "markers": """
-    markers : int, or ndarray of int, optional
-        Same shape as image. The desired number of markers, or an array marking the basins with the values to be assigned in the label matrix.
-        Zero means not a marker. If None (no markers given), the local minima of the image are used as markers.
-    """,
-}
+DOCFILLER_LOCAL = DocFiller.from_docstring(_docstrings_local, combine_keys="parameters")
 
-_shared_docs_local = _prepare_shared_docs(_shared_docs_local)
-docfiller_shared = docfiller(**(dict(_shared_docs, **_shared_docs_local)))
-
-# docfiller_shared = docfiller(**dict(_shared_docs, **_prepare_shared_docs(_shared_docs_local)))
+docfiller_shared = DOCFILLER_SHARED.append(DOCFILLER_LOCAL)()
 
 
 @docfiller_shared

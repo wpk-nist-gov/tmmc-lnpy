@@ -3,8 +3,6 @@ Options (:mod:`~lnpy.options`)
 ==============================
 """
 
-import os
-
 TQDM_USE = "tqdm_use"
 TQDM_LEN_CALC = "tqdm_len_calc"
 TQDM_LEN_BUILD = "tqdm_len_build"
@@ -17,14 +15,6 @@ JOBLIB_BACKEND = "joblib_backend"
 JOBLIB_KWS = "joblib_kws"
 JOBLIB_LEN_CALC = "joblib_len_calc"
 JOBLIB_LEN_BUILD = "joblib_len_build"
-
-DOC_SUB = "doc_sub"
-
-try:
-    # Default to setting docs
-    _DOC_SUB = os.getenv("LNPI_DOC_SUB", "True").lower() not in ("0", "f", "false")
-except KeyError:
-    _DOC_SUB = True
 
 
 OPTIONS = {
@@ -39,7 +29,6 @@ OPTIONS = {
     JOBLIB_KWS: {},
     JOBLIB_LEN_CALC: 200,
     JOBLIB_LEN_BUILD: 500,
-    DOC_SUB: _DOC_SUB,
 }
 
 _isbool = lambda x: isinstance(x, bool)
@@ -60,7 +49,6 @@ _VALIDATORS = {
     JOBLIB_KWS: lambda x: isinstance(x, dict),
     JOBLIB_LEN_CALC: _isint,
     JOBLIB_LEN_BUILD: _isint,
-    DOC_SUB: _isbool,
 }
 
 _SETTERS = {}
