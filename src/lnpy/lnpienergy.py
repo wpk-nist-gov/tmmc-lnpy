@@ -11,7 +11,7 @@ import xarray as xr
 from module_utilities import cached
 from skimage import segmentation
 
-from ._docstrings import docfiller_shared
+from .docstrings import docfiller_shared
 from .lnpiseries import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs

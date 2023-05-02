@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from module_utilities import cached
 
-from ._docstrings import docfiller_shared
+from .docstrings import docfiller_shared
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
 

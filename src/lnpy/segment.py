@@ -19,7 +19,7 @@ import numpy as np
 from module_utilities.docfiller import DocFiller
 from skimage import feature, morphology, segmentation
 
-from ._docstrings import DOCFILLER_SHARED
+from .docstrings import DOCFILLER_SHARED
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
 
