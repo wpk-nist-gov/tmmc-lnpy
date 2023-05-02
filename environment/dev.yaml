@@ -6,7 +6,7 @@ dependencies:
   - ipywidgets
   - joblib
   - matplotlib
-  - module-utilities
+  - module-utilities >= 0.1
   - netcdf4
   - numpy
   - pytest

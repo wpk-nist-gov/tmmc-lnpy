@@ -34,7 +34,7 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities",
+    "module-utilities >= 0.1",
 ] # additional packages
 
 [project.urls]
