@@ -8,7 +8,8 @@ import warnings
 from itertools import chain
 from operator import attrgetter
 
-from .cached_decorators import gcached
+from module_utilities import cached
+
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import parallel_map_attr, parallel_map_call
 
@@ -65,7 +66,7 @@ def _CachedAccessorCleared(name, accessor):
     If you only want to create it once, then use the Single access wrapper below
     """
 
-    @gcached(key=name, prop=True)
+    @cached.prop(key=name)
     @wraps(accessor)
     def _get_prop(self):
         return accessor(self)
@@ -180,7 +181,7 @@ class _CallableListResultsCache:
         self._cache = {}
         self._use_joblib = getattr(self.parent, "_USE_JOBLIB_", False)
 
-    @gcached(prop=False)
+    @cached.meth
     def __call__(self, *args, **kwargs):
         # get value
         seq = get_tqdm(self.items, desc=self.desc)
@@ -287,7 +288,7 @@ def _CachedListPropertyWrapper(name, cache_list=None):
     else:
         cache = False
 
-    # @gcached(key=name, prop=True)
+    # @cached.prop(key=name)
     def _get_prop(self):
         results = [getattr(x, name) for x in self]
         if callable(results[0]):
@@ -298,7 +299,7 @@ def _CachedListPropertyWrapper(name, cache_list=None):
         return results
 
     if cache:
-        _get_prop = gcached(key=name, prop=True)(_get_prop)
+        _get_prop = cached.prop(key=name)(_get_prop)
     else:
         _get_prop = property(_get_prop)
 
@@ -308,7 +309,7 @@ def _CachedListPropertyWrapper(name, cache_list=None):
 def _CachedListAccessorWrapper(name, cache_list=None):
     """Wrap List accessor in cached property"""
 
-    @gcached(key=name, prop=True)
+    @cached.prop(key=name)
     def _get_prop(self):
         return _ListAccessor(
             self, [getattr(x, name) for x in self], cache_list=cache_list

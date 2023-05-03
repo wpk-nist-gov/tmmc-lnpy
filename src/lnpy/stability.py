@@ -7,9 +7,9 @@ Calculation of spinodal and binodal
 import itertools
 
 import numpy as np
+from module_utilities import cached
 from scipy import optimize
 
-from .cached_decorators import gcached
 from .lnpiseries import lnPiCollection
 
 
@@ -584,7 +584,7 @@ class StabilityBase:
         # return self._parent.new_like(s)
         return self._parent.concat(items, concat_kws=concat_kws, **kwargs)
 
-    @gcached()
+    @cached.prop
     def access(self):
         """View (:class:`lnpy.lnpiseries.lnPiCollection`) of stability"""
         return self._get_access()
@@ -711,7 +711,7 @@ class Spinodals(StabilityBase):
             unstack = self._parent._xarray_unstack
         self.set_access_kws(unstack=unstack)
 
-        converged = all([x.converged for x in info.values()])
+        converged = all(x.converged for x in info.values())
         if raise_unconverged and not converged:
             raise ValueError("Spinodal calculation did not converge")
 
@@ -849,7 +849,7 @@ class Binodals(StabilityBase):
             info[idx] = r
             index[idx] = ids
 
-        converged = all([x.converged for x in info.values()])
+        converged = all(x.converged for x in info.values())
         if raise_unconverged and not converged:
             raise ValueError("Binodal calculation did not converge")
 

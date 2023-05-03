@@ -17,7 +17,7 @@ def tag_phases2(x):
 
 from pathlib import Path
 
-path_data = Path(__file__).parent / "../examples/LJ_cfs_2.5sig"
+path_data = Path(__file__).parent / "../examples/archived/LJ_cfs_2.5sig"
 
 
 def get_lnz(path):

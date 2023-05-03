@@ -1,6 +1,8 @@
-:::{include} ../README.md
+<!-- markdownlint-disable MD041 -->
+
+```{include} ../README.md
 :end-before: <!-- end-docs -->
-:::
+```
 
 # Navigation
 
@@ -8,7 +10,7 @@
 :maxdepth: 1
 
 installation
-notebooks/Basic_usage
+examples/index
 reference/index
 license
 contributing

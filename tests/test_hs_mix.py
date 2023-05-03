@@ -7,7 +7,7 @@ import pytest
 import lnpy
 import lnpy.stability
 
-path_data = Path(__file__).parent / "../examples/HS_mix"
+path_data = Path(__file__).parent / "../examples/archived/HS_mix"
 
 
 # function to tag 'LD' and 'HD' phases
