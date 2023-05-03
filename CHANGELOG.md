@@ -8,6 +8,26 @@ See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
 
 <!-- scriv-insert-here -->
 
+## v0.3.0 — 2023-05-02
+
+### Added
+
+- Added support for python3.11
+
+- Moved `_docstrings` -> `docstrings` to make available
+- Moved from local docfiller to module_utilities.docfiller
+- Moved from local cached module to module-utilities.cached
+- Add support for python3.11
+
+Full set of changes:
+[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...0.3.0)
+
+### Changed
+
+- Update package layout
+- New linters via pre-commit
+- Development env now handled by tox
+
 ## v0.2.2 - 2023-04-05
 
 Full set of changes:
