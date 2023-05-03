@@ -2,6 +2,7 @@ dependencies:
   - bottleneck
   - importlib_resources
   - joblib
+  - module-utilities >= 0.1
   - mypy
   - numpy
   - pytest

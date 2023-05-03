@@ -6,8 +6,8 @@ Collection of lnPi objects (:mod:`~lnpy.lnpiseries`)
 import numpy as np
 import pandas as pd
 import xarray as xr
+from module_utilities import cached
 
-from .cached_decorators import gcached
 from .extensions import AccessorMixin
 from .utils import get_tqdm_build as get_tqdm
 from .utils import labels_to_masks, masks_to_labels
@@ -486,7 +486,7 @@ class lnPiCollection(SeriesWrapper):
                 # assert lnpi._base is _base
 
     # repr
-    @gcached()
+    @cached.prop
     def _lnz_series(self):
         return self._series.apply(lambda x: x.lnz)
 
@@ -506,7 +506,7 @@ class lnPiCollection(SeriesWrapper):
         """Number of unique lnzs"""
         return len(self.index.droplevel("phase").drop_duplicates())
 
-    @gcached()
+    @cached.prop
     def index_frame(self):
         """
         Values (from :class:`xarray.DataArray`) for each sample.
@@ -554,7 +554,7 @@ class lnPiCollection(SeriesWrapper):
         """Get index values for specified level"""
         return self._get_level(level=level)
 
-    # @gcached()
+    # @cached.prop
     @property
     def _nrec(self):
         return len(self._series)

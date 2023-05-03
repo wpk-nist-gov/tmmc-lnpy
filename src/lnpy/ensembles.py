@@ -2,18 +2,20 @@
 Ensemble averages (:mod:`~lnpy.ensembles`)
 ==========================================
 """
-from functools import lru_cache, wraps
+from functools import lru_cache, partial, wraps
 
 import numpy as np
-
-# import pandas as pd
 import xarray as xr
+from module_utilities import cached
 
-from .cached_decorators import gcached_use_cache as gcached
 from .lnpidata import MaskedlnPiDelayed, lnPiMasked
 from .lnpiseries import lnPiCollection
 from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .utils import dim_to_suffix_dataset
+
+# always check_use_cache here.
+cached_prop = partial(cached.prop, check_use_cache=True)
+cached_meth = partial(cached.meth, check_use_cache=True)
 
 
 ###############################################################################
@@ -79,14 +81,14 @@ class xlnPiWrapper:
         self.dims_lnz = [f"{lnz_name}_{i}" for i in range(self.ndim)]
         self.dims_comp = [comp_name]
 
-    @gcached()
+    @cached_prop
     def coords_n(self):
         return {
             k: xr.DataArray(_get_range(n), dims=k, attrs={"long_name": rf"${k}$"})
             for k, n in zip(self.dims_n, self.shape)
         }
 
-    @gcached(prop=False)
+    @cached_meth
     def attrs(self, *args):
         d = {
             "dims_n": self.dims_n,
@@ -99,7 +101,7 @@ class xlnPiWrapper:
             d["dims_rec"] = self.dims_rec
         return d
 
-    @gcached(prop=False)
+    @cached_meth
     def ncoords(self, coords_n=False):
         if coords_n:
             coords = self.coords_n
@@ -112,7 +114,7 @@ class xlnPiWrapper:
             name=self.n_name,
         )
 
-    @gcached(prop=False)
+    @cached_meth
     def ncoords_tot(self, coords_n=False):
         return self.ncoords(coords_n).sum(self.dims_comp)
 
@@ -212,11 +214,11 @@ class xGrandCanonical:
     def _xarray_unstack(self):
         return getattr(self._parent, "_xarray_unstack", True)
 
-    @gcached()
+    @cached_prop
     def _standard_attrs(self):
         return self._wrapper.attrs(*self._parent.state_kws.keys())
 
-    # @gcached() to much memory
+    # @cached_prop to much memory
     @property
     def _rec_coords(self):
         if self._rec_name is None:
@@ -276,11 +278,11 @@ class xGrandCanonical:
         """System volume :math:`V`."""
         return self._parent.state_kws["volume"]
 
-    @gcached()
+    @cached_prop
     def coords_state(self):
         return {k: self.pi_norm.coords[k] for k in self.dims_state}
 
-    @gcached()
+    @cached_prop
     @xr_name(r"$\beta {\bf \mu}$")
     def betamu(self):
         r"""Scaled chemical potential :math:`\beta \mu`"""
@@ -308,7 +310,7 @@ class xGrandCanonical:
             **self._parent.state_kws,
         )  # .assign_coords(**self._rec_coords)
 
-    @gcached()
+    @cached_prop
     def _pi_params(self):
         pi_norm, pi_sum, lnpi_zero = self._parent._pi_params(-np.inf)
 
@@ -485,13 +487,13 @@ class xGrandCanonical:
         """Apply function to `self`"""
         return func(self, *args, **kwargs)
 
-    @gcached()
+    @cached_prop
     @xr_name(r"${\bf n}(\mu,V,T)$")
     def nvec(self):
         r"""Average number of particles of each component :math:`\overline{{\bf N}}`"""
         return self._mean_pi(self.ncoords)
 
-    @gcached()
+    @cached_prop
     @xr_name(r"$n(\mu,V,T)$")
     def ntot(self):
         r"""Average total number of particles :math:`\overline{N}`"""
@@ -503,13 +505,13 @@ class xGrandCanonical:
         r"""Average molfrac for each components :math:`{\bf x} = \overline{{\bf N}} / N`"""
         return self.nvec.pipe(lambda x: x / x.sum(self.dims_comp))
 
-    @gcached()
+    @cached_prop
     @xr_name(r"$var[{\bf n}(\mu,V,T)]$")
     def nvec_var(self):
         r"""Variance in particle number :math:`{\rm var}\, \bf{N}`"""
         return self.var_pi(self.ncoords)
 
-    @gcached()
+    @cached_prop
     @xr_name(r"$var[n(\mu,V,T)]$")
     def ntot_var(self):
         r"""Variance in total number of particles :math:`{\rm var}\, N`"""
@@ -544,7 +546,7 @@ class xGrandCanonical:
     #                         dims=self.dims_rec,
     #                         coords=self._rec_coords)
 
-    @gcached(prop=False)
+    @cached_meth
     def _argmax_indexer(self):
         x = self.pi_norm.values
         xx = x.reshape(x.shape[0], -1)
@@ -552,14 +554,14 @@ class xGrandCanonical:
         indexer = np.unravel_index(idx_flat, x.shape[1:])
         return indexer
 
-    @gcached()
+    @cached_prop
     def _argmax_indexer_dict(self):
         return {
             k: xr.DataArray(v, dims=self._parent._concat_dim)
             for k, v in zip(self.dims_n, self._argmax_indexer())
         }
 
-    @gcached()
+    @cached_prop
     def _sample_indexer_dict(self):
         return {
             self._parent._concat_dim: xr.DataArray(
@@ -591,7 +593,7 @@ class xGrandCanonical:
             out = out.assign_coords(**self._argmax_indexer_dict)
         return out
 
-    @gcached(prop=False)
+    @cached_meth
     def argmax(self):
         return np.array(self._argmax_indexer()).T
 
@@ -626,7 +628,7 @@ class xGrandCanonical:
         mask = self.pi_norm > val
         return e.where(mask).min(self.dims_n)
 
-    @gcached(prop=False)
+    @cached_meth
     @xr_name(r"$\beta \Omega(\mu,V,T)$", standard_name="grand_potential")
     def _betaOmega(self, lnpi_zero=None):
         if lnpi_zero is None:
@@ -649,7 +651,7 @@ class xGrandCanonical:
         # thing in cache
         return self._betaOmega(lnpi_zero)
 
-    @gcached()
+    @cached_prop
     @xr_name(r"${\rm PE}(\mu,V,T)$", standard_name="potential_energy")
     def PE(self):
         r"""Potential energy :math:`\overline{PE}`"""
@@ -697,13 +699,13 @@ class xGrandCanonical:
         r"""Grand potential per particle :math:`\beta \Omega / \overline{N}`"""
         return self.betaOmega(lnpi_zero) / self.ntot
 
-    # @gcached(prop=False)
+    # @cached_meth
     @xr_name(r"$\beta p(\mu,V,T)V$")
     def betapV(self, lnpi_zero=None):
         r""":math:`\beta p V = - \beta \Omega`"""
         return -self.betaOmega(lnpi_zero)
 
-    @gcached()
+    @cached_prop
     @xr_name("mask_stable", description="True where state is most stable")
     def mask_stable(self):
         """Masks are True where values are stable. Only works for unstacked data."""
@@ -720,7 +722,7 @@ class xGrandCanonical:
         else:
             return self.betapV().pipe(lambda x: x.max("phase") == x)
 
-    # @gcached(prop=False)
+    # @cached_meth
     @xr_name(r"$\beta p(\mu,V,T)/\rho$", standard_name="compressibility_factor")
     def Z(self, lnpi_zero=None):
         r"""Compressibility factor :math:`\beta p / \rho`"""
@@ -903,7 +905,7 @@ class xCanonical:
     def _xarray_unstack(self):
         return getattr(self._parent, "_xarray_unstack", True)
 
-    @gcached()
+    @cached_prop
     def ncoords(self):
         """Coordinate vector `dims_n`"""
         return (
@@ -917,12 +919,12 @@ class xCanonical:
         r"""Number of particles for each components :math:`{\bf N}`"""
         return self.ncoords.rename("nvec")
 
-    @gcached()
+    @cached_prop
     def ntot(self):
         """Total number of particles :math:`N`"""
         return self.ncoords.sum(self._xge.dims_comp)
 
-    @gcached(prop=False)
+    @cached_meth
     @xr_name(r"$\beta F({\bf n},V,T)$", standard_name="helmholtz_free_energy")
     def _betaF(self, lnpi_zero=None):
         """Helmholtz free energy"""
@@ -950,7 +952,7 @@ class xCanonical:
         r"""Scaled Helmholtz free energy per particle :math:`\beta F / N`"""
         return self.betaF(lnpi_zero) / self.ntot
 
-    @gcached()
+    @cached_prop
     @xr_name(r"${\rm PE}({\bf n},V,T)/n$", standard_name="potential_energy")
     def PE(self):
         """Internal Energy :math:`PE`"""
@@ -990,7 +992,7 @@ class xCanonical:
         r"""Entropy per particle :math:`S / (N k_{\rm B})`"""
         return self.S(ndim, lnpi_zero) / self.ntot
 
-    @gcached(prop=False)
+    @cached_meth
     @xr_name(r"$\beta {\bf\mu}({bf n},V,T)$", standard_name="absolute_activity")
     def _betamu(self, lnpi_zero=None):
         return xr.concat(
@@ -1008,7 +1010,7 @@ class xCanonical:
         r"""Density :math:`\rho = N / V`"""
         return self.ncoords / self._xge.volume
 
-    @gcached(prop=False)
+    @cached_meth
     @xr_name(r"$\beta\Omega({\bf n},V,T)$")
     def _betaOmega(self, lnpi_zero=None):
         """Calculate beta * Omega = betaF - lnz .dot. N"""
