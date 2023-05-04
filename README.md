@@ -30,8 +30,6 @@
 
 # `tmmc-lnpy`
 
-A Python package for stuff.
-
 ## Overview
 
 A package to analyze $\ln \Pi(N)$ data from Transition Matrix Monte Carlo
