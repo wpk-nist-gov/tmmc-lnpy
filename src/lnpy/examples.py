@@ -60,7 +60,7 @@ def load_example_dict(name):
     name : {'lj_sub', 'lj_sup', 'ljmix_sup', 'hsmix', 'watermof}
     """
 
-    ref = load_example_maskddata(name)
+    ref = load_example_lnpimasked(name)
 
     return {
         "lnPi_data": ref.data,
@@ -71,7 +71,7 @@ def load_example_dict(name):
     }
 
 
-def load_example_maskddata(name):
+def load_example_lnpimasked(name):
     """
     Load an example file
 
@@ -123,7 +123,7 @@ class Example:
 
 def lj_sup_example():
     """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
-    ref = load_example_maskddata("lj_sup")
+    ref = load_example_lnpimasked("lj_sup")
 
     phase_creator = PhaseCreator(
         nmax=1,
@@ -147,7 +147,7 @@ def tag_phases_single_comp_simple(x):
 
 def lj_sub_example():
     """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
-    ref = load_example_maskddata("lj_sub")
+    ref = load_example_lnpimasked("lj_sub")
 
     phase_creator = PhaseCreator(
         nmax=2,
@@ -164,7 +164,7 @@ def lj_sub_example():
 
 def ljmix_sup_example():
     """Create an :class:`Example` instance for a Lennard-Jones mixture (supercritical)."""
-    ref = load_example_maskddata("ljmix_sup")
+    ref = load_example_lnpimasked("ljmix_sup")
 
     phase_creator = PhaseCreator(
         nmax=1,
@@ -184,7 +184,7 @@ def hsmix_example():
         argmax0 = np.array([xx.local_argmax()[0] for xx in x])
         return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
-    ref = load_example_maskddata("hsmix")
+    ref = load_example_lnpimasked("hsmix")
 
     phase_creator = PhaseCreator(
         nmax=2, nmax_peak=4, ref=ref, tag_phases=tag_phases, merge_kws={"efac": 0.8}
@@ -200,7 +200,7 @@ def hsmix_example():
 #         argmax0 = np.array([xx.local_argmax()[0] for xx in x])
 #         return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
-#     ref = load_example_maskddata('watermof')
+#     ref = load_example_lnpimasked('watermof')
 
 #     phase_creator = PhaseCreator(
 #         nmax=2,

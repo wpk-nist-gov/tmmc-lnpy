@@ -54,7 +54,7 @@ def ref(request):
     else:
         import lnpy.examples
 
-        return lnpy.examples.load_example_maskddata("watermof")
+        return lnpy.examples.load_example_lnpimasked("watermof")
 
 
 def get_test_table(o, ref):

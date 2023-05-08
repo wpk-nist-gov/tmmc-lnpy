@@ -79,7 +79,7 @@ Note that the distribution name `tmmc-lnpy` is different than the import name
 >>> import lnpy
 >>> import lnpy.examples
 
->>> ref = lnpy.examples.load_example_maskddata('lj_sub')
+>>> ref = lnpy.examples.load_example_lnpimasked('lj_sub')
 
 >>> phase_creator = lnpy.PhaseCreator(nmax=1, ref=ref)
 >>> build_phases = phase_creator.build_phases_mu([None])
