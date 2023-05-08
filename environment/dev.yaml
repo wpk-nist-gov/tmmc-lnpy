@@ -9,6 +9,7 @@ dependencies:
   - module-utilities >= 0.1
   - netcdf4
   - numpy
+  - pip
   - pytest
   - pytest-cov
   - pytest-xdist
@@ -18,4 +19,6 @@ dependencies:
   - setuptools-scm
   - tqdm
   - xarray
+  - pip:
+      - pytest-accept
 name: lnpy-env
