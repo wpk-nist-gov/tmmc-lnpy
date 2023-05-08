@@ -75,10 +75,54 @@ Note that the distribution name `tmmc-lnpy` is different than the import name
 `lnpy` due to name clashing on pypi.
 
 ```python
-import lnpy
-import lnpy.examples
+>>> import numpy as np
+>>> import lnpy
+>>> import lnpy.examples
 
-ref = lnpy.examples.load_example_maskddata('lj_sub')
+>>> ref = lnpy.examples.load_example_maskddata('lj_sub')
+
+>>> phase_creator = lnpy.PhaseCreator(nmax=1, ref=ref)
+>>> build_phases = phase_creator.build_phases_mu([None])
+>>> collection = lnpy.lnPiCollection.from_builder(
+...     lnzs=np.linspace(-10, 3, 5), build_phases=build_phases
+... )
+
+
+# Collections are like pandas.Series
+>>> collection
+<class lnPiCollection>
+lnz_0   phase
+-10.00  0        [-10.0]
+-6.75   0        [-6.75]
+-3.50   0         [-3.5]
+-0.25   0        [-0.25]
+ 3.00   0          [3.0]
+dtype: object
+
+
+# Access xarray backend for Grand Canonical properties with `xge` accessor
+>>> collection.xge.betaOmega()
+<xarray.DataArray 'betaOmega' (lnz_0: 5, phase: 1)>
+array([[-2.32445630e-02],
+       [-6.03695807e-01],
+       [-1.85523371e+02],
+       [-1.54471391e+03],
+       [-2.95801694e+03]])
+Coordinates:
+  * lnz_0    (lnz_0) float64 -10.0 -6.75 -3.5 -0.25 3.0
+  * phase    (phase) int64 0
+    beta     float64 1.372
+    volume   float64 512.0
+Attributes:
+    dims_n:         ['n_0']
+    dims_lnz:       ['lnz_0']
+    dims_comp:      ['component']
+    dims_state:     ['lnz_0', 'beta', 'volume']
+    dims_rec:       ['sample']
+    standard_name:  grand_potential
+    long_name:      $\beta \Omega(\mu,V,T)$
+
+
 ```
 
 <!-- end-docs -->
