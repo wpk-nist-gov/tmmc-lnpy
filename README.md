@@ -21,8 +21,8 @@
 [docs-link]: https://pages.nist.gov/tmmc-lnpy/
 [repo-badge]: https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff
 [repo-link]: https://github.com/usnistgov/tmmc-lnpy
-[conda-badge]: https://img.shields.io/conda/v/wpk-nist/tmmc-lnpy
-[conda-link]: https://anaconda.org/wpk-nist/tmmc-lnpy
+[conda-badge]: https://img.shields.io/conda/v/conda-forge/tmmc-lnpy
+[conda-link]: https://anaconda.org/conda-forge/tmmc-lnpy
 [license-badge]: https://img.shields.io/pypi/l/cmomy?color=informational
 [license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/main/LICENSE
 
@@ -66,7 +66,7 @@ pip install tmmc-lnpy
 or
 
 ```bash
-conda install -c wpk-nist tmmc-lnpy
+conda install -c conda-forge tmmc-lnpy
 ```
 
 ## Example usage
