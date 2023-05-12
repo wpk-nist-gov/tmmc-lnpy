@@ -11,7 +11,7 @@ pip install lnpy
 or
 
 ```bash
-conda install -c wpk-nist lnpy
+conda install -c conda-forge lnpy
 ```
 
 This is the preferred method to install tmmc-lnpy, as it will always install the
