@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 Changelog for `lnpy`
@@ -7,6 +9,17 @@ Changelog for `lnpy`
 See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
 
 <!-- scriv-insert-here -->
+
+## v0.4.0 — 2023-05-12
+
+### Added
+
+- Package now available on conda-forge
+
+### Changed
+
+- Changed `examples.load_example_maskddata` to
+  `examples.load_example_lnpimasked` for consistency with other method names.
 
 ## v0.3.0 — 2023-05-02
 
