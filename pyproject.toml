@@ -42,10 +42,71 @@ homepage = "https://github.com/usnistgov/tmmc-lnpy"
 documentation = "https://pages.nist.gov/tmmc-lnpy/"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = [
+    "pytest", #
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-sugar",
+]
+dev-extras = [
+    "setuptools-scm", #
+    "pytest-accept", # p2c: -p
+    "ipython",
+    "ipykernel",
+]
+typing-extras = [
+    # "pytype; python_version < '3.11'",
+    "mypy",
+]
+typing = [
+    "tmmc-lnpy[typing-extras]", #
+    "tmmc-lnpy[test]",
+]
+nox = [
+    "nox",
+    "noxopt", # p2c: -p
+    "ruamel.yaml",
+]
+dev = [
+    "tmmc-lnpy[test]", #
+    "tmmc-lnpy[typing-extras]",
+    "tmmc-lnpy[dev-extras]",
+]
+tools = [
+    "pre-commit", #
+    "cruft",
+    "scriv",
+]
+dev-complete = [
+    "tmmc-lnpy[dev]", #
+    "tmmc-lnpy[tools]",
+    "tmmc-lnpy[nox]",
+]
+docs = [
+    "ipython", #
+    "pyenchant",
+    "ghp-import",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinxcontrib-spelling",
+    "sphinx-autobuild",
+    "myst-nb",
+    "sphinx-book-theme",
+    "autodocsumm",
+]
+# to be parsed with pyproject2conda with --no-base option
+dist-pypi = ["twine", "build"]
+dist-conda = [
+    "anaconda-client", #
+    "grayskull",
+    "conda-build",
+    "conda-verify",
+    "boa",
+]
 
-# dev = []
-# docs = []
+[tool.pyproject2conda]
+channels = ["conda-forge"]
+
 ## grayskull still messes some things up, but use scripts/recipe-append.sh for this
 [tool.setuptools]
 zip-safe = true # if using mypy, must be False
@@ -58,7 +119,6 @@ where = ["src"]
 
 ## include = []
 ## exclude = []
-##
 [tool.setuptools.dynamic]
 readme = { file = [
     "README.md",
@@ -68,13 +128,14 @@ readme = { file = [
 
 [tool.setuptools_scm]
 fallback_version = "999"
+write_to = "src/lnpy/_version.py"
 
 [tool.aliases]
 test = "pytest"
 
 [tool.pytest.ini_options]
-addopts = "--verbose --doctest-modules --doctest-glob='*.md'"
-testpaths = ["README.md", "tests"]
+addopts = "--doctest-modules --doctest-glob='*.md'"
+testpaths = ["tests", "README.md"]
 
 [tool.isort]
 profile = "black"
@@ -236,7 +297,7 @@ show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
-exclude = [".eggs", ".tox", "doc", "docs"]
+exclude = [".eggs", ".tox", "doc", "docs", ".nox"]
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]

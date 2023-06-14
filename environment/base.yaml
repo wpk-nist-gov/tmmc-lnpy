@@ -16,7 +16,3 @@ dependencies:
   - tqdm
   - importlib_resources
   - module-utilities >= 0.1
-  - pytest
-  - pytest-xdist
-  - pytest-cov
-  - pytest-sugar

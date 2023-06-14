@@ -15,6 +15,6 @@ reference/index
 license
 contributing
 authors
-history
+changelog
 navigation
 ```

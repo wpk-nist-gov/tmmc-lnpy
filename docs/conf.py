@@ -61,7 +61,12 @@ extensions = [
 ]
 
 nitpicky = True
+nitpicky_ignore_regex = [(r"py:*", r"lnPi.*")]
+nitpicky_ignore = [("py:obj", "lnPi.MaskedlnPiDelayed")]
+
+
 autosectionlabel_prefix_document = True
+suppress_warnings = ["autosectionlabel.*"]
 
 # -- myst stuff ---------------------------------------------------------
 myst_enable_extensions = [
@@ -239,15 +244,28 @@ author = "William P. Krekelberg"
 # The short X.Y version.
 # versioning with scm with editable install has issues.
 # instead, try to use scm if available.
-try:
-    from setuptools_scm import get_version
+# try:
+#     from setuptools_scm import get_version
 
-    version = get_version(root="..", relative_to=__file__)
-    release = version
-except ImportError:
-    version = lnpy.__version__
-    # The full version, including alpha/beta/rc tags.
-    release = lnpy.__version__
+#     version = get_version(root="..", relative_to=__file__)
+#     release = version
+# except ImportError:
+#     version = lnpy.__version__
+#     # The full version, including alpha/beta/rc tags.
+#     release = lnpy.__version__
+
+
+def _get_version():
+    import os
+
+    version = os.environ.get("SETUPTOOLS_SCM_PRETEND_VERSION", None)
+    if version is None:
+        version = lnpy.__version__
+    return version
+
+
+release = version = _get_version()
+
 
 # if always want to print "latest"
 # release = "latest"
