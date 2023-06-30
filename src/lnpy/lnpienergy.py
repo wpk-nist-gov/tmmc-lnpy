@@ -124,7 +124,7 @@ def find_masked_extrema(
     masks,
     convention="image",
     extrema="max",
-    fill_val=np.nan,
+    fill_val=None,
     fill_arg=None,
     unravel=True,
 ):
@@ -155,6 +155,8 @@ def find_masked_extrema(
     out_val : ndarray
         value of extrema, one for each `mask`
     """
+
+    fill_val = fill_val or np.nan
 
     if extrema == "max":
         func = np.argmax

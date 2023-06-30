@@ -8,7 +8,6 @@ from module_utilities import cached
 
 from .lnpidata import MaskedlnPiDelayed, lnPiMasked
 from .lnpiseries import lnPiCollection
-from .maskedlnpi_legacy import MaskedlnPiLegacy
 from .utils import dim_to_suffix_dataset, np, xr
 
 # always check_use_cache here.
@@ -177,7 +176,6 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
 
 @lnPiMasked.decorate_accessor("xge")
 @MaskedlnPiDelayed.decorate_accessor("xge")
-@MaskedlnPiLegacy.decorate_accessor("xge")
 @lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
     """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
@@ -876,7 +874,6 @@ class xGrandCanonical:
 # NOTE: Using function accessor to override the docstring
 @lnPiMasked.decorate_accessor("xce")
 @MaskedlnPiDelayed.decorate_accessor("xce")
-@MaskedlnPiLegacy.decorate_accessor("xce")
 def xce_accessor(parent):
     """Accessor to :class:`~lnpy.ensembles.xCanonical`"""
     return xCanonical(parent)
