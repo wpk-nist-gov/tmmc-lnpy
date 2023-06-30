@@ -6,11 +6,10 @@ Calculation of spinodal and binodal
 """
 import itertools
 
-import numpy as np
 from module_utilities import cached
-from scipy import optimize
 
 from .lnpiseries import lnPiCollection
+from .utils import np
 
 
 # ###############################################################################
@@ -168,6 +167,7 @@ def _refine_bracket_spinodal_right(
 
     r : :class:`scipy.optimize.zeros.RootResults` object
     """
+    from scipy.optimize import RootResults
 
     doneLeft = False
     doneRight = False
@@ -192,7 +192,7 @@ def _refine_bracket_spinodal_right(
         # checks
         if doneLeft and doneRight:
             # find bracket
-            r = optimize.RootResults(root=None, iterations=i, function_calls=i, flag=1)
+            r = RootResults(root=None, iterations=i, function_calls=i, flag=1)
             return left, right, r
 
         ########
@@ -201,7 +201,7 @@ def _refine_bracket_spinodal_right(
             # we've reached a breaking point
             if doneLeft:
                 # can't find a lower bound to efac, just return where we're at
-                r = optimize.RootResults(
+                r = RootResults(
                     root=left._get_lnz(), iterations=i + 1, function_calls=i, flag=0
                 )
                 for k, val in [
@@ -217,9 +217,7 @@ def _refine_bracket_spinodal_right(
             # elif not doneLeft and not doneRight:
             else:
                 # all close, and no good on either end -> no spinodal
-                r = optimize.RootResults(
-                    root=None, iterations=i + 1, function_calls=i, flag=1
-                )
+                r = RootResults(root=None, iterations=i + 1, function_calls=i, flag=1)
                 for k, val in [
                     ("left", left),
                     ("right", right),
@@ -268,6 +266,8 @@ def _refine_bracket_spinodal_right(
 def _solve_spinodal(
     a, b, build_phases, idx, idx_nebr=None, efac=1.0, ref=None, build_kws=None, **kwargs
 ):
+    from scipy.optimize import brentq
+
     if build_kws is None:
         build_kws = {}
 
@@ -281,7 +281,7 @@ def _solve_spinodal(
 
         return out
 
-    xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
+    xx, r = brentq(f, a, b, full_output=True, **kwargs)
 
     r.residual = f(xx)
     lnz = f._lnpi._get_lnz(build_phases.index)
@@ -503,6 +503,7 @@ def get_binodal_point(
     --------
     scipy.optimize.brentq
     """
+    from scipy.optimize import brentq
 
     IDs = list(IDs)
     assert len(IDs) == 2
@@ -521,7 +522,7 @@ def get_binodal_point(
         # return Omegas[IDs[0]] - Omegas[IDs[1]]
         return p.xge.betaOmega().reindex(phase=IDs).diff("phase").squeeze().values
 
-    xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
+    xx, r = brentq(f, a, b, full_output=True, **kwargs)
     r.residual = f(xx)
     if full_output:
         return f.lnpi, r

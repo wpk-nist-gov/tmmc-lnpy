@@ -6,15 +6,11 @@ lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
 # Delayed
 from functools import lru_cache
 
-import numpy as np
-import pandas as pd
 from module_utilities import cached
 
 from .docstrings import docfiller_shared
 from .extensions import AccessorMixin
-from .utils import labels_to_masks, masks_change_convention
-
-# from scipy.ndimage import filters
+from .utils import labels_to_masks, masks_change_convention, np, pd
 
 
 @lru_cache(maxsize=20)
@@ -66,7 +62,7 @@ class lnPiArray:
         data,
         state_kws=None,
         extra_kws=None,
-        fill_value=np.nan,
+        fill_value=None,
         copy=False,
     ):
         """
@@ -83,6 +79,8 @@ class lnPiArray:
         lnz = np.atleast_1d(lnz)
         data = np.array(data, copy=copy)
         assert data.ndim == len(lnz)
+
+        fill_value = fill_value or np.nan
 
         if state_kws is None:
             state_kws = {}
@@ -258,7 +256,7 @@ class lnPiMasked(AccessorMixin):
         mask=None,
         state_kws=None,
         extra_kws=None,
-        fill_value=np.nan,
+        fill_value=None,
         copy=False,
     ):
         """
@@ -281,6 +279,8 @@ class lnPiMasked(AccessorMixin):
         -------
         out : lnPiMasked
         """
+
+        fill_value = fill_value or np.nan
 
         base = cls._DataClass(
             lnz=lnz_data,

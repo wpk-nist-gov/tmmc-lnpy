@@ -14,14 +14,12 @@ import warnings
 from collections.abc import Iterable
 from functools import lru_cache
 
-import bottleneck
-import numpy as np
 from module_utilities.docfiller import DocFiller
-from skimage import feature, morphology, segmentation
 
 from .docstrings import DOCFILLER_SHARED
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
+from .utils import np
 
 # * Common doc strings
 _docstrings_local = r"""
@@ -116,6 +114,9 @@ def peak_local_max_adaptive(
     ~skimage.feature.peak_local_max
     ~skimage.morphology.label
     """
+    import bottleneck
+    from skimage.feature import peak_local_max
+    from skimage.morphology import label as morphology_label
 
     assert style in ["indices", "mask", "marker"]
 
@@ -133,7 +134,7 @@ def peak_local_max_adaptive(
 
     n = idx = None
     for md in min_distance:
-        idx = feature.peak_local_max(
+        idx = peak_local_max(
             data,
             min_distance=md,
             labels=mask,
@@ -168,7 +169,7 @@ def peak_local_max_adaptive(
         out[idx] = True
 
         if style == "marker":
-            out = morphology.label(out, connectivity=connectivity)
+            out = morphology_label(out, connectivity=connectivity)
 
     return out
 
@@ -267,11 +268,12 @@ class Segmenter:
         --------
         ~skimage.segmentation.watershed
         """
+        from skimage.segmentation import watershed
 
         if connectivity is None:
             connectivity = data.ndim
         kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
-        return segmentation.watershed(data, markers=markers, mask=mask, **kwargs)
+        return watershed(data, markers=markers, mask=mask, **kwargs)
 
     @docfiller_shared
     def segment_lnpi(

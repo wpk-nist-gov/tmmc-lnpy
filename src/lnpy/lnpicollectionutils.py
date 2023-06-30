@@ -2,10 +2,8 @@
 
 # from functools import partial
 
-import numpy as np
-from scipy.optimize import brentq
-
 from .lnpiseries import lnPiCollection
+from .utils import np
 
 
 def tag_phases_singlecomp(x):
@@ -89,6 +87,7 @@ def get_lnz_min(
     phases : Phases object as solution lnz
     solution_parameters : optional
     """
+    from scipy.optimize import brentq
 
     if phase_id is not None and phase_id not in C.index.get_level_values("phase"):
         raise ValueError(f"no phase {phase_id}")

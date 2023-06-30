@@ -35,6 +35,8 @@ dependencies = [
     "tqdm",
     "importlib_resources",
     "module-utilities >= 0.1",
+    "lazy-import", # p2c: -s lazy_import
+
 ] # additional packages
 
 [project.urls]
@@ -48,11 +50,16 @@ test = [
     "pytest-cov",
     "pytest-sugar",
 ]
+viz = [
+    "matplotlib", #
+    "ipywidgets",
+]
 dev-extras = [
     "setuptools-scm", #
     "pytest-accept", # p2c: -p
     "ipython",
     "ipykernel",
+    "tmmc-lnpy[viz]",
 ]
 typing-extras = [
     # "pytype; python_version < '3.11'",
@@ -93,6 +100,7 @@ docs = [
     "myst-nb",
     "sphinx-book-theme",
     "autodocsumm",
+    "tmmc-lnpy[viz]",
 ]
 # to be parsed with pyproject2conda with --no-base option
 dist-pypi = ["twine", "build"]

@@ -5,16 +5,19 @@ Local free energy of lnPi (:mod:`~lnpy.lnpienergy`)
 import itertools
 import warnings
 
-import numpy as np
-import pandas as pd
-import xarray as xr
 from module_utilities import cached
-from skimage import segmentation
 
 from .docstrings import docfiller_shared
 from .lnpiseries import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
-from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
+from .utils import (
+    labels_to_masks,
+    masks_change_convention,
+    np,
+    parallel_map_func_starargs,
+    pd,
+    xr,
+)
 
 
 def find_boundaries(masks, mode="thick", connectivity=None, **kws):
@@ -42,6 +45,8 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
     skimage.segmentation.find_boundaries
 
     """
+    from skimage import segmentation
+
     if connectivity is None:
         connectivity = np.asarray(masks[0]).ndim
 

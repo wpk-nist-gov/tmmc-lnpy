@@ -4,14 +4,12 @@ Ensemble averages (:mod:`~lnpy.ensembles`)
 """
 from functools import lru_cache, partial, wraps
 
-import numpy as np
-import xarray as xr
 from module_utilities import cached
 
 from .lnpidata import MaskedlnPiDelayed, lnPiMasked
 from .lnpiseries import lnPiCollection
 from .maskedlnpi_legacy import MaskedlnPiLegacy
-from .utils import dim_to_suffix_dataset
+from .utils import dim_to_suffix_dataset, np, xr
 
 # always check_use_cache here.
 cached_prop = partial(cached.prop, check_use_cache=True)

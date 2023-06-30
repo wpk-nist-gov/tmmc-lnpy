@@ -4,13 +4,10 @@ Legacy lnPi array routines (:mod:`~lnpy.maskedlnpi_legacy`)
 """
 from warnings import warn
 
-import numpy as np
-import pandas as pd
 from module_utilities import cached
-from scipy import ndimage
 
 from .extensions import AccessorMixin
-from .utils import labels_to_masks, masks_change_convention
+from .utils import labels_to_masks, masks_change_convention, np, pd
 
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
@@ -369,6 +366,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         --------
         ~scipy.ndimage.gaussian_filter
         """
+        from scipy.ndimage import gaussian_filter
 
         if inplace:
             new = self
@@ -376,7 +374,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         else:
             new = self.copy()
 
-        ndimage.gaussian_filter(
+        gaussian_filter(
             new.data,
             output=new.data,
             mode=mode,
