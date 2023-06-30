@@ -115,3 +115,4 @@ cruft.patch
 /tmp/
 /tmmc-lnpy-feedstock*/
 /src/**/_version.py
+tuna-loadtime.log

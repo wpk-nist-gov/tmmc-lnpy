@@ -25,6 +25,6 @@ api-legacy
     lnpy.stability
     lnpy.utils
     lnpy.examples
-    lnpy.maskedlnpi_legacy
+
 
 ```

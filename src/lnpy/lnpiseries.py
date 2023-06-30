@@ -697,7 +697,8 @@ class lnPiCollection(SeriesWrapper):
 
         Parameters
         ----------
-        dtype : data-type, default=np.uint8
+        dtype : data-type, optional
+            Default to :class:`numpy.uint8`.
         reset_index : bool, default=True
         """
 
