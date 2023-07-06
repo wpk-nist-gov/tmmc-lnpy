@@ -10,11 +10,22 @@ See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
 
 <!-- scriv-insert-here -->
 
+## v0.5.0 — 2023-07-06
+
+### Added
+
+- Now use [lazy_loader](https://github.com/scientific-python/lazy_loader) to
+  speed up initial load time.
+
+Full set of changes:
+[`v0.4.0...0.5.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.4.0...v0.5.0)
+
 ## v0.4.0 — 2023-05-12
 
 ### Added
 
-- Package now available on conda-forge
+- Package now available on conda-forge Full set of changes:
+  [`v0.3.0...0.4.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.3.0...v0.4.0)
 
 ### Changed
 
@@ -33,7 +44,7 @@ See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
 - Add support for python3.11
 
 Full set of changes:
-[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...0.3.0)
+[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...v0.3.0)
 
 ### Changed
 

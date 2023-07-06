@@ -1,16 +1,15 @@
 """
-Legacy lnPi array routines (:mod:`~lnpy.maskedlnpi_legacy`)
+Legacy lnPi array routines (:mod:`~lnPi.maskedlnpi_legacy`)
 ===========================================================
 """
 from warnings import warn
 
-import numpy as np
-import pandas as pd
 from module_utilities import cached
-from scipy import ndimage
 
-from .extensions import AccessorMixin
-from .utils import labels_to_masks, masks_change_convention
+from lnpy._lazy_imports import np, pd
+from lnpy.ensembles import xce_accessor, xge_accessor
+from lnpy.extensions import AccessorMixin
+from lnpy.utils import labels_to_masks, masks_change_convention
 
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
@@ -188,7 +187,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     @cached.prop
     def edge_distance_matrix(self):
         """Matrix of distance from upper bound"""
-        from .utils import distance_matrix
+        from lnpy.utils import distance_matrix
 
         return distance_matrix(~self.mask)
 
@@ -244,7 +243,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         """
         import bottleneck
 
-        from .utils import bfill, ffill
+        from lnpy.utils import bfill, ffill
 
         if axes is None:
             axes = range(self.ndim)
@@ -369,6 +368,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         --------
         ~scipy.ndimage.gaussian_filter
         """
+        from scipy.ndimage import gaussian_filter
 
         if inplace:
             new = self
@@ -376,7 +376,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         else:
             new = self.copy()
 
-        ndimage.gaussian_filter(
+        gaussian_filter(
             new.data,
             output=new.data,
             mode=mode,
@@ -553,3 +553,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
             **kwargs,
         )
         return self.list_from_masks(masks, convention=False)
+
+
+# --- register accessors ---------------------------------------------------------------
+MaskedlnPiLegacy.register_accessor("xge", xge_accessor)
+MaskedlnPiLegacy.register_accessor("xce", xce_accessor)

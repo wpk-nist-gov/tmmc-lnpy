@@ -23,5 +23,11 @@ This is simply an interface to {mod}`lnpy` routines with some renaming.
     lnPi.MaskedlnPiDelayed
     lnPi.CollectionlnPi
 
+.. autosummary::
+    :toctree: generated/
+    :template: autodocsumm/module.rst
+
+    lnPi.maskedlnpi_legacy
+
 
 ```

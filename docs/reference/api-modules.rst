@@ -18,4 +18,3 @@
    :template: autodocsumm/module.rst
 
    lnpiseries
-   maskedlnpi_legacy

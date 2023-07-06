@@ -3,9 +3,5 @@
 # You should not manually edit this file.
 # Instead edit the corresponding pyproject.toml file.
 #
-channels:
-  - conda-forge
-dependencies:
-  - python>=3.8
-  - twine
-  - build
+twine
+build
