@@ -1,6 +1,6 @@
 """routines to find constant molfracs"""
 
-from .utils import np
+from ._lazy_imports import np
 
 
 def _initial_bracket_molfrac(

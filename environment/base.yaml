@@ -16,4 +16,4 @@ dependencies:
   - tqdm
   - importlib_resources
   - module-utilities >= 0.1
-  - lazy_import
+  - lazy_loader

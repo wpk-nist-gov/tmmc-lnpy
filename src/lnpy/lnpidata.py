@@ -8,9 +8,12 @@ from functools import lru_cache
 
 from module_utilities import cached
 
+from lnpy.ensembles import xce_accessor, xge_accessor
+
+from ._lazy_imports import np, pd
 from .docstrings import docfiller_shared
 from .extensions import AccessorMixin
-from .utils import labels_to_masks, masks_change_convention, np, pd
+from .utils import labels_to_masks, masks_change_convention
 
 
 @lru_cache(maxsize=20)
@@ -723,12 +726,6 @@ class lnPiMasked(AccessorMixin):
         return self.list_from_masks(masks, convention=False)
 
 
-from warnings import warn
-
-
-class MaskedlnPiDelayed(lnPiMasked):
-    """Deprecated alias for lnPiMasked"""
-
-    def __init__(self, *args, **kwargs):
-        warn("MaskedlnPiDelayed is deprecated.  Please use lnPiMasked instead")
-        super().__init__(*args, **kwargs)
+# --- Register accessors ---------------------------------------------------------------
+lnPiMasked.register_accessor("xge", xge_accessor)
+lnPiMasked.register_accessor("xce", xce_accessor)

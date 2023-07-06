@@ -16,7 +16,7 @@ dependencies:
   - tqdm
   - importlib_resources
   - module-utilities >= 0.1
-  - lazy_import
+  - lazy_loader
   - ipython
   - pyenchant
   - ghp-import
@@ -28,3 +28,4 @@ dependencies:
   - sphinx-book-theme
   - autodocsumm
   - matplotlib
+  - ipywidgets

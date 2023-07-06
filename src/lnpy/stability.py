@@ -8,8 +8,8 @@ import itertools
 
 from module_utilities import cached
 
+from ._lazy_imports import np
 from .lnpiseries import lnPiCollection
-from .utils import np
 
 
 # ###############################################################################

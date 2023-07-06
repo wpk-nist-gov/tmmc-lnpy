@@ -5,11 +5,20 @@ Collection of lnPi objects (:mod:`~lnpy.lnpiseries`)
 
 from module_utilities import cached
 
+from lnpy.ensembles import xge_accessor
+from lnpy.lnpienergy import (
+    wfe_accessor,
+    wfe_phases_accessor,
+    wlnPi_accessor,
+    wlnPi_single_accessor,
+)
+
+from ._lazy_imports import np, pd, xr
 from .extensions import AccessorMixin
 from .utils import get_tqdm_build as get_tqdm
 
 # lazy loads
-from .utils import labels_to_masks, masks_to_labels, np, pd, xr
+from .utils import labels_to_masks, masks_to_labels
 from .utils import parallel_map_build as parallel_map
 
 
@@ -849,6 +858,13 @@ class lnPiCollection(SeriesWrapper):
 
 ################################################################################
 # Accessors for ColleectionlnPi
+lnPiCollection.register_accessor("xge", xge_accessor)
+lnPiCollection.register_accessor("wfe", wfe_accessor)
+lnPiCollection.register_accessor("wfe_phases", wfe_phases_accessor)
+lnPiCollection.register_accessor("wlnPi", wlnPi_accessor)
+lnPiCollection.register_accessor("wlnPi_single", wlnPi_single_accessor)
+
+
 @SeriesWrapper.decorate_accessor("zloc")
 class _LocIndexer_unstack_zloc:
     """positional indexer for everything but phase"""

@@ -2,8 +2,8 @@
 
 # from functools import partial
 
+from ._lazy_imports import np
 from .lnpiseries import lnPiCollection
-from .utils import np
 
 
 def tag_phases_singlecomp(x):

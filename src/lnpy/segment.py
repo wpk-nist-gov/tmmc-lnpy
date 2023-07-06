@@ -16,10 +16,10 @@ from functools import lru_cache
 
 from module_utilities.docfiller import DocFiller
 
+from ._lazy_imports import np
 from .docstrings import DOCFILLER_SHARED
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
-from .utils import np
 
 # * Common doc strings
 _docstrings_local = r"""
@@ -407,7 +407,7 @@ class PhaseCreator:
         merge_kws = dict(merge_kws, convention=False, nfeature_max=self.nmax)
         self.merge_kws = merge_kws
 
-    def _merge_phase_ids(sel, ref, phase_ids, lnpis):
+    def _merge_phase_ids(self, ref, phase_ids, lnpis):
         """Perform merge of phase_ids/index"""
         from scipy.spatial.distance import pdist
 

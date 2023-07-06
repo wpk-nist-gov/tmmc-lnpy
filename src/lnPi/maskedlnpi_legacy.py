@@ -6,9 +6,10 @@ from warnings import warn
 
 from module_utilities import cached
 
+from lnpy._lazy_imports import np, pd
 from lnpy.ensembles import xce_accessor, xge_accessor
 from lnpy.extensions import AccessorMixin
-from lnpy.utils import labels_to_masks, masks_change_convention, np, pd
+from lnpy.utils import labels_to_masks, masks_change_convention
 
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
@@ -186,7 +187,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     @cached.prop
     def edge_distance_matrix(self):
         """Matrix of distance from upper bound"""
-        from .utils import distance_matrix
+        from lnpy.utils import distance_matrix
 
         return distance_matrix(~self.mask)
 
@@ -242,7 +243,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         """
         import bottleneck
 
-        from .utils import bfill, ffill
+        from lnpy.utils import bfill, ffill
 
         if axes is None:
             axes = range(self.ndim)
@@ -554,6 +555,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         return self.list_from_masks(masks, convention=False)
 
 
-# register accessors
+# --- register accessors ---------------------------------------------------------------
 MaskedlnPiLegacy.register_accessor("xge", xge_accessor)
 MaskedlnPiLegacy.register_accessor("xce", xce_accessor)

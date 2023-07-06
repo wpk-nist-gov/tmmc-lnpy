@@ -4,21 +4,8 @@ Utility functions (:mod:`~lnpy.utils`)
 """
 
 from functools import lru_cache, partial
-from typing import TYPE_CHECKING
 
-# Have this to support type checking and IDE support
-if TYPE_CHECKING:
-    import numpy as np
-    import pandas as pd
-    import xarray as xr
-else:
-    from lazy_import import lazy_module
-
-    np = lazy_module("numpy")
-    pd = lazy_module("pandas")
-    xr = lazy_module("xarray")
-
-
+from ._lazy_imports import np
 from .options import OPTIONS
 
 

@@ -12,10 +12,12 @@ import json
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
+from ._lazy_imports import np, xr
+
 # from .lnpiseries import lnPiCollection
 from .lnpidata import lnPiMasked
 from .segment import PhaseCreator
-from .utils import dataset_to_lnpimasked, np, xr
+from .utils import dataset_to_lnpimasked
 
 
 def json_to_dict(basename):

@@ -6,9 +6,8 @@ from functools import lru_cache, partial, wraps
 
 from module_utilities import cached
 
-from .lnpidata import MaskedlnPiDelayed, lnPiMasked
-from .lnpiseries import lnPiCollection
-from .utils import dim_to_suffix_dataset, np, xr
+from ._lazy_imports import np, xr
+from .utils import dim_to_suffix_dataset
 
 # always check_use_cache here.
 cached_prop = partial(cached.prop, check_use_cache=True)
@@ -174,9 +173,6 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
     return decorator
 
 
-@lnPiMasked.decorate_accessor("xge")
-@MaskedlnPiDelayed.decorate_accessor("xge")
-@lnPiCollection.decorate_accessor("xge")
 def xge_accessor(parent):
     """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
     return xGrandCanonical(parent)
@@ -872,8 +868,6 @@ class xGrandCanonical:
 
 
 # NOTE: Using function accessor to override the docstring
-@lnPiMasked.decorate_accessor("xce")
-@MaskedlnPiDelayed.decorate_accessor("xce")
 def xce_accessor(parent):
     """Accessor to :class:`~lnpy.ensembles.xCanonical`"""
     return xCanonical(parent)
