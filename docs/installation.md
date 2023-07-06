@@ -5,13 +5,13 @@
 To install tmmc-lnpy, run this command in your terminal:
 
 ```bash
-pip install lnpy
+pip install tmmc-lnpy
 ```
 
 or
 
 ```bash
-conda install -c conda-forge lnpy
+conda install -c conda-forge tmmc-lnpy
 ```
 
 This is the preferred method to install tmmc-lnpy, as it will always install the
@@ -36,9 +36,16 @@ pip install .
 To install dependencies with conda/mamba, use:
 
 ```bash
-conda env create [-n {name}] -f environment.yaml
+conda env create [-n {name}] -f environment/base.yaml
 conda activate {name}
 pip install [-e] --no-deps .
+```
+
+If `environment/base.yaml` does not exist, it can be generated with:
+
+```bash
+pip/pipx install pyproject2conda
+pyproject2conda yaml -o environment/base.yaml
 ```
 
 where options in brackets are options (for environment name, and editable

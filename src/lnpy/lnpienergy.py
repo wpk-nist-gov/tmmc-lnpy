@@ -5,16 +5,16 @@ Local free energy of lnPi (:mod:`~lnpy.lnpienergy`)
 import itertools
 import warnings
 
-import numpy as np
-import pandas as pd
-import xarray as xr
 from module_utilities import cached
-from skimage import segmentation
 
+from ._lazy_imports import np, pd, xr
 from .docstrings import docfiller_shared
-from .lnpiseries import lnPiCollection
 from .utils import get_tqdm_calc as get_tqdm
-from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
+from .utils import (
+    labels_to_masks,
+    masks_change_convention,
+    parallel_map_func_starargs,
+)
 
 
 def find_boundaries(masks, mode="thick", connectivity=None, **kws):
@@ -42,6 +42,8 @@ def find_boundaries(masks, mode="thick", connectivity=None, **kws):
     skimage.segmentation.find_boundaries
 
     """
+    from skimage import segmentation
+
     if connectivity is None:
         connectivity = np.asarray(masks[0]).ndim
 
@@ -119,7 +121,7 @@ def find_masked_extrema(
     masks,
     convention="image",
     extrema="max",
-    fill_val=np.nan,
+    fill_val=None,
     fill_arg=None,
     unravel=True,
 ):
@@ -150,6 +152,8 @@ def find_masked_extrema(
     out_val : ndarray
         value of extrema, one for each `mask`
     """
+
+    fill_val = fill_val or np.nan
 
     if extrema == "max":
         func = np.argmax
@@ -739,13 +743,13 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
         return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
 
 
-@lnPiCollection.decorate_accessor("wfe")
+# @lnPiCollection.decorate_accessor("wfe")
 def wfe_accessor(parent):
     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wfe`."""
     return wFreeEnergyCollection(parent)
 
 
-@lnPiCollection.decorate_accessor("wfe_phases")
+# @lnPiCollection.decorate_accessor("wfe_phases")
 def wfe_phases_accessor(parent):
     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wfe_phases`."""
     return wFreeEnergyPhases(parent)
@@ -755,7 +759,7 @@ from warnings import warn
 
 
 # create alias accessors
-@lnPiCollection.decorate_accessor("wlnPi")
+# @lnPiCollection.decorate_accessor("wlnPi")
 def wlnPi_accessor(parent):
     """
     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wlnPi`.
@@ -766,7 +770,7 @@ def wlnPi_accessor(parent):
     return parent.wfe
 
 
-@lnPiCollection.decorate_accessor("wlnPi_single")
+# @lnPiCollection.decorate_accessor("wlnPi_single")
 def wlnPi_single_accessor(parent):
     """
     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wlnPi_single`.

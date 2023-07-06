@@ -6,15 +6,14 @@ lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
 # Delayed
 from functools import lru_cache
 
-import numpy as np
-import pandas as pd
 from module_utilities import cached
 
+from lnpy.ensembles import xce_accessor, xge_accessor
+
+from ._lazy_imports import np, pd
 from .docstrings import docfiller_shared
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
-
-# from scipy.ndimage import filters
 
 
 @lru_cache(maxsize=20)
@@ -66,7 +65,7 @@ class lnPiArray:
         data,
         state_kws=None,
         extra_kws=None,
-        fill_value=np.nan,
+        fill_value=None,
         copy=False,
     ):
         """
@@ -83,6 +82,8 @@ class lnPiArray:
         lnz = np.atleast_1d(lnz)
         data = np.array(data, copy=copy)
         assert data.ndim == len(lnz)
+
+        fill_value = fill_value or np.nan
 
         if state_kws is None:
             state_kws = {}
@@ -258,7 +259,7 @@ class lnPiMasked(AccessorMixin):
         mask=None,
         state_kws=None,
         extra_kws=None,
-        fill_value=np.nan,
+        fill_value=None,
         copy=False,
     ):
         """
@@ -281,6 +282,8 @@ class lnPiMasked(AccessorMixin):
         -------
         out : lnPiMasked
         """
+
+        fill_value = fill_value or np.nan
 
         base = cls._DataClass(
             lnz=lnz_data,
@@ -723,12 +726,6 @@ class lnPiMasked(AccessorMixin):
         return self.list_from_masks(masks, convention=False)
 
 
-from warnings import warn
-
-
-class MaskedlnPiDelayed(lnPiMasked):
-    """Deprecated alias for lnPiMasked"""
-
-    def __init__(self, *args, **kwargs):
-        warn("MaskedlnPiDelayed is deprecated.  Please use lnPiMasked instead")
-        super().__init__(*args, **kwargs)
+# --- Register accessors ---------------------------------------------------------------
+lnPiMasked.register_accessor("xge", xge_accessor)
+lnPiMasked.register_accessor("xce", xce_accessor)

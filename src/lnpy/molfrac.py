@@ -1,9 +1,6 @@
 """routines to find constant molfracs"""
 
-import numpy as np
-from scipy import optimize
-
-# from .segment import get_default_PhaseCreator
+from ._lazy_imports import np
 
 
 def _initial_bracket_molfrac(
@@ -148,6 +145,7 @@ def _solve_lnz_molfrac(
         object with desired molfraction
     info : solver info (optional, returned if full_output is `True`)
     """
+    from scipy.optimize import brentq
 
     if build_kws is None:
         build_kws = {}
@@ -199,7 +197,7 @@ def _solve_lnz_molfrac(
 
         return mf - target
 
-    xx, r = optimize.brentq(f, a, b, full_output=True, **kwargs)
+    xx, r = brentq(f, a, b, full_output=True, **kwargs)
     r.residual = f(xx)
 
     if np.abs(r.residual) > tol:

@@ -3,60 +3,63 @@ Utility functions (:mod:`~lnpy.utils`)
 ======================================
 """
 
-from functools import partial
+from functools import lru_cache, partial
 
-import numpy as np
-
-# import pandas as pd
-import xarray as xr
-from scipy import ndimage as ndi
-from skimage import segmentation
-
-# --------------------------------------------------
-# TQDM stuff
-try:
-    import tqdm as _tqdm
-
-    _HAS_TQDM = True
-except ImportError:
-    _HAS_TQDM = False
-
-if _HAS_TQDM:
-    try:
-        from IPython import get_ipython
-
-        p = get_ipython()
-        if p is not None and p.has_trait("kernel"):
-            from tqdm.notebook import tqdm as tqdm_default
-        else:
-            tqdm_default = _tqdm.tqdm
-    except ImportError:
-        tqdm_default = _tqdm.tqdm
-
+from ._lazy_imports import np
 from .options import OPTIONS
+
+
+# --- TQDM setup -----------------------------------------------------------------------
+@lru_cache
+def _get_tqdm():
+    try:
+        import tqdm
+    except ImportError:
+        tqdm = None
+    return tqdm
+
+
+@lru_cache
+def _get_tqdm_default():
+    _tqdm = _get_tqdm()
+    if _tqdm:
+        try:
+            from IPython import get_ipython
+
+            p = get_ipython()
+            if p is not None and p.has_trait("kernel"):
+                from tqdm.notebook import tqdm as tqdm_default
+            else:
+                tqdm_default = _tqdm.tqdm
+        except ImportError:
+            tqdm_default = _tqdm.tqdm
+    else:
+        tqdm_default = None
+
+    return tqdm_default
 
 
 def tqdm(*args, **kwargs):
     opt = OPTIONS["tqdm_bar"]
     if opt == "text":
-        func = _tqdm.tqdm
+        func = _get_tqdm().tqdm
     elif opt == "notebook":
-        func = _tqdm.tqdm_notebook
+        func = _get_tqdm().tqdm_notebook
     else:
-        func = tqdm_default
-
+        func = _get_tqdm_default()
     return func(*args, **kwargs)
 
 
 def get_tqdm(seq, len_min, leave=None, **kwargs):
     n = kwargs.get("total", None)
+    _tqdm = _get_tqdm()
 
     if isinstance(len_min, str):
         len_min = OPTIONS[len_min]
 
     if n is None:
         n = len(seq)
-    if _HAS_TQDM and OPTIONS["tqdm_use"] and n >= len_min:
+    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
         seq = tqdm(seq, leave=leave, **kwargs)
@@ -80,28 +83,23 @@ get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
 
 # --------------------------------------------------
 # JOBLIB stuff
-try:
-    from joblib import Parallel, delayed
-
-    _HAS_JOBLIB = True
-except ImportError:
-    _HAS_JOBLIB = False
-
-
-from operator import attrgetter
+@lru_cache
+def _get_joblib():
+    try:
+        import joblib
+    except ImportError:
+        joblib = None
+    return joblib
 
 
 def parallel_map_build(func, items, *args, **kwargs):
-    if (
-        _HAS_JOBLIB
-        and OPTIONS["joblib_use"]
-        and len(items) >= OPTIONS["joblib_len_build"]
-    ):
-        return Parallel(
+    joblib = _get_joblib()
+    if joblib and OPTIONS["joblib_use"] and len(items) >= OPTIONS["joblib_len_build"]:
+        return joblib.Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
             **OPTIONS["joblib_kws"],
-        )(delayed(func)(x, *args, **kwargs) for x in items)
+        )(joblib.delayed(func)(x, *args, **kwargs) for x in items)
     else:
         return [func(x, *args, **kwargs) for x in items]
 
@@ -111,34 +109,39 @@ def _func_call(x, *args, **kwargs):
 
 
 def parallel_map_call(items, use_joblib, *args, **kwargs):
+    joblib = _get_joblib()
     if (
         use_joblib
-        and _HAS_JOBLIB
+        and joblib
         and OPTIONS["joblib_use"]
         and len(items) >= OPTIONS["joblib_len_calc"]
     ):
-        return Parallel(
+        return joblib.Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
             **OPTIONS["joblib_kws"],
-        )(delayed(_func_call)(x, *args, **kwargs) for x in items)
+        )(joblib.delayed(_func_call)(x, *args, **kwargs) for x in items)
     else:
         return [x(*args, **kwargs) for x in items]
 
 
 def parallel_map_attr(attr, use_joblib, items):
+    from operator import attrgetter
+
+    joblib = _get_joblib()
     func = attrgetter(attr)
+
     if (
         use_joblib
-        and _HAS_JOBLIB
+        and joblib
         and OPTIONS["joblib_use"]
         and len(items) >= OPTIONS["joblib_len_calc"]
     ):
-        return Parallel(
+        return joblib.Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
             **OPTIONS["joblib_kws"],
-        )(delayed(func)(x) for x in items)
+        )(joblib.delayed(func)(x) for x in items)
     else:
         return [func(x) for x in items]
 
@@ -147,17 +150,19 @@ def parallel_map_func_starargs(func, use_joblib, items, total=None):
     if total is None:
         total = len(items)
 
+    joblib = _get_joblib()
+
     if (
         use_joblib
-        and _HAS_JOBLIB
+        and joblib
         and OPTIONS["joblib_use"]
         and total >= OPTIONS["joblib_len_calc"]
     ):
-        return Parallel(
+        return joblib.Parallel(
             n_jobs=OPTIONS["joblib_n_jobs"],
             backend=OPTIONS["joblib_backend"],
             **OPTIONS["joblib_kws"],
-        )(delayed(func)(*x) for x in items)
+        )(joblib.delayed(func)(*x) for x in items)
     else:
         return [func(*x) for x in items]
 
@@ -189,9 +194,11 @@ def dim_to_suffix_dataset(table, dim, join="_"):
 
 
 def dim_to_suffix(ds, dim="component", join="_"):
-    if isinstance(ds, xr.DataArray):
+    from xarray import DataArray, Dataset
+
+    if isinstance(ds, DataArray):
         f = dim_to_suffix_dataarray
-    elif isinstance(ds, xr.Dataset):
+    elif isinstance(ds, Dataset):
         f = dim_to_suffix_dataset
     else:
         raise ValueError("`ds` must be `DataArray` or `Dataset`")
@@ -324,6 +331,7 @@ def labels_to_masks(
     :func:`skimage.segmentation.find_boundaries`
 
     """
+    from skimage import segmentation
 
     if include_boundary:
         kwargs = dict(dict(mode="outer", connectivity=labels.ndim), **kwargs)
@@ -504,6 +512,7 @@ def distance_matrix(mask, convention="image"):
     --------
     ~scipy.ndimage.distance_transform_edt
     """
+    from scipy.ndimage import distance_transform_edt
 
     mask = np.asarray(mask, dtype=bool)
     mask = masks_change_convention(mask, convention_in=convention, convention_out=True)
@@ -515,7 +524,7 @@ def distance_matrix(mask, convention="image"):
     mask = np.pad(mask, pad_width=pad_width, mode="constant", constant_values=False)
 
     # distance filter
-    dist = ndi.distance_transform_edt(mask)
+    dist = distance_transform_edt(mask)
 
     # remove padding
     s = (slice(None, -1),) * ndim

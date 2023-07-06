@@ -12,8 +12,7 @@ import json
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
-import numpy as np
-import xarray as xr
+from ._lazy_imports import np, xr
 
 # from .lnpiseries import lnPiCollection
 from .lnpidata import lnPiMasked
