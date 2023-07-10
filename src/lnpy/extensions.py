@@ -89,9 +89,10 @@ class AccessorMixin:
         """Most general accessor"""
         if hasattr(cls, name):
             warnings.warn(
-                "registration of accessor %r under name %r for type %r is "
-                "overriding a preexisting attribute with the same name."
-                % (accessor, name, cls),
+                "registration of accessor {!r} under name {!r} for type {!r} is "
+                "overriding a preexisting attribute with the same name.".format(
+                    accessor, name, cls
+                ),
                 AccessorRegistrationWarning,
                 stacklevel=2,
             )
@@ -329,9 +330,10 @@ class ListAccessorMixin:
         for name in names:
             if hasattr(cls, name):
                 warnings.warn(
-                    "registration of name %r for type %r is "
-                    "overriding a preexisting attribute with the same name."
-                    % (name, cls),
+                    "registration of name {!r} for type {!r} is "
+                    "overriding a preexisting attribute with the same name.".format(
+                        name, cls
+                    ),
                     AccessorRegistrationWarning,
                     stacklevel=2,
                 )
@@ -417,9 +419,10 @@ def _decorate_listaccessor(names, accessor_wrapper, **kwargs):
         for name in names:
             if hasattr(cls, name):
                 warnings.warn(
-                    "registration of name %r for type %r is "
-                    "overriding a preexisting attribute with the same name."
-                    % (name, cls),
+                    "registration of name {!r} for type {!r} is "
+                    "overriding a preexisting attribute with the same name.".format(
+                        name, cls
+                    ),
                     AccessorRegistrationWarning,
                     stacklevel=2,
                 )

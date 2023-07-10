@@ -58,6 +58,7 @@ def _initial_bracket_spinodal_right(
         function that returns a Phases object.
     build_kws : dict
         extra arguments to build_phases
+
     Returns
     -------
     left,right: lnPiCollection
@@ -160,6 +161,7 @@ def _refine_bracket_spinodal_right(
     build_kws : dict
     close_kwargs : dict
         arguments to :func:`numpy.allclose`
+
     Returns
     -------
     left,right : lnPiCollection
@@ -492,6 +494,7 @@ def get_binodal_point(
         if True, return solve stats
     kwargs : dict
         extra arguments to ``brentq``
+
     Returns
     -------
     binodal : lnPiCollection

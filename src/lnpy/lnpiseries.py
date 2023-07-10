@@ -635,6 +635,7 @@ class lnPiCollection(SeriesWrapper):
             Extra positional arguments to `cls`
         **kwargs :
             Extra keyword arguments to `cls`
+
         Returns
         -------
         lnPiCollection
@@ -671,6 +672,7 @@ class lnPiCollection(SeriesWrapper):
             Typically one of `PhaseCreator.build_phases_mu` or `PhaseCreator.build_phases_dmu`
         build_kws : optional
             optional arguments to `build_phases`
+
         Returns
         -------
         lnPiCollection

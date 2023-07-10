@@ -524,6 +524,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
             masks[i] is the mask for lnpi index `i`.
         convention : str or bool
             convention of input masks
+
         Returns
         -------
         lnpis : list
