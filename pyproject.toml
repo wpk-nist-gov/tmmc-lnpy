@@ -61,7 +61,7 @@ dev-extras = [
     "tmmc-lnpy[viz]",
 ]
 typing-extras = [
-    # "pytype; python_version < '3.11'",
+    "pytype; python_version < '3.11'", #
     "mypy",
 ]
 typing = [

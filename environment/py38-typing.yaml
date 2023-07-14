@@ -6,7 +6,7 @@
 channels:
   - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.8
   - numpy
   - xarray
   - scipy
@@ -17,15 +17,9 @@ dependencies:
   - importlib_resources
   - module-utilities >= 0.1
   - lazy_loader
-  - ipython
-  - pyenchant
-  - ghp-import
-  - sphinx
-  - sphinx-copybutton
-  - sphinxcontrib-spelling
-  - sphinx-autobuild
-  - myst-nb
-  - sphinx-book-theme
-  - autodocsumm
-  - matplotlib
-  - ipywidgets
+  - pytype
+  - mypy
+  - pytest
+  - pytest-xdist
+  - pytest-cov
+  - pytest-sugar

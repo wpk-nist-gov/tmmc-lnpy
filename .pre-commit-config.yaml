@@ -27,7 +27,7 @@ repos:
         stages: [commit]
         additional_dependencies:
           - prettier-plugin-toml
-        exclude: ^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
+        exclude: ^environment/lock/.*[.]yaml|^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
   #** markdown
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.8.1

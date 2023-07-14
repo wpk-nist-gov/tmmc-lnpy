@@ -6,7 +6,7 @@
 channels:
   - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.10
   - numpy
   - xarray
   - scipy
@@ -17,3 +17,7 @@ dependencies:
   - importlib_resources
   - module-utilities >= 0.1
   - lazy_loader
+  - pytest
+  - pytest-xdist
+  - pytest-cov
+  - pytest-sugar
