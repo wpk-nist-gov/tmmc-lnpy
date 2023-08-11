@@ -52,6 +52,4 @@ watershed_kws : mapping, optional
 """
 
 
-DOCFILLER_SHARED = DocFiller.from_docstring(_docstrings, combine_keys="parameters")
-
-docfiller_shared = DOCFILLER_SHARED()
+docfiller = DocFiller.from_docstring(_docstrings, combine_keys="parameters")

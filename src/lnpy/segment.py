@@ -17,7 +17,7 @@ from functools import lru_cache
 from module_utilities.docfiller import DocFiller
 
 from ._lazy_imports import np
-from .docstrings import DOCFILLER_SHARED
+from .docstrings import docfiller
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
 
@@ -55,12 +55,12 @@ markers : int, or ndarray of int, optional
 """
 
 
-DOCFILLER_LOCAL = DocFiller.from_docstring(_docstrings_local, combine_keys="parameters")
+docfiller_local = docfiller.append(
+    DocFiller.from_docstring(_docstrings_local, combine_keys="parameters")
+).decorate
 
-docfiller_shared = DOCFILLER_SHARED.append(DOCFILLER_LOCAL)()
 
-
-@docfiller_shared
+@docfiller_local
 def peak_local_max_adaptive(
     data,
     mask=None,
@@ -174,7 +174,7 @@ def peak_local_max_adaptive(
     return out
 
 
-@docfiller_shared
+@docfiller_local
 class Segmenter:
     """
     Data segmenter:
@@ -199,7 +199,7 @@ class Segmenter:
             watershed_kws = {}
         self.watershed_kws = watershed_kws
 
-    @docfiller_shared
+    @docfiller_local
     def peaks(self, data, mask=None, num_peaks_max=None, style="marker", **kwargs):
         """
         Interface to :func:`peak_local_max_adaptive` with default values from `self`.
@@ -242,7 +242,7 @@ class Segmenter:
 
         return out
 
-    @docfiller_shared
+    @docfiller_local
     def watershed(self, data, markers, mask, connectivity=None, **kwargs):
         """
         Interface to :func:`skimage.segmentation.watershed` function
@@ -275,7 +275,7 @@ class Segmenter:
         kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
         return watershed(data, markers=markers, mask=mask, **kwargs)
 
-    @docfiller_shared
+    @docfiller_local
     def segment_lnpi(
         self,
         lnpi,

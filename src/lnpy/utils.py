@@ -3,24 +3,39 @@ Utility functions (:mod:`~lnpy.utils`)
 ======================================
 """
 
+from __future__ import annotations
+
 from functools import lru_cache, partial
+from typing import TYPE_CHECKING, cast, overload
 
 from ._lazy_imports import np
 from .options import OPTIONS
 
+if TYPE_CHECKING:
+    from types import ModuleType
+    from typing import Any, Callable, Hashable, Iterable, Mapping, Sequence
+
+    import xarray as xr
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
+
+    from lnpy.lnpidata import lnPiMasked
+
+    from ._typing import MyNDArray, R, T
+
 
 # --- TQDM setup -----------------------------------------------------------------------
 @lru_cache
-def _get_tqdm():
+def _get_tqdm() -> ModuleType | None:
     try:
         import tqdm
+
+        return tqdm
     except ImportError:
-        tqdm = None
-    return tqdm
+        return None
 
 
 @lru_cache
-def _get_tqdm_default():
+def _get_tqdm_default() -> Callable[..., Any]:
     _tqdm = _get_tqdm()
     if _tqdm:
         try:
@@ -29,40 +44,50 @@ def _get_tqdm_default():
             p = get_ipython()
             if p is not None and p.has_trait("kernel"):
                 from tqdm.notebook import tqdm as tqdm_default
+
+                return tqdm_default
             else:
-                tqdm_default = _tqdm.tqdm
+                return cast("Callable[..., Any]", _tqdm.tqdm)
         except ImportError:
-            tqdm_default = _tqdm.tqdm
+            return cast("Callable[..., Any]", _tqdm.tqdm)
     else:
-        tqdm_default = None
 
-    return tqdm_default
+        def wrapper(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
+            return seq
+
+        return wrapper
 
 
-def tqdm(*args, **kwargs):
+def tqdm(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
     opt = OPTIONS["tqdm_bar"]
-    if opt == "text":
-        func = _get_tqdm().tqdm
-    elif opt == "notebook":
-        func = _get_tqdm().tqdm_notebook
+    _tqdm = _get_tqdm()
+    if _tqdm:
+        if opt == "text":
+            func = _tqdm.tqdm
+        elif opt == "notebook":
+            func = _tqdm.tqdm_notebook
+        else:
+            func = _get_tqdm_default()
     else:
         func = _get_tqdm_default()
-    return func(*args, **kwargs)
+    return cast("Iterable[T]", func(seq, *args, **kwargs))
 
 
-def get_tqdm(seq, len_min, leave=None, **kwargs):
+def get_tqdm(
+    seq: Sequence[T], len_min: str | int, leave: bool | None = None, **kwargs: Any
+) -> Iterable[T]:
     n = kwargs.get("total", None)
     _tqdm = _get_tqdm()
 
     if isinstance(len_min, str):
-        len_min = OPTIONS[len_min]
+        len_min = OPTIONS[len_min]  # type: ignore
 
     if n is None:
         n = len(seq)
     if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
-        seq = tqdm(seq, leave=leave, **kwargs)
+        seq = tqdm(seq, leave=leave, **kwargs)  # type: ignore
     return seq
 
 
@@ -84,7 +109,7 @@ get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
 # --------------------------------------------------
 # JOBLIB stuff
 @lru_cache
-def _get_joblib():
+def _get_joblib() -> Any:
     try:
         import joblib
     except ImportError:
@@ -92,100 +117,107 @@ def _get_joblib():
     return joblib
 
 
-def parallel_map_build(func, items, *args, **kwargs):
+def _use_joblib(
+    items: Sequence[Any],
+    len_key: str,
+    use_joblib: bool = True,
+    total: int | None = None,
+) -> bool:
     joblib = _get_joblib()
-    if joblib and OPTIONS["joblib_use"] and len(items) >= OPTIONS["joblib_len_build"]:
-        return joblib.Parallel(
-            n_jobs=OPTIONS["joblib_n_jobs"],
-            backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"],
-        )(joblib.delayed(func)(x, *args, **kwargs) for x in items)
+
+    if use_joblib and joblib and OPTIONS["joblib_use"]:
+        if total is None:
+            total = len(items)
+
+        return total >= OPTIONS[len_key]  # type: ignore
+    else:
+        return False
+
+
+def _parallel(seq: Iterable[Any]) -> list[Any]:
+    joblib = _get_joblib()
+
+    return joblib.Parallel(  # type: ignore
+        n_jobs=OPTIONS["joblib_n_jobs"],
+        backend=OPTIONS["joblib_backend"],
+        **OPTIONS["joblib_kws"],
+    )(seq)
+
+
+def parallel_map_build(
+    func: Callable[..., R], items: Sequence[Any], *args: Any, **kwargs: Any
+) -> list[R]:
+    joblib = _get_joblib()
+
+    if _use_joblib(items, "joblib_len_build"):
+        return _parallel(joblib.delayed(func)(x, *args, **kwargs) for x in items)
     else:
         return [func(x, *args, **kwargs) for x in items]
 
 
-def _func_call(x, *args, **kwargs):
+def _func_call(x: Callable[..., R], *args: Any, **kwargs: Any) -> R:
     return x(*args, **kwargs)
 
 
-def parallel_map_call(items, use_joblib, *args, **kwargs):
+def parallel_map_call(
+    items: Sequence[Callable[..., Any]], use_joblib: bool, *args: Any, **kwargs: Any
+) -> list[Any]:
     joblib = _get_joblib()
-    if (
-        use_joblib
-        and joblib
-        and OPTIONS["joblib_use"]
-        and len(items) >= OPTIONS["joblib_len_calc"]
-    ):
-        return joblib.Parallel(
-            n_jobs=OPTIONS["joblib_n_jobs"],
-            backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"],
-        )(joblib.delayed(_func_call)(x, *args, **kwargs) for x in items)
+    if _use_joblib(items, "joblib_len_calc"):
+        return _parallel(joblib.delayed(_func_call)(x, *args, **kwargs) for x in items)
     else:
         return [x(*args, **kwargs) for x in items]
 
 
-def parallel_map_attr(attr, use_joblib, items):
+def parallel_map_attr(attr: str, use_joblib: bool, items: Sequence[Any]) -> list[Any]:
     from operator import attrgetter
 
     joblib = _get_joblib()
     func = attrgetter(attr)
 
-    if (
-        use_joblib
-        and joblib
-        and OPTIONS["joblib_use"]
-        and len(items) >= OPTIONS["joblib_len_calc"]
-    ):
-        return joblib.Parallel(
-            n_jobs=OPTIONS["joblib_n_jobs"],
-            backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"],
-        )(joblib.delayed(func)(x) for x in items)
+    if _use_joblib(items, "joblib_len_calc"):
+        return _parallel(joblib.delayed(func)(x) for x in items)
     else:
         return [func(x) for x in items]
 
 
-def parallel_map_func_starargs(func, use_joblib, items, total=None):
-    if total is None:
-        total = len(items)
-
+def parallel_map_func_starargs(
+    func: Callable[..., R],
+    use_joblib: bool,
+    items: Sequence[Any],
+    total: int | None = None,
+) -> list[R]:
     joblib = _get_joblib()
 
-    if (
-        use_joblib
-        and joblib
-        and OPTIONS["joblib_use"]
-        and total >= OPTIONS["joblib_len_calc"]
-    ):
-        return joblib.Parallel(
-            n_jobs=OPTIONS["joblib_n_jobs"],
-            backend=OPTIONS["joblib_backend"],
-            **OPTIONS["joblib_kws"],
-        )(joblib.delayed(func)(*x) for x in items)
+    if _use_joblib(items, "joblib_len_calc", total=total):
+        return _parallel(joblib.delayed(func)(*x) for x in items)
     else:
         return [func(*x) for x in items]
 
 
 # ----------------------------------------
 # pandas stuff
-def allbut(levels, *names):
-    names = set(names)
-    return [item for item in levels if item not in names]
+def allbut(levels: Iterable[str], *names: str) -> list[str]:
+    name_set = set(names)
+    return [item for item in levels if item not in name_set]
 
 
 # ----------------------------------------
 # xarray utils
-def dim_to_suffix_dataarray(da, dim, join="_"):
+def dim_to_suffix_dataarray(
+    da: xr.DataArray, dim: Hashable, join: str = "_"
+) -> xr.Dataset:
     if dim in da.dims:
         return da.assign_coords(
-            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}  # type: ignore
         ).to_dataset(dim=dim)
     else:
         return da.to_dataset()
 
 
-def dim_to_suffix_dataset(table, dim, join="_"):
+def dim_to_suffix_dataset(
+    table: xr.Dataset, dim: Hashable, join: str = "_"
+) -> xr.Dataset:
     out = table
     for k in out:
         if dim in out[k].dims:
@@ -193,37 +225,72 @@ def dim_to_suffix_dataset(table, dim, join="_"):
     return out
 
 
-def dim_to_suffix(ds, dim="component", join="_"):
+@overload
+def dim_to_suffix(
+    ds: xr.DataArray, dim: Hashable = ..., join: str = ...
+) -> xr.DataArray:
+    ...
+
+
+@overload
+def dim_to_suffix(ds: xr.Dataset, dim: Hashable = ..., join: str = ...) -> xr.Dataset:
+    ...
+
+
+def dim_to_suffix(
+    ds: xr.DataArray | xr.Dataset, dim: Hashable = "component", join: str = "_"
+) -> xr.DataArray | xr.Dataset:
     from xarray import DataArray, Dataset
 
     if isinstance(ds, DataArray):
-        f = dim_to_suffix_dataarray
+        return dim_to_suffix_dataarray(ds, dim=dim, join=join)
     elif isinstance(ds, Dataset):
-        f = dim_to_suffix_dataset
+        return dim_to_suffix_dataset(ds, dim=dim, join=join)
     else:
         raise ValueError("`ds` must be `DataArray` or `Dataset`")
-    return f(ds, dim=dim, join=join)
 
 
-def _convention_to_bool(convention):
+def _convention_to_bool(convention: bool | str) -> bool:
     if convention == "image":
         convention = True
     elif convention == "masked":
         convention = False
-    else:
-        assert convention in [True, False]
+    elif not isinstance(convention, bool):
+        raise ValueError(f"Bad value {convention} sent to _convention_to_bool")
     return convention
 
 
-def mask_change_convention(mask, convention_in="image", convention_out="masked"):
+@overload
+def mask_change_convention(
+    mask: None,
+    convention_in: str | bool = ...,
+    convention_out: str | bool = ...,
+) -> None:
+    ...
+
+
+@overload
+def mask_change_convention(
+    mask: MyNDArray,
+    convention_in: str | bool = ...,
+    convention_out: str | bool = ...,
+) -> MyNDArray:
+    ...
+
+
+def mask_change_convention(
+    mask: MyNDArray | None,
+    convention_in: str | bool = "image",
+    convention_out: str | bool = "masked",
+) -> MyNDArray | None:
     """
     Convert an array from one 'mask' convention to another.
 
     Parameters
     ----------
-    mask : array-like
+    mask : np.ndarray, optional
         Masking array.
-    convention_in, convention_out : string or bool or None
+    convention_in, convention_out : string or bool
         Convention for input and output.
         Convention for mask.  Allowable values are:
 
@@ -231,8 +298,6 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
           This is the normal convention in :mod:`scipy.ndimage`.
         * ``'masked'`` or ``False``:  `False` values are included, `True` values are excluded.
           This is the convention in :mod:`numpy.ma`
-
-        If ``None``, then pass return input `mask`
 
     Returns
     -------
@@ -251,7 +316,38 @@ def mask_change_convention(mask, convention_in="image", convention_out="masked")
     return mask
 
 
-def masks_change_convention(masks, convention_in="image", convention_out="masked"):
+@overload
+def masks_change_convention(
+    masks: Sequence[MyNDArray],
+    convention_in: str | bool = ...,
+    convention_out: str | bool = ...,
+) -> Sequence[MyNDArray]:
+    ...
+
+
+@overload
+def masks_change_convention(
+    masks: Sequence[None],
+    convention_in: str | bool = ...,
+    convention_out: str | bool = ...,
+) -> Sequence[None]:
+    ...
+
+
+@overload
+def masks_change_convention(
+    masks: Sequence[MyNDArray | None],
+    convention_in: str | bool = ...,
+    convention_out: str | bool = ...,
+) -> Sequence[MyNDArray | None]:
+    ...
+
+
+def masks_change_convention(
+    masks: Sequence[MyNDArray] | Sequence[None] | Sequence[MyNDArray | None],
+    convention_in: str | bool = "image",
+    convention_out: str | bool = "masked",
+) -> Sequence[MyNDArray] | Sequence[None] | Sequence[MyNDArray | None]:
     """
     Perform convention change of sequence of masks
 
@@ -288,19 +384,19 @@ def masks_change_convention(masks, convention_in="image", convention_out="masked
 # labels/masks utilities
 ##################################################
 def labels_to_masks(
-    labels,
-    features=None,
-    include_boundary=False,
-    convention="image",
-    check_features=True,
-    **kwargs,
-):
+    labels: MyNDArray,
+    features: Sequence[int] | None = None,
+    include_boundary: bool = False,
+    convention: str | bool = "image",
+    check_features: bool = True,
+    **kwargs: Any,
+) -> tuple[Sequence[MyNDArray], Sequence[int]]:
     """
     Convert labels array to list of masks
 
     Parameters
     ----------
-    labels : array-like of int
+    labels : np.ndarray of int
         Each unique value `i` in `labels` indicates a mask.
         That is ``labels == i``.
     features : array-like, optional
@@ -320,7 +416,7 @@ def labels_to_masks(
     Returns
     -------
     output : list of array of bool
-        List of mask arrays, each with same shape as ``labels``.
+        list of mask arrays, each with same shape as ``labels``.
         Mask for each feature.
     features : list
         features
@@ -355,14 +451,20 @@ def labels_to_masks(
     return output, features
 
 
-def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwargs):
+def masks_to_labels(
+    masks: Sequence[MyNDArray],
+    features: Sequence[int] | None = None,
+    convention: str | bool = "image",
+    dtype: DTypeLike = np.int_,
+    **kwargs: Any,
+) -> MyNDArray:
     """
     Convert list of masks to labels
 
     Parameters
     ----------
     masks : list of array-like of bool
-        List of mask arrays.
+        list of mask arrays.
     features : array-like of int, optional
         Value for each feature.
         labels[mask[i]] = features[i] + feature_offset
@@ -396,14 +498,14 @@ def masks_to_labels(masks, features=None, convention="image", dtype=int, **kwarg
     return labels
 
 
-def ffill(arr, axis=-1, limit=None):
+def ffill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
     import bottleneck
 
     _limit = limit if limit is not None else arr.shape[axis]
-    return bottleneck.push(arr, n=_limit, axis=axis)
+    return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore
 
 
-def bfill(arr, axis=-1, limit=None):
+def bfill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
     """Inverse of ffill"""
     import bottleneck
 
@@ -422,7 +524,7 @@ def bfill(arr, axis=-1, limit=None):
 ##################################################
 
 
-def get_lnz_iter(lnz, x):
+def get_lnz_iter(lnz: Iterable[float], x: ArrayLike) -> MyNDArray:
     """
     Create a lnz_iter object for varying a single lnz
 
@@ -442,10 +544,8 @@ def get_lnz_iter(lnz, x):
         Shape ``(len(x),len(lnz))``.
         array with rows [lnz0,lnz1,lnz2]
     """
-
-    z = np.zeros_like(x)
-
     x = np.asarray(x)
+    z = np.zeros_like(x)
 
     L = []
     for m in lnz:
@@ -462,34 +562,35 @@ def get_lnz_iter(lnz, x):
 ##################################################
 
 
-def sort_lnPis(input, comp=0):
-    """
-    Sort list of lnPi  that component `comp` mole fraction increases
+# def sort_lnPis(values: Sequence[lnPiMasked], comp=0) -> list[lnPiMasked]:
+#     """
+#     Sort list of lnPi  that component `comp` mole fraction increases
 
-    Parameters
-    ----------
-    input : list of lnPiMasked
+#     Parameters
+#     ----------
+#     values : list of lnPiMasked
+
+#     comp : int, default=0
+#      component to sort along
+
+#     Returns
+#     -------
+#     output : list of lnPiMasked
+#         Objects in sorted order.
+#     """
+
+#     molfrac_comp = np.array([x.molfrac[comp] for x in values]) # type: ignore
+
+#     order = np.argsort(molfrac_comp)
+
+#     output = [values[i] for i in order]
+
+#     return output
 
 
-    comp : int, default=0
-     component to sort along
-
-    Returns
-    -------
-    output : list of lnPiMasked
-        Objects in sorted order.
-    """
-
-    molfrac_comp = np.array([x.molfrac[comp] for x in input])
-
-    order = np.argsort(molfrac_comp)
-
-    output = [input[i] for i in order]
-
-    return output
-
-
-def distance_matrix(mask, convention="image"):
+def distance_matrix(
+    mask: ArrayLike, convention: str | bool = "image"
+) -> NDArray[np.float_]:
     """
     Create matrix of distances from elements of mask
     to nearest background point
@@ -515,7 +616,7 @@ def distance_matrix(mask, convention="image"):
     from scipy.ndimage import distance_transform_edt
 
     mask = np.asarray(mask, dtype=bool)
-    mask = masks_change_convention(mask, convention_in=convention, convention_out=True)
+    mask = mask_change_convention(mask, convention_in=convention, convention_out=True)
 
     # pad mask
     # add padding to end of matrix in each dimension
@@ -528,10 +629,12 @@ def distance_matrix(mask, convention="image"):
 
     # remove padding
     s = (slice(None, -1),) * ndim
-    return dist[s]
+    return dist[s]  # type: ignore
 
 
-def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
+def lnpimasked_to_dataset(
+    data: lnPiMasked, keys: Sequence[str] = ("lnpi", "PE")
+) -> xr.Dataset:
     """
     Convert a :class:`~lnpy.lnpidata.lnPiMasked` object into as :class:`~xarray.Dataset`.
 
@@ -544,10 +647,16 @@ def lnpimasked_to_dataset(data, keys=("lnpi", "PE")):
     output : Dataset
     """
 
-    return data.xce.table(keys=keys, default_keys=None)
+    return data.xce.table(keys=keys, default_keys=None)  # type: ignore
 
 
-def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **kwargs):
+def dataset_to_lnpimasked(
+    ds: xr.Dataset,
+    lnpi_name: str = "lnpi",
+    pe_name: str = "PE",
+    extra_kws: Mapping[str, Any] | None = None,
+    **kwargs,
+) -> lnPiMasked:
     """
     Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnpidata.lnPiMasked` object.
 
@@ -572,6 +681,6 @@ def dataset_to_lnpimasked(ds, lnpi_name="lnpi", pe_name="PE", extra_kws=None, **
         extra_kws = {}
 
     if pe_name in ds:
-        extra_kws[pe_name] = ds[pe_name].values
+        extra_kws[pe_name] = ds[pe_name].values  # type: ignore
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)

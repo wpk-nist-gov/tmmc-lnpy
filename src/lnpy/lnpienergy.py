@@ -8,7 +8,7 @@ import warnings
 from module_utilities import cached
 
 from ._lazy_imports import np, pd, xr
-from .docstrings import docfiller_shared
+from .docstrings import docfiller
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import (
     labels_to_masks,
@@ -115,7 +115,7 @@ def find_boundaries_overlap(
     return result
 
 
-@docfiller_shared
+@docfiller.decorate
 def find_masked_extrema(
     data,
     masks,
@@ -190,7 +190,7 @@ def find_masked_extrema(
     return out_arg, out_val
 
 
-@docfiller_shared
+@docfiller.decorate
 def merge_regions(
     w_tran,
     w_min,
@@ -306,7 +306,7 @@ def merge_regions(
     return masks, w_tran, w_min
 
 
-@docfiller_shared
+@docfiller.decorate
 class wFreeEnergy:
     r"""
     Analysis of local free energy :math:`w = \beta f = - \ln \Pi`.
@@ -352,7 +352,7 @@ class wFreeEnergy:
         return len(self.masks)
 
     @classmethod
-    @docfiller_shared
+    @docfiller.decorate
     def from_labels(
         cls,
         data,

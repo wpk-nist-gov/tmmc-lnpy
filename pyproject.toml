@@ -34,7 +34,7 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.1",
+    "module-utilities >= 0.6",
     "lazy_loader",
 ] # additional packages
 
@@ -63,6 +63,7 @@ dev-extras = [
 typing-extras = [
     "pytype; python_version < '3.11'", #
     "mypy >= 1.4.1",
+    "types-tqdm",
 ]
 typing = [
     "tmmc-lnpy[typing-extras]", #
@@ -313,7 +314,7 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = []
+module = ["joblib.*", "skimage.*", "bottleneck.*", "scipy.ndimage.*"]
 
 [[tool.mypy.overrides]]
 ignore_errors = true
