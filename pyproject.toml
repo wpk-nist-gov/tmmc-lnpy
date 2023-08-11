@@ -61,8 +61,8 @@ dev-extras = [
     "tmmc-lnpy[viz]",
 ]
 typing-extras = [
-    # "pytype; python_version < '3.11'",
-    "mypy",
+    "pytype; python_version < '3.11'", #
+    "mypy >= 1.4.1",
 ]
 typing = [
     "tmmc-lnpy[typing-extras]", #
@@ -143,6 +143,11 @@ test = "pytest"
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.md'"
 testpaths = ["tests", "README.md"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "@overload"]
+omit = ["*/vendored/*"]
+include = ["src/*"]
 
 [tool.isort]
 profile = "black"
