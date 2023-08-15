@@ -6,7 +6,6 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
-R = TypeVar("R")
 
 FuncType = Callable[..., Any]
 

@@ -308,198 +308,198 @@ def get_lnz_max(
         return left
 
 
-class _BaseLimit:
-    _bound_side = None  # -1 for lower bound, +1 for upper bound
+# class _BaseLimit:
+#     _bound_side = None  # -1 for lower bound, +1 for upper bound
 
-    def __init__(self, parent):
-        self._parent = parent
+#     def __init__(self, parent):
+#         self._parent = parent
 
-    @property
-    def parent(self):
-        return self._parent
+#     @property
+#     def parent(self):
+#         return self._parent
 
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError("to be implemented in subclass")
+#     def __call__(self, *args, **kwargs):
+#         raise NotImplementedError("to be implemented in subclass")
 
-    @property
-    def lnz_idx(self):
-        return self._lnz_idx
+#     @property
+#     def lnz_idx(self):
+#         return self._lnz_idx
 
-    @lnz_idx.setter
-    def lnz_idx(self, i):
-        self._lnz_idx = i
+#     @lnz_idx.setter
+#     def lnz_idx(self, i):
+#         self._lnz_idx = i
 
-    @property
-    def access(self):
-        return self._access
+#     @property
+#     def access(self):
+#         return self._access
 
-    @access.setter
-    def access(self, val):
-        if not isinstance(val, lnPiCollection):
-            raise ValueError("access should be lnPiCollection")
-        self._access = val
+#     @access.setter
+#     def access(self, val):
+#         if not isinstance(val, lnPiCollection):
+#             raise ValueError("access should be lnPiCollection")
+#         self._access = val
 
-    def _get_bound(self, sign, access=None, lnz_idx=None):
-        if access is None:
-            access = self.access
-        if lnz_idx is None:
-            lnz_idx = self.lnz_idx
-        if sign == self._bound_side:
-            return access._get_lnz(lnz_idx)
-        else:
-            return sign * np.inf
+#     def _get_bound(self, sign, access=None, lnz_idx=None):
+#         if access is None:
+#             access = self.access
+#         if lnz_idx is None:
+#             lnz_idx = self.lnz_idx
+#         if sign == self._bound_side:
+#             return access._get_lnz(lnz_idx)
+#         else:
+#             return sign * np.inf
 
-    def get_bounds(self, access=None, lnz_idx=None):
-        return np.array(
-            [
-                self._get_bound(sign=sign, access=access, lnz_idx=lnz_idx)
-                for sign in [-1, +1]
-            ]
-        )
+#     def get_bounds(self, access=None, lnz_idx=None):
+#         return np.array(
+#             [
+#                 self._get_bound(sign=sign, access=access, lnz_idx=lnz_idx)
+#                 for sign in [-1, +1]
+#             ]
+#         )
 
-    @property
-    def bounds(self):
-        return self._bounds
+#     @property
+#     def bounds(self):
+#         return self._bounds
 
-    @bounds.setter
-    def bounds(self, bounds):
-        assert len(bounds) == 2
-        self._bounds = np.array(bounds)
+#     @bounds.setter
+#     def bounds(self, bounds):
+#         assert len(bounds) == 2
+#         self._bounds = np.array(bounds)
 
-    def set_bounds(self, access=None, lnz_idx=None):
-        self.bounds = self.get_bounds(access=access, lnz_idx=lnz_idx)
+#     def set_bounds(self, access=None, lnz_idx=None):
+#         self.bounds = self.get_bounds(access=access, lnz_idx=lnz_idx)
 
-    @property
-    def lb(self):
-        return self.bounds[0]
+#     @property
+#     def lb(self):
+#         return self.bounds[0]
 
-    @property
-    def ub(self):
-        return self.bounds[1]
+#     @property
+#     def ub(self):
+#         return self.bounds[1]
 
-    @property
-    def lnz_list(self):
-        return self._lnz_list
+#     @property
+#     def lnz_list(self):
+#         return self._lnz_list
 
-    def get_lnz_list(self, lnz=None, lnz_idx=None):
-        if lnz is None:
-            lnz = self.access.iloc[0].lnz
-        if lnz_idx is None:
-            lnz_idx = self.lnz_idx
-        lnz = list(lnz)
-        lnz[lnz_idx] = None
-        return lnz
+#     def get_lnz_list(self, lnz=None, lnz_idx=None):
+#         if lnz is None:
+#             lnz = self.access.iloc[0].lnz
+#         if lnz_idx is None:
+#             lnz_idx = self.lnz_idx
+#         lnz = list(lnz)
+#         lnz[lnz_idx] = None
+#         return lnz
 
-    def set_lnz_list(self, lnz=None, lnz_idx=None):
-        self._lnz_list = self.get_lnz_list(lnz, lnz_idx)
-
-
-@lnPiCollection.decorate_accessor("bounds_lower", single_create=True)
-class LowerBounds(_BaseLimit):
-    """Class to hold lower bounds."""
-
-    _bound_side = -1
-
-    def __call__(
-        self,
-        dens_min,
-        build_phases,
-        phase_id=0,
-        component=None,
-        dlnz=0.5,
-        dfac=1.0,
-        ref=None,
-        build_kws=None,
-        ntry=20,
-        solve_kws=None,
-        inplace=True,
-        force=False,
-    ):
-        if hasattr(self, "_access") and not force:
-            p = self.access
-            info = self._info
-            lnz_idx = self.lnz_idx
-            bounds = self.bounds
-
-        else:
-            lnz_idx = build_phases.index
-            p, info = get_lnz_min(
-                target=dens_min,
-                C=self._parent,
-                build_phases=build_phases,
-                phase_id=phase_id,
-                component=component,
-                dlnz=dlnz,
-                dfac=1.0,
-                ref=ref,
-                build_kws=build_kws,
-                ntry=ntry,
-                solve_kws=solve_kws,
-            )
-
-            bounds = self.get_bounds(p, lnz_idx)
-
-        if inplace:
-            self.access = p
-            self._info = info
-            self.lnz_idx = lnz_idx
-            self.bounds = bounds
-            self.set_lnz_list()
-        else:
-            return bounds, p, lnz_idx, info
+#     def set_lnz_list(self, lnz=None, lnz_idx=None):
+#         self._lnz_list = self.get_lnz_list(lnz, lnz_idx)
 
 
-@lnPiCollection.decorate_accessor("bounds_upper", single_create=True)
-class UpperBounds(_BaseLimit):
-    """Class to hold upper bounds."""
+# @lnPiCollection.decorate_accessor("bounds_lower", single_create=True)
+# class LowerBounds(_BaseLimit):
+#     """Class to hold lower bounds."""
 
-    _bound_side = +1
+#     _bound_side = -1
 
-    def __call__(
-        self,
-        edge_distance_min,
-        build_phases,
-        ref=None,
-        lnz_start=None,
-        dlnz=0.5,
-        dfac=1.0,
-        threshold_abs=1e-4,
-        ntry=20,
-        build_kws=None,
-        inplace=True,
-        force=False,
-    ):
-        if hasattr(self, "_access") and not force:
-            p = self.access
-            info = self._info
-            lnz_idx = self.lnz_idx
-            bounds = self.bounds
+#     def __call__(
+#         self,
+#         dens_min,
+#         build_phases,
+#         phase_id=0,
+#         component=None,
+#         dlnz=0.5,
+#         dfac=1.0,
+#         ref=None,
+#         build_kws=None,
+#         ntry=20,
+#         solve_kws=None,
+#         inplace=True,
+#         force=False,
+#     ):
+#         if hasattr(self, "_access") and not force:
+#             p = self.access
+#             info = self._info
+#             lnz_idx = self.lnz_idx
+#             bounds = self.bounds
 
-        else:
-            lnz_idx = build_phases.index
-            p, info = get_lnz_max(
-                edge_distance_min=edge_distance_min,
-                C=self._parent,
-                build_phases=build_phases,
-                lnz_start=None,
-                dlnz=dlnz,
-                dfac=1.0,
-                threshold_abs=threshold_abs,
-                ntry=ntry,
-                ref=ref,
-                build_kws=build_kws,
-                full_output=True,
-            )
-            bounds = self.get_bounds(p, lnz_idx)
+#         else:
+#             lnz_idx = build_phases.index
+#             p, info = get_lnz_min(
+#                 target=dens_min,
+#                 C=self._parent,
+#                 build_phases=build_phases,
+#                 phase_id=phase_id,
+#                 component=component,
+#                 dlnz=dlnz,
+#                 dfac=1.0,
+#                 ref=ref,
+#                 build_kws=build_kws,
+#                 ntry=ntry,
+#                 solve_kws=solve_kws,
+#             )
 
-        if inplace:
-            self.access = p
-            self._info = info
-            self.lnz_idx = lnz_idx
-            self.bounds = bounds
-            self.set_lnz_list()
-        else:
-            return bounds, p, lnz_idx, info
+#             bounds = self.get_bounds(p, lnz_idx)
+
+#         if inplace:
+#             self.access = p
+#             self._info = info
+#             self.lnz_idx = lnz_idx
+#             self.bounds = bounds
+#             self.set_lnz_list()
+#         else:
+#             return bounds, p, lnz_idx, info
+
+
+# @lnPiCollection.decorate_accessor("bounds_upper", single_create=True)
+# class UpperBounds(_BaseLimit):
+#     """Class to hold upper bounds."""
+
+#     _bound_side = +1
+
+#     def __call__(
+#         self,
+#         edge_distance_min,
+#         build_phases,
+#         ref=None,
+#         lnz_start=None,
+#         dlnz=0.5,
+#         dfac=1.0,
+#         threshold_abs=1e-4,
+#         ntry=20,
+#         build_kws=None,
+#         inplace=True,
+#         force=False,
+#     ):
+#         if hasattr(self, "_access") and not force:
+#             p = self.access
+#             info = self._info
+#             lnz_idx = self.lnz_idx
+#             bounds = self.bounds
+
+#         else:
+#             lnz_idx = build_phases.index
+#             p, info = get_lnz_max(
+#                 edge_distance_min=edge_distance_min,
+#                 C=self._parent,
+#                 build_phases=build_phases,
+#                 lnz_start=None,
+#                 dlnz=dlnz,
+#                 dfac=1.0,
+#                 threshold_abs=threshold_abs,
+#                 ntry=ntry,
+#                 ref=ref,
+#                 build_kws=build_kws,
+#                 full_output=True,
+#             )
+#             bounds = self.get_bounds(p, lnz_idx)
+
+#         if inplace:
+#             self.access = p
+#             self._info = info
+#             self.lnz_idx = lnz_idx
+#             self.bounds = bounds
+#             self.set_lnz_list()
+#         else:
+#             return bounds, p, lnz_idx, info
 
 
 def build_grid(

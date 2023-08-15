@@ -15,7 +15,6 @@ dependencies:
   - bottleneck
   - tqdm
   - importlib_resources
-  - module-utilities >= 0.6
   - lazy_loader
   - pytest
   - pytest-xdist
@@ -33,5 +32,6 @@ dependencies:
   - ruamel.yaml
   - pip
   - pip:
+      - module-utilities >= 0.7
       - pytest-accept
       - noxopt

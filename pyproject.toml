@@ -34,7 +34,7 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.6",
+    "module-utilities >= 0.7", # p2c: -p
     "lazy_loader",
 ] # additional packages
 

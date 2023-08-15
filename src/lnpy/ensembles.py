@@ -2,12 +2,18 @@
 Ensemble averages (:mod:`~lnpy.ensembles`)
 ==========================================
 """
+from __future__ import annotations
+
 from functools import lru_cache, partial, wraps
+from typing import TYPE_CHECKING
 
 from module_utilities import cached
 
 from ._lazy_imports import np, xr
 from .utils import dim_to_suffix_dataset
+
+if TYPE_CHECKING:
+    from module_utilities._typing import HasCache
 
 # always check_use_cache here.
 cached_prop = partial(cached.prop, check_use_cache=True)
@@ -173,7 +179,7 @@ def xr_name(long_name=None, name=None, unstack=True, **kws):
     return decorator
 
 
-def xge_accessor(parent):
+def xge_accessor(parent: HasCache) -> xGrandCanonical:
     """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
     return xGrandCanonical(parent)
 
@@ -868,7 +874,7 @@ class xGrandCanonical:
 
 
 # NOTE: Using function accessor to override the docstring
-def xce_accessor(parent):
+def xce_accessor(parent: HasCache) -> xCanonical:
     """Accessor to :class:`~lnpy.ensembles.xCanonical`"""
     return xCanonical(parent)
 

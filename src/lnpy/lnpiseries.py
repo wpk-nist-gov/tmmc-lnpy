@@ -3,15 +3,12 @@ Collection of lnPi objects (:mod:`~lnpy.lnpiseries`)
 ====================================================
 """
 
-from module_utilities import cached
+from __future__ import annotations
 
-from lnpy.ensembles import xge_accessor
-from lnpy.lnpienergy import (
-    wfe_accessor,
-    wfe_phases_accessor,
-    wlnPi_accessor,
-    wlnPi_single_accessor,
-)
+from typing import TYPE_CHECKING
+from warnings import warn
+
+from module_utilities import cached
 
 from ._lazy_imports import np, pd, xr
 from .extensions import AccessorMixin
@@ -20,6 +17,11 @@ from .utils import get_tqdm_build as get_tqdm
 # lazy loads
 from .utils import labels_to_masks, masks_to_labels
 from .utils import parallel_map_build as parallel_map
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+    from . import ensembles, lnpienergy, stability
 
 
 class SeriesWrapper(AccessorMixin):
@@ -313,6 +315,26 @@ class SeriesWrapper(AccessorMixin):
         s = cls._concat_to_series(objs, **concat_kws)
         return cls(s, *args, **kwargs)
 
+    @cached.prop
+    def loc(self) -> _LocIndexer:
+        return _LocIndexer(self)
+
+    @cached.prop
+    def iloc(self) -> _iLocIndexer:
+        return _iLocIndexer(self)
+
+    @cached.prop
+    def query(self) -> _Query:
+        return _Query(self)
+
+    @cached.prop
+    def zloc(self) -> _LocIndexer_unstack_zloc:
+        return _LocIndexer_unstack_zloc(self)
+
+    @cached.prop
+    def mloc(self) -> _LocIndexer_unstack_mloc:
+        return _LocIndexer_unstack_mloc(self)
+
 
 # Accessors
 class _CallableResult:
@@ -343,7 +365,7 @@ class _Groupby:
             raise AttributeError(f"no attribute {attr} in groupby")
 
 
-@SeriesWrapper.decorate_accessor("loc")
+# @SeriesWrapper.decorate_accessor("loc")
 class _LocIndexer:
     """
     Indexer by value.
@@ -365,7 +387,7 @@ class _LocIndexer:
         self._parent._series.loc[idx] = values
 
 
-@SeriesWrapper.decorate_accessor("iloc")
+# @SeriesWrapper.decorate_accessor("iloc")
 class _iLocIndexer:
     """
     Indexer by position.
@@ -387,7 +409,7 @@ class _iLocIndexer:
         self._parent._series.iloc[idx] = values
 
 
-@SeriesWrapper.decorate_accessor("query")
+# @SeriesWrapper.decorate_accessor("query")
 class _Query:
     """
     Select values by string query.
@@ -402,6 +424,62 @@ class _Query:
     def __call__(self, expr, **kwargs):
         idx = self._frame.query(expr, **kwargs).index
         return self._parent.iloc[idx]
+
+
+# @SeriesWrapper.decorate_accessor("zloc")
+class _LocIndexer_unstack_zloc:
+    """positional indexer for everything but phase"""
+
+    def __init__(self, parent, level=["phase"]):
+        self._parent = parent
+        self._level = level
+        self._loc = self._parent._series.unstack(self._level).iloc
+
+    def __getitem__(self, idx):
+        out = self._loc[idx]
+        if isinstance(out, pd.DataFrame):
+            out = out.stack(self._level)
+        else:
+            out = out.dropna()
+
+        if isinstance(out, pd.Series):
+            out = self._parent.new_like(out)
+        return out
+
+
+# @SeriesWrapper.decorate_accessor("mloc")
+class _LocIndexer_unstack_mloc:
+    """indexer with pandas index"""
+
+    def __init__(self, parent, level=["phase"]):
+        self._parent = parent
+        self._level = level
+        self._index = self._parent.index
+
+        self._index_names = set(self._index.names)
+        self._loc = self._parent._series.iloc
+
+    def _get_loc_idx(self, idx):
+        index = self._index
+        if isinstance(idx, pd.MultiIndex):
+            # names in idx and
+            drop = list(self._index_names - set(idx.names))
+            index = index.droplevel(drop)
+            # reorder idx
+            idx = idx.reorder_levels(index.names)
+        else:
+            drop = list(set(index.names) - {idx.name})
+            index = index.droplevel(drop)
+        indexer = index.get_indexer_for(idx)
+        return indexer
+
+    def __getitem__(self, idx):
+        indexer = self._get_loc_idx(idx)
+        out = self._loc[indexer]
+
+        if isinstance(out, pd.Series):
+            out = self._parent.new_like(out)
+        return out
 
 
 class lnPiCollection(SeriesWrapper):
@@ -857,101 +935,79 @@ class lnPiCollection(SeriesWrapper):
             **kwargs,
         )  # yapf: disable
 
+    @cached.prop
+    def xge(self) -> ensembles.xGrandCanonical:
+        from .ensembles import xGrandCanonical
+
+        return xGrandCanonical(self)
+
+    @cached.prop
+    def wfe(self) -> lnpienergy.wFreeEnergyCollection:
+        from .lnpienergy import wFreeEnergyCollection
+
+        return wFreeEnergyCollection(self)
+
+    @cached.prop
+    def wfe_phases(self) -> lnpienergy.wFreeEnergyPhases:
+        from .lnpienergy import wFreeEnergyPhases
+
+        return wFreeEnergyPhases(self)
+
+    @property
+    def wlnPi(self) -> lnpienergy.wFreeEnergyCollection:
+        warn("Using `wlnPi` accessor is deprecated.  Please use `wfe` accessor instead")
+        return self.wfe
+
+    @property
+    def wlnPi_single(self) -> lnpienergy.wFreeEnergyPhases:
+        warn("Using `wlnPi_single is deprecated.  Please use `self.wfe_phases` instead")
+        return self.wfe_phases
+
+    @cached.prop
+    def spinodal(self) -> stability.Spinodals:
+        from .stability import Spinodals
+
+        return Spinodals(self)
+
+    @cached.prop
+    def binodal(self) -> stability.Binodals:
+        from .stability import Binodals
+
+        return Binodals(self)
+
+    def stability_append(
+        self,
+        other: Self | None,
+        append: bool = True,
+        sort: bool = True,
+        copy_stability: bool = True,
+    ) -> Self:
+        if (not append) and (not copy_stability):
+            raise ValueError("one of append or copy_stability must be True")
+
+        if other is None:
+            other = self
+        spin = other.spinodal
+        bino = other.binodal
+        if append:
+            new = self.append(spin.appender).append(bino.appender)
+            if sort:
+                new = new.sort_index()
+        else:
+            new = self.copy()
+        if copy_stability:
+            # TODO: fix this hack
+            new._cache["spinodal"] = spin
+            new._cache["binodal"] = bino
+            # new.spinodal = spin
+            # new.binodal = bino
+        return new
+
 
 ################################################################################
 # Accessors for ColleectionlnPi
-lnPiCollection.register_accessor("xge", xge_accessor)
-lnPiCollection.register_accessor("wfe", wfe_accessor)
-lnPiCollection.register_accessor("wfe_phases", wfe_phases_accessor)
-lnPiCollection.register_accessor("wlnPi", wlnPi_accessor)
-lnPiCollection.register_accessor("wlnPi_single", wlnPi_single_accessor)
-
-
-@SeriesWrapper.decorate_accessor("zloc")
-class _LocIndexer_unstack_zloc:
-    """positional indexer for everything but phase"""
-
-    def __init__(self, parent, level=["phase"]):
-        self._parent = parent
-        self._level = level
-        self._loc = self._parent._series.unstack(self._level).iloc
-
-    def __getitem__(self, idx):
-        out = self._loc[idx]
-        if isinstance(out, pd.DataFrame):
-            out = out.stack(self._level)
-        else:
-            out = out.dropna()
-
-        if isinstance(out, pd.Series):
-            out = self._parent.new_like(out)
-        return out
-
-
-@SeriesWrapper.decorate_accessor("mloc")
-class _LocIndexer_unstack_mloc:
-    """indexer with pandas index"""
-
-    def __init__(self, parent, level=["phase"]):
-        self._parent = parent
-        self._level = level
-        self._index = self._parent.index
-
-        self._index_names = set(self._index.names)
-        self._loc = self._parent._series.iloc
-
-    def _get_loc_idx(self, idx):
-        index = self._index
-        if isinstance(idx, pd.MultiIndex):
-            # names in idx and
-            drop = list(self._index_names - set(idx.names))
-            index = index.droplevel(drop)
-            # reorder idx
-            idx = idx.reorder_levels(index.names)
-        else:
-            drop = list(set(index.names) - {idx.name})
-            index = index.droplevel(drop)
-        indexer = index.get_indexer_for(idx)
-        return indexer
-
-    def __getitem__(self, idx):
-        indexer = self._get_loc_idx(idx)
-        out = self._loc[indexer]
-
-        if isinstance(out, pd.Series):
-            out = self._parent.new_like(out)
-        return out
-
-
-# play around with sample index
-# lnz_0 = np.random.rand(20)
-
-# L = []
-# for z in lnz_0:
-#     repeat = np.random.randint(1, 4)
-#     L += [(z, i) for i in range(repeat)]
-
-# # example dataset
-# idx = pd.MultiIndex.from_tuples(L, names=['lnz_0','phase'])
-# s = pd.Series(range(len(L)), index=idx)
-
-# def get_sample_index(s):
-#     # get mapping from row values to sample
-#     idx = s.index
-#     idx_less_phase = idx.droplevel('phase')
-#     idx_less_phase_unique = idx_less_phase.drop_duplicates()
-
-#     mapping = pd.Series(range(len(idx_less_phase_unique)), idx_less_phase_unique)
-
-#     # # sample values
-#     # samples = mapping.loc[idx_less_phase].values
-
-#     # make new index
-#     idx_samp = (
-#     idx
-#     .to_frame()
-#     .assign(sample=mapping.loc[idx_less_phase].values)
-#     .set_index(['sample'] + idx.names)
-#     .index
-#     )
-#     return idx_samp
+# lnPiCollection.register_accessor("xge", xge_accessor)
+# lnPiCollection.register_accessor("wfe", wfe_accessor)
+# lnPiCollection.register_accessor("wfe_phases", wfe_phases_accessor)
+# lnPiCollection.register_accessor("wlnPi", wlnPi_accessor)
+# lnPiCollection.register_accessor("wlnPi_single", wlnPi_single_accessor)

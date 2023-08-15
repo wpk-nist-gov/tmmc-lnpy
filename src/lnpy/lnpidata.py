@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, Iterable
 
 from module_utilities import cached
 
-from lnpy.ensembles import xce_accessor, xge_accessor
-
 from ._lazy_imports import np, pd
 from .docstrings import docfiller
 from .extensions import AccessorMixin
@@ -26,14 +24,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
     from typing_extensions import Self
 
+    from . import ensembles
     from ._typing import MyNDArray
-
-# from numpy import float, int, ndarray
-# from numpy.dtypes import Float64DType
-# from numpy.ma.core import MaskedArray
-# from pathlib import Path
-# from typing import Any, Optional, Union
-# from xarray.core.dataarray import DataArray
 
 
 @lru_cache(maxsize=20)
@@ -800,7 +792,23 @@ class lnPiMasked(AccessorMixin):
         )
         return self.list_from_masks(masks, convention=False)
 
+    @cached.prop
+    def xge(self) -> ensembles.xGrandCanonical:
+        from .ensembles import xGrandCanonical
+
+        return xGrandCanonical(self)
+
+    @cached.prop
+    def xce(self) -> ensembles.xCanonical:
+        from .ensembles import xCanonical
+
+        return xCanonical(self)
+
 
 # --- Register accessors ---------------------------------------------------------------
-lnPiMasked.register_accessor("xge", xge_accessor)
-lnPiMasked.register_accessor("xce", xce_accessor)
+# lnPiMasked.register_accessor("xge", xge_accessor)
+# lnPiMasked.register_accessor("xce", xce_accessor)
+
+
+# reveal_type(lnPiMasked.list_from_labels)
+# reveal_type(lnPiMasked.xge)

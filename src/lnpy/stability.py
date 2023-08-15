@@ -9,7 +9,8 @@ import itertools
 from module_utilities import cached
 
 from ._lazy_imports import np
-from .lnpiseries import lnPiCollection
+
+# from .lnpiseries import lnPiCollection
 
 
 # ###############################################################################
@@ -535,8 +536,6 @@ def get_binodal_point(
 
 ################################################################################
 # Accessor classes/routines
-
-
 class StabilityBase:
     """
     Base class for stability
@@ -615,7 +614,7 @@ class StabilityBase:
 
 
 # NOTE : single create means this is only created once
-@lnPiCollection.decorate_accessor("spinodal", single_create=False)
+# @lnPiCollection.decorate_accessor("spinodal", single_create=False)
 class Spinodals(StabilityBase):
     """Methods for calculation locations of spinodal"""
 
@@ -733,7 +732,7 @@ class Spinodals(StabilityBase):
             return out, info
 
 
-@lnPiCollection.decorate_accessor("binodal", single_create=False)
+# @lnPiCollection.decorate_accessor("binodal", single_create=False)
 class Binodals(StabilityBase):
     """Routines to calculate binodal."""
 
@@ -876,59 +875,59 @@ class Binodals(StabilityBase):
             return out, info
 
 
-@lnPiCollection.decorate_accessor("stability_append", single_create=False)
-def _stability_append(self):
-    """
-    Add stability from a collection to this collection
+# @lnPiCollection.decorate_accessor("stability_append", single_create=False)
+# def _stability_append(self):
+#     """
+#     Add stability from a collection to this collection
 
-    Parameters
-    ----------
-    other : optional, optional
-        if passed, copy stability from this collection to self, otherwise
-        use `self`
-    append: bool, default=True
-        if True, append results to new frame
-    sort: bool, default=True
-        if True, sort appended results
-    copy_stability
-    """
-    # Duplicate docstring so show up in docs
+#     Parameters
+#     ----------
+#     other : optional, optional
+#         if passed, copy stability from this collection to self, otherwise
+#         use `self`
+#     append: bool, default=True
+#         if True, append results to new frame
+#     sort: bool, default=True
+#         if True, sort appended results
+#     copy_stability
+#     """
+#     # Duplicate docstring so show up in docs
 
-    def func(other=None, append=True, sort=True, copy_stability=True):
-        """
-        Add stability from collection to this collection
+#     def func(other=None, append=True, sort=True, copy_stability=True):
+#         """
+#         Add stability from collection to this collection
 
-        Parameters
-        ----------
-        other : optional, optional
-            if passed, copy stability from this collection to self, otherwise
-            use `self`
-        append: bool, default=True
-            if True, append results to new frame
-        sort: bool, default=True
-            if True, sort appended results
-        copy_stability
-        """
+#         Parameters
+#         ----------
+#         other : optional, optional
+#             if passed, copy stability from this collection to self, otherwise
+#             use `self`
+#         append: bool, default=True
+#             if True, append results to new frame
+#         sort: bool, default=True
+#             if True, sort appended results
+#         copy_stability
+#         """
 
-        if (not append) and (not copy_stability):
-            raise ValueError("one of append or copy_stability must be True")
+#         if (not append) and (not copy_stability):
+#             raise ValueError("one of append or copy_stability must be True")
 
-        if other is None:
-            other = self
-        spin = other.spinodal
-        bino = other.binodal
-        if append:
-            new = self.append(spin.appender).append(bino.appender)
-            if sort:
-                new = new.sort_index()
-        else:
-            new = self.copy()
-        if copy_stability:
-            # TODO: fix this hack
-            new._cache["spinodal"] = spin
-            new._cache["binodal"] = bino
-            # new.spinodal = spin
-            # new.binodal = bino
-        return new
+#         if other is None:
+#             other = self
+#         spin = other.spinodal
+#         bino = other.binodal
+#         if append:
+#             new = self.append(spin.appender).append(bino.appender)
+#             if sort:
+#                 new = new.sort_index()
+#         else:
+#             new = self.copy()
+#         if copy_stability:
+#             # TODO: fix this hack
+#             new._cache["spinodal"] = spin
+#             new._cache["binodal"] = bino
+#             # new.spinodal = spin
+#             # new.binodal = bino
+#         return new
 
-    return func
+#     return func

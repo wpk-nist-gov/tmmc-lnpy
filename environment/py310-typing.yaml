@@ -15,7 +15,6 @@ dependencies:
   - bottleneck
   - tqdm
   - importlib_resources
-  - module-utilities >= 0.6
   - lazy_loader
   - pytype
   - mypy >= 1.4.1
@@ -24,3 +23,6 @@ dependencies:
   - pytest-xdist
   - pytest-cov
   - pytest-sugar
+  - pip
+  - pip:
+      - module-utilities >= 0.7
