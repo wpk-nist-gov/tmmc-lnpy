@@ -14,7 +14,7 @@ import warnings
 from typing import TYPE_CHECKING, Callable, Generic, overload
 
 from module_utilities import cached
-from module_utilities._typing import C_prop, R, S
+from module_utilities.typing import C_prop, R, S
 
 if TYPE_CHECKING:
     from module_utilities.cached import CachedProperty
@@ -42,7 +42,7 @@ class _CachedAccessorSingle(Generic[S, R]):
         ...
 
     @overload
-    def __get__(self, obj: S, cls: type[S] | None = None) -> R:
+    def __get__(self, obj: S, cls: type[S] | None = None) -> R:  # type: ignore[misc]
         ...
 
     def __get__(self, obj: S | None, cls: type[S] | None = None) -> C_prop[S, R] | R:
@@ -176,7 +176,7 @@ class AccessorMixin:  # (Generic[S, R]):
         >>> parent.register_accessor("hello", hello)
         >>> x = parent()
         >>> x.hello.there()
-        'parent'
+        "<class 'lnpy.extensions.parent'>"
         """
         cls._register_accessor(name, accessor, single_create=single_create)
 
@@ -193,7 +193,7 @@ class AccessorMixin:  # (Generic[S, R]):
         ...     pass
         ...
 
-        >>> @parent.decorate("hello")
+        >>> @parent.decorate_accessor("hello")
         ... class hello(AccessorMixin):
         ...     def __init__(self, parent):
         ...         self._parent = parent
@@ -204,7 +204,7 @@ class AccessorMixin:  # (Generic[S, R]):
 
         >>> x = parent()
         >>> x.hello.there()
-        'parent'
+        "<class 'lnpy.extensions.parent'>"
         """
 
         def decorator(accessor: C_prop[S, R]) -> C_prop[S, R]:

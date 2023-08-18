@@ -34,7 +34,7 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.7", # p2c: -p
+    "module-utilities >= 0.8.1", # p2c: -p
     "lazy_loader",
 ] # additional packages
 
@@ -63,6 +63,7 @@ dev-extras = [
 typing-extras = [
     "pytype; python_version < '3.11'", #
     "mypy >= 1.4.1",
+    "pandas-stubs",
     "types-tqdm",
 ]
 typing = [
@@ -142,8 +143,8 @@ write_to = "src/lnpy/_version.py"
 test = "pytest"
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.md'"
-testpaths = ["tests", "README.md"]
+addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
+testpaths = ["tests", "src", "README.md"]
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:", "@overload"]
@@ -314,7 +315,14 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["joblib.*", "skimage.*", "bottleneck.*", "scipy.ndimage.*"]
+module = [
+    "joblib.*",
+    "skimage.*",
+    "bottleneck.*",
+    "scipy.ndimage.*",
+    "scipy.spatial.*",
+    "scipy.optimize.*",
+]
 
 [[tool.mypy.overrides]]
 ignore_errors = true

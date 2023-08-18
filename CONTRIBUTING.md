@@ -412,7 +412,7 @@ python version:
 
 ```bash
 $ for version in 3.8 3.9 3.10 3.11; do
-    conda create -n test-3.8 python=3.8
+    conda create -n test-${version} python=${version}
   done
 ```
 

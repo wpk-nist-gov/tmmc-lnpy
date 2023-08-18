@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from . import ensembles
-    from ._typing import MyNDArray
+    from ._typing import MaskConvention, MyNDArray
 
 
 @lru_cache(maxsize=20)
@@ -645,7 +645,7 @@ class lnPiMasked(AccessorMixin):
             csv_kws = {}
 
         da = (
-            pd.read_csv(path, sep=sep, names=names, **csv_kws)
+            pd.read_csv(path, sep=sep, names=names, **csv_kws)  # type: ignore
             .set_index(names[:-1])["lnpi"]
             .to_xarray()
         )
@@ -722,7 +722,7 @@ class lnPiMasked(AccessorMixin):
 
     @docfiller.decorate
     def list_from_masks(
-        self, masks: Sequence[MyNDArray], convention: str | bool = "image"
+        self, masks: Sequence[MyNDArray], convention: MaskConvention = "image"
     ) -> list[Self]:
         """
         Create list of lnpis corresponding to masks[i]

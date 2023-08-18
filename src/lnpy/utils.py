@@ -5,7 +5,7 @@ Utility functions (:mod:`~lnpy.utils`)
 
 from __future__ import annotations
 
-from functools import lru_cache, partial
+from functools import lru_cache
 from typing import TYPE_CHECKING, cast, overload
 
 from ._lazy_imports import np
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from lnpy.lnpidata import lnPiMasked
 
-    from ._typing import MyNDArray, R, T
+    from ._typing import MaskConvention, MyNDArray, R, T
 
 
 # --- TQDM setup -----------------------------------------------------------------------
@@ -74,7 +74,7 @@ def tqdm(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
 
 
 def get_tqdm(
-    seq: Sequence[T], len_min: str | int, leave: bool | None = None, **kwargs: Any
+    seq: Iterable[T], len_min: str | int, leave: bool | None = None, **kwargs: Any
 ) -> Iterable[T]:
     n = kwargs.get("total", None)
     _tqdm = _get_tqdm()
@@ -83,16 +83,30 @@ def get_tqdm(
         len_min = OPTIONS[len_min]  # type: ignore
 
     if n is None:
+        seq = tuple(seq)
         n = len(seq)
+
     if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
-        seq = tqdm(seq, leave=leave, **kwargs)  # type: ignore
+        seq = tqdm(seq, leave=leave, **kwargs)
     return seq
 
 
-get_tqdm_calc = partial(get_tqdm, len_min="tqdm_len_calc")
-get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
+def get_tqdm_calc(
+    seq: Iterable[T], leave: bool | None = None, **kwargs: Any
+) -> Iterable[T]:
+    return get_tqdm(seq, len_min="tqdm_len_calc", leave=leave, **kwargs)
+
+
+def get_tqdm_build(
+    seq: Iterable[T], leave: bool | None = None, **kwargs: Any
+) -> Iterable[T]:
+    return get_tqdm(seq, len_min="tqdm_len_build", leave=leave, **kwargs)
+
+
+# get_tqdm_calc = partial(get_tqdm, len_min="tqdm_len_calc")
+# get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
 
 # def get_tqdm_calc(seq, len_min=None, leave=None, **kwargs):
 #     if len_min is None:
@@ -145,9 +159,11 @@ def _parallel(seq: Iterable[Any]) -> list[Any]:
 
 
 def parallel_map_build(
-    func: Callable[..., R], items: Sequence[Any], *args: Any, **kwargs: Any
+    func: Callable[..., R], items: Iterable[Any], *args: Any, **kwargs: Any
 ) -> list[R]:
     joblib = _get_joblib()
+
+    items = tuple(items)
 
     if _use_joblib(items, "joblib_len_build"):
         return _parallel(joblib.delayed(func)(x, *args, **kwargs) for x in items)
@@ -184,10 +200,12 @@ def parallel_map_attr(attr: str, use_joblib: bool, items: Sequence[Any]) -> list
 def parallel_map_func_starargs(
     func: Callable[..., R],
     use_joblib: bool,
-    items: Sequence[Any],
+    items: Iterable[Any],
     total: int | None = None,
 ) -> list[R]:
     joblib = _get_joblib()
+
+    items = tuple(items)
 
     if _use_joblib(items, "joblib_len_calc", total=total):
         return _parallel(joblib.delayed(func)(*x) for x in items)
@@ -250,7 +268,7 @@ def dim_to_suffix(
         raise ValueError("`ds` must be `DataArray` or `Dataset`")
 
 
-def _convention_to_bool(convention: bool | str) -> bool:
+def _convention_to_bool(convention: MaskConvention) -> bool:
     if convention == "image":
         convention = True
     elif convention == "masked":
@@ -263,8 +281,8 @@ def _convention_to_bool(convention: bool | str) -> bool:
 @overload
 def mask_change_convention(
     mask: None,
-    convention_in: str | bool = ...,
-    convention_out: str | bool = ...,
+    convention_in: MaskConvention = ...,
+    convention_out: MaskConvention = ...,
 ) -> None:
     ...
 
@@ -272,16 +290,16 @@ def mask_change_convention(
 @overload
 def mask_change_convention(
     mask: MyNDArray,
-    convention_in: str | bool = ...,
-    convention_out: str | bool = ...,
+    convention_in: MaskConvention = ...,
+    convention_out: MaskConvention = ...,
 ) -> MyNDArray:
     ...
 
 
 def mask_change_convention(
     mask: MyNDArray | None,
-    convention_in: str | bool = "image",
-    convention_out: str | bool = "masked",
+    convention_in: MaskConvention = "image",
+    convention_out: MaskConvention = "masked",
 ) -> MyNDArray | None:
     """
     Convert an array from one 'mask' convention to another.
@@ -316,11 +334,21 @@ def mask_change_convention(
     return mask
 
 
+# m0: list[MyNDArray]
+# reveal_type(masks_change_convention(m0))
+
+# m1: list[None]
+# reveal_type(masks_change_convention(m1))
+
+# m2: list[MyNDArray | None]
+# reveal_type(masks_change_convention(m2))
+
+
 @overload
 def masks_change_convention(
     masks: Sequence[MyNDArray],
-    convention_in: str | bool = ...,
-    convention_out: str | bool = ...,
+    convention_in: MaskConvention = ...,
+    convention_out: MaskConvention = ...,
 ) -> Sequence[MyNDArray]:
     ...
 
@@ -328,8 +356,8 @@ def masks_change_convention(
 @overload
 def masks_change_convention(
     masks: Sequence[None],
-    convention_in: str | bool = ...,
-    convention_out: str | bool = ...,
+    convention_in: MaskConvention = ...,
+    convention_out: MaskConvention = ...,
 ) -> Sequence[None]:
     ...
 
@@ -337,16 +365,16 @@ def masks_change_convention(
 @overload
 def masks_change_convention(
     masks: Sequence[MyNDArray | None],
-    convention_in: str | bool = ...,
-    convention_out: str | bool = ...,
+    convention_in: MaskConvention = ...,
+    convention_out: MaskConvention = ...,
 ) -> Sequence[MyNDArray | None]:
     ...
 
 
 def masks_change_convention(
     masks: Sequence[MyNDArray] | Sequence[None] | Sequence[MyNDArray | None],
-    convention_in: str | bool = "image",
-    convention_out: str | bool = "masked",
+    convention_in: MaskConvention = "image",
+    convention_out: MaskConvention = "masked",
 ) -> Sequence[MyNDArray] | Sequence[None] | Sequence[MyNDArray | None]:
     """
     Perform convention change of sequence of masks
@@ -385,12 +413,12 @@ def masks_change_convention(
 ##################################################
 def labels_to_masks(
     labels: MyNDArray,
-    features: Sequence[int] | None = None,
+    features: Sequence[int] | MyNDArray | None = None,
     include_boundary: bool = False,
-    convention: str | bool = "image",
+    convention: MaskConvention = "image",
     check_features: bool = True,
     **kwargs: Any,
-) -> tuple[Sequence[MyNDArray], Sequence[int]]:
+) -> tuple[list[MyNDArray], Sequence[int]]:
     """
     Convert labels array to list of masks
 
@@ -433,6 +461,7 @@ def labels_to_masks(
         kwargs = dict(dict(mode="outer", connectivity=labels.ndim), **kwargs)
     if features is None:
         features = [i for i in np.unique(labels) if i > 0]
+
     elif check_features:
         vals = np.unique(labels)
         assert np.all([x in vals for x in features])
@@ -448,13 +477,13 @@ def labels_to_masks(
         if not convention:
             m = ~m
         output.append(m)
-    return output, features
+    return output, features  # type: ignore
 
 
 def masks_to_labels(
     masks: Sequence[MyNDArray],
-    features: Sequence[int] | None = None,
-    convention: str | bool = "image",
+    features: Sequence[int] | MyNDArray | None = None,
+    convention: MaskConvention = "image",
     dtype: DTypeLike = np.int_,
     **kwargs: Any,
 ) -> MyNDArray:
@@ -589,7 +618,7 @@ def get_lnz_iter(lnz: Iterable[float], x: ArrayLike) -> MyNDArray:
 
 
 def distance_matrix(
-    mask: ArrayLike, convention: str | bool = "image"
+    mask: ArrayLike, convention: MaskConvention = "image"
 ) -> NDArray[np.float_]:
     """
     Create matrix of distances from elements of mask
@@ -647,7 +676,7 @@ def lnpimasked_to_dataset(
     output : Dataset
     """
 
-    return data.xce.table(keys=keys, default_keys=None)  # type: ignore
+    return data.xce.table(keys=keys, default_keys=None)
 
 
 def dataset_to_lnpimasked(

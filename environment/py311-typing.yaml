@@ -17,6 +17,7 @@ dependencies:
   - importlib_resources
   - lazy_loader
   - mypy >= 1.4.1
+  - pandas-stubs
   - types-tqdm
   - pytest
   - pytest-xdist
@@ -24,4 +25,4 @@ dependencies:
   - pytest-sugar
   - pip
   - pip:
-      - module-utilities >= 0.7
+      - module-utilities >= 0.8.1

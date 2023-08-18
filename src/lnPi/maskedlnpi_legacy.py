@@ -7,7 +7,7 @@ from warnings import warn
 from module_utilities import cached
 
 from lnpy._lazy_imports import np, pd
-from lnpy.ensembles import xce_accessor, xge_accessor
+from lnpy.ensembles import xCanonical, xGrandCanonical
 from lnpy.extensions import AccessorMixin
 from lnpy.utils import labels_to_masks, masks_change_convention
 
@@ -555,7 +555,15 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         )
         return self.list_from_masks(masks, convention=False)
 
+    @cached.prop
+    def xge(self) -> xGrandCanonical:
+        return xGrandCanonical(self)
+
+    @cached.prop
+    def xce(self) -> xCanonical:
+        return xCanonical(self)
+
 
 # --- register accessors ---------------------------------------------------------------
-MaskedlnPiLegacy.register_accessor("xge", xge_accessor)
-MaskedlnPiLegacy.register_accessor("xce", xce_accessor)
+# MaskedlnPiLegacy.register_accessor("xge", xge_accessor)
+# MaskedlnPiLegacy.register_accessor("xce", xce_accessor)

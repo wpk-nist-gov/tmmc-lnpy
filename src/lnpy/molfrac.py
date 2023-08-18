@@ -179,7 +179,7 @@ def _solve_lnz_molfrac(
 
     def f(x):
         p = build_phases(x, ref=ref, **build_kws)
-        f.lnpi = p
+        f.lnpi = p  # type: ignore
 
         # by not using the ListAccessor,
         # can parralelize
@@ -202,7 +202,7 @@ def _solve_lnz_molfrac(
 
     if np.abs(r.residual) > tol:
         raise RuntimeError("something went wrong with solve")
-    return f.lnpi, r
+    return f.lnpi, r  # type: ignore
 
 
 def find_lnz_molfrac(

@@ -119,14 +119,15 @@ class set_options:
     --------
     You can use ``set_options`` either as a context manager:
 
-    >>> with xr.set_options(use_tqdm=True, tqdm_min_len_calc=50):
+    >>> import lnpy
+    >>> with lnpy.set_options(use_tqdm=True, tqdm_min_len_calc=50): # doctest: +SKIP
     ...     c.xge.betaOmega()
     ...
 
 
     Or to set global options:
 
-    >>> xr.set_options(tqdm_min_len_calc=50)
+    >>> _ = lnpy.set_options(tqdm_len_calc=50)
     """
 
     def __init__(self, **kwargs: Any) -> None:
