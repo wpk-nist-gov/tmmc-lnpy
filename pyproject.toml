@@ -34,7 +34,7 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.8.1", # p2c: -p
+    "module-utilities >= 0.9.0", # p2c: -p
     "lazy_loader",
 ] # additional packages
 
@@ -312,6 +312,7 @@ warn_return_any = true
 warn_unused_configs = true
 exclude = [".eggs", ".tox", "doc", "docs", ".nox"]
 check_untyped_defs = true
+strict = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -331,6 +332,7 @@ module = []
 [tool.pyright]
 include = ["src", "tests"]
 exclude = ["**/__pycache__", ".tox/**", ".nox/**", "**/.mypy_cache"]
+# strict = ["src/lnpy"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
 # enable subset of "strict"

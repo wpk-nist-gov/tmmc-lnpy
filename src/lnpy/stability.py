@@ -7,11 +7,12 @@ Calculation of spinodal and binodal
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, TypedDict, cast, overload
+from typing import TYPE_CHECKING, overload
 
 from module_utilities import cached
 
 from ._lazy_imports import np
+from .utils import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from typing import Any, Literal, Mapping, Sequence
@@ -23,16 +24,6 @@ if TYPE_CHECKING:
     from .lnpidata import lnPiMasked
     from .lnpiseries import lnPiCollection
     from .segment import BuildPhasesBase
-
-
-class RootResultDict(TypedDict):
-    """Interface to scipy.optimize.RootResult."""
-
-    root: float
-    iterations: int
-    function_calls: int
-    converged: bool
-    flag: str
 
 
 class RootResultTotal(RootResultDict, total=False):
@@ -48,7 +39,7 @@ class RootResultTotal(RootResultDict, total=False):
     residual: float
 
 
-def _update_root_result(
+def _rootresults_to_rootresulttotal(
     r: RootResults,
     *,
     left: lnPiCollection | None = None,
@@ -56,8 +47,11 @@ def _update_root_result(
     left_done: bool | None = None,
     right_done: bool | None = None,
     info: str | None = None,
+    bracket_iteration: int | None = None,
+    from_solve: bool | None = None,
+    residual: float | None = None,
 ) -> RootResultTotal:
-    output = RootResultTotal(cast(RootResultDict, r))  # type: ignore
+    output = RootResultTotal(**rootresults_to_rootresultdict(r))  # type: ignore[typeddict-item]
 
     if left is not None:
         output["left"] = left
@@ -69,7 +63,14 @@ def _update_root_result(
         output["right_done"] = right_done
     if info is not None:
         output["info"] = info
-    return output  # type: ignore
+    if bracket_iteration is not None:
+        output["bracket_iteration"] = bracket_iteration
+    if from_solve is not None:
+        output["from_solve"] = from_solve
+    if residual is not None:
+        output["residual"] = residual
+
+    return output
 
 
 # ###############################################################################
@@ -255,7 +256,7 @@ def _refine_bracket_spinodal_right(
         if left_done and right_done:
             # find bracket
             r = RootResults(root=None, iterations=i, function_calls=i, flag=1)
-            return left, right, _update_root_result(r)
+            return left, right, _rootresults_to_rootresulttotal(r)
 
         ########
         # converged?
@@ -267,7 +268,7 @@ def _refine_bracket_spinodal_right(
                     root=left._get_lnz(), iterations=i + 1, function_calls=i, flag=0
                 )
 
-                r = _update_root_result(
+                r = _rootresults_to_rootresulttotal(
                     r,
                     left=left,
                     right=right,
@@ -304,7 +305,7 @@ def _refine_bracket_spinodal_right(
                 # ]:
                 #     setattr(r, k, val)
 
-                r = _update_root_result(
+                r = _rootresults_to_rootresulttotal(
                     r,
                     left=left,
                     right=right,
@@ -395,9 +396,11 @@ class _SolveSpinodal:
 
         xx, r = brentq(self.objective, a, b, full_output=True, **kws)
 
-        r["residual"] = self.objective(xx)
-        lnz = self.collection._get_lnz(self.build_phases.index)
-        return lnz, r, self.collection
+        return (
+            self.collection._get_lnz(self.build_phases.index),
+            _rootresults_to_rootresulttotal(r, residual=self.objective(xx)),  # type: ignore
+            self.collection,
+        )
 
 
 def get_spinodal(
@@ -609,8 +612,7 @@ class _SolveBinodal:
 
         xx, r = brentq(self.objective, a, b, full_output=True, **kws)
 
-        r["residual"] = self.objective(xx)
-        return self.collection, r
+        return self.collection, _rootresults_to_rootresulttotal(r, residual=self.objective(xx))  # type: ignore
 
 
 ################################################################################
@@ -644,7 +646,7 @@ class StabilityBase:
     def parent(self) -> lnPiCollection:
         return self._parent
 
-    def set_access_kws(self, **kwargs) -> None:
+    def set_access_kws(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             self.access_kws[k] = v
 
@@ -687,7 +689,9 @@ class StabilityBase:
     def appender(self) -> lnPiCollection:
         return self._get_appender()
 
-    def append_to_parent(self, sort=True, copy_stability=True):
+    def append_to_parent(
+        self, sort: bool = True, copy_stability: bool = True
+    ) -> lnPiCollection:
         new = self._parent.append(self.appender)
         if sort:
             new = new.sort_index()
@@ -905,7 +909,7 @@ class Binodals(StabilityBase):
         if None in [lnz_min, lnz_max] and spinodals is None:
             spinodals = self._parent.spinodal
 
-        def _get_lnz(idx: int):
+        def _get_lnz(idx: int) -> float:
             assert spinodals is not None
             s = spinodals[idx]
             if s is None:

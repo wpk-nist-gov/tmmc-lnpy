@@ -34,14 +34,14 @@ if TYPE_CHECKING:
 
     _FillArg = Union[int, None]
     _FillVal = Union[_FillArg, float]
-    _ExtremaArg = Union[int, tuple[int, ...], None]
+    _ExtremaArg = Union[int, "tuple[int, ...]", None]  # noqa
 
 
 def find_boundaries(
     masks: Sequence[MyNDArray],
     mode: _FindBoundariesMode = "thick",
     connectivity: int | None = None,
-    **kws,
+    **kws: Any,
 ) -> list[MyNDArray]:
     """
     Find boundary region for masks
@@ -186,7 +186,7 @@ def find_boundaries_overlap(
                     result[i, j, index] = overlap
         return result
 
-    if method == "appox":
+    if method == "approx":
         return _get_approx()
     elif method == "exact":
         return _get_exact()
@@ -622,7 +622,7 @@ class wFreeEnergy:
         )
 
 
-def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series]:
+def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any]]:
     w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
@@ -685,7 +685,7 @@ class wFreeEnergyCollection:
 
         self._cache: dict[str, Any] = {}
 
-    def _get_items_ws(self) -> tuple[list[pd.Index], list[wFreeEnergy]]:
+    def _get_items_ws(self) -> tuple[list[pd.Index[Any]], list[wFreeEnergy]]:
         indexes = []
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):
@@ -698,7 +698,7 @@ class wFreeEnergyCollection:
         return indexes, ws
 
     @cached.prop
-    def _data(self) -> dict[str, pd.Series]:
+    def _data(self) -> dict[str, pd.Series[Any]]:
         indexes, ws = self._get_items_ws()
         seq = get_tqdm(zip(indexes, ws), total=len(ws), desc="wFreeEnergyCollection")
         out = parallel_map_func_starargs(
@@ -710,31 +710,31 @@ class wFreeEnergyCollection:
         return result
 
     @property
-    def w_min(self) -> pd.Series:
+    def w_min(self) -> pd.Series[Any]:
         """Minimum energy (maximum `lnPi`) for a given region/phase"""
         return self._data["w_min"]
 
     @property
-    def w_tran(self) -> pd.Series:
+    def w_tran(self) -> pd.Series[Any]:
         """Minimum energy (maximum `lnPi`) at boundary between phases"""
         return self._data["w_tran"]
 
     @property
-    def w_argmin(self) -> pd.Series:
+    def w_argmin(self) -> pd.Series[Any]:
         """Location of :attr:`w_min`"""
         return self._data["w_argmin"]
 
     @property
-    def w_argtran(self) -> pd.Series:
+    def w_argtran(self) -> pd.Series[Any]:
         """Location of :attr:`w_tran`"""
         return self._data["w_argtran"]
 
-    @cached.prop
-    def dw(self) -> pd.Series:
+    @property
+    def dw(self) -> pd.Series[Any]:
         """Series representation of `dw = w_tran - w_min`"""
         return (self.w_tran - self.w_min).rename("delta_w")
 
-    @cached.prop
+    @property
     def dwx(self) -> xr.DataArray:
         """:mod:`xarray` representation of :attr:`dw`"""
         return self.dw.to_xarray()
@@ -783,7 +783,9 @@ class wFreeEnergyCollection:
         out = delta_w.min("phase_nebr").fillna(0.0)
         return out
 
-    def get_dw(self, idx: int, idx_nebr: int | list[int] | None = None) -> pd.Series:
+    def get_dw(
+        self, idx: int, idx_nebr: int | list[int] | None = None
+    ) -> pd.Series[Any]:
         """Series version of :meth:`get_dwx`"""
         return self.get_dwx(idx, idx_nebr).to_series()
 
@@ -805,7 +807,8 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
     """
 
-    @cached.prop
+    @property
+    @cached.meth
     def dwx(self) -> xr.DataArray:
         index = list(self._parent.index.get_level_values("phase"))
         masks = [x.mask for x in self._parent]
@@ -816,8 +819,9 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
-    @cached.prop
-    def dw(self) -> pd.Series:
+    @property
+    @cached.meth
+    def dw(self) -> pd.Series[Any]:
         """Series representation of delta_w"""
         return self.dwx.to_series()
 

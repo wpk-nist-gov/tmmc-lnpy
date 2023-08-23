@@ -1,17 +1,8 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Literal,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
 
-from typing_extensions import Concatenate, ParamSpec
+from typing_extensions import Concatenate, ParamSpec, TypeAlias
 
 if TYPE_CHECKING:
     import numpy as np
@@ -41,7 +32,12 @@ MyNDArray: TypeAlias = "NDArray[Any]"
 
 
 IndexingInt: TypeAlias = Union[
-    int, "np.int_", "np.integer", "np.unsignedinteger", "np.signedinteger", "np.int8"
+    int,
+    "np.int_",
+    "np.integer[Any]",
+    "np.unsignedinteger[Any]",
+    "np.signedinteger[Any]",
+    "np.int8",
 ]
 
 
@@ -60,7 +56,7 @@ PeakStyle = Literal["indices", "mask", "marker"]
 PeakError = Literal["ignore", "raise", "warn"]
 
 
-TagPhasesSignature = Callable[[Sequence["lnPiMasked"]], Sequence[int] | MyNDArray]
+TagPhasesSignature = Callable[[Sequence["lnPiMasked"]], "Sequence[int] | MyNDArray"]
 PhasesFactorySignature = Callable[..., "lnPiCollection"]
 
 

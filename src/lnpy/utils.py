@@ -6,7 +6,7 @@ Utility functions (:mod:`~lnpy.utils`)
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, cast, overload
+from typing import TYPE_CHECKING, TypedDict, cast, overload
 
 from ._lazy_imports import np
 from .options import OPTIONS
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray
+    from scipy.optimize import RootResults  # pyright: ignore
 
     from lnpy.lnpidata import lnPiMasked
 
@@ -39,13 +40,13 @@ def _get_tqdm_default() -> Callable[..., Any]:
     _tqdm = _get_tqdm()
     if _tqdm:
         try:
-            from IPython import get_ipython
+            from IPython.core.getipython import get_ipython
 
-            p = get_ipython()
+            p = get_ipython()  # type: ignore
             if p is not None and p.has_trait("kernel"):
                 from tqdm.notebook import tqdm as tqdm_default
 
-                return tqdm_default
+                return tqdm_default  # pyright: ignore
             else:
                 return cast("Callable[..., Any]", _tqdm.tqdm)
         except ImportError:
@@ -86,7 +87,7 @@ def get_tqdm(
         seq = tuple(seq)
         n = len(seq)
 
-    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
+    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:  # pyright: ignore
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
         seq = tqdm(seq, leave=leave, **kwargs)
@@ -125,7 +126,7 @@ def get_tqdm_build(
 @lru_cache
 def _get_joblib() -> Any:
     try:
-        import joblib
+        import joblib  # pyright: ignore
     except ImportError:
         joblib = None
     return joblib
@@ -239,7 +240,9 @@ def dim_to_suffix_dataset(
     out = table
     for k in out:
         if dim in out[k].dims:
-            out = out.drop(k).update(table[k].pipe(dim_to_suffix_dataarray, dim, join))
+            out = out.drop_vars(k).update(
+                table[k].pipe(dim_to_suffix_dataarray, dim, join)
+            )  # pyright: ignore
     return out
 
 
@@ -262,7 +265,7 @@ def dim_to_suffix(
 
     if isinstance(ds, DataArray):
         return dim_to_suffix_dataarray(ds, dim=dim, join=join)
-    elif isinstance(ds, Dataset):
+    elif isinstance(ds, Dataset):  # pyright: ignore
         return dim_to_suffix_dataset(ds, dim=dim, join=join)
     else:
         raise ValueError("`ds` must be `DataArray` or `Dataset`")
@@ -273,7 +276,7 @@ def _convention_to_bool(convention: MaskConvention) -> bool:
         convention = True
     elif convention == "masked":
         convention = False
-    elif not isinstance(convention, bool):
+    elif not isinstance(convention, bool):  # pyright: ignore
         raise ValueError(f"Bad value {convention} sent to _convention_to_bool")
     return convention
 
@@ -468,12 +471,12 @@ def labels_to_masks(
 
     convention = _convention_to_bool(convention)
 
-    output = []
+    output: list[MyNDArray] = []
     for i in features:
-        m = labels == i
+        m: NDArray[np.bool_] = labels == i
         if include_boundary:
-            b = segmentation.find_boundaries(m.astype(int), **kwargs)
-            m = m + b
+            b = cast("NDArray[np.bool_]", segmentation.find_boundaries(m.astype(int), **kwargs))  # type: ignore[reportUnknownMemberType]
+            m = m | b
         if not convention:
             m = ~m
         output.append(m)
@@ -528,7 +531,7 @@ def masks_to_labels(
 
 
 def ffill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
-    import bottleneck
+    import bottleneck  # pyright: ignore
 
     _limit = limit if limit is not None else arr.shape[axis]
     return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore
@@ -536,16 +539,16 @@ def ffill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray
 
 def bfill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
     """Inverse of ffill"""
-    import bottleneck
+    import bottleneck  # pyright: ignore
 
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
     arr = np.flip(arr, axis=axis)
     # fill
-    arr = bottleneck.push(arr, axis=axis, n=_limit)
+    arr = bottleneck.push(arr, axis=axis, n=_limit)  # pyright: ignore
     # reverse back to original
-    return np.flip(arr, axis=axis)
+    return np.flip(arr, axis=axis)  # pyright: ignore
 
 
 ##################################################
@@ -553,7 +556,7 @@ def bfill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray
 ##################################################
 
 
-def get_lnz_iter(lnz: Iterable[float], x: ArrayLike) -> MyNDArray:
+def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
     """
     Create a lnz_iter object for varying a single lnz
 
@@ -576,7 +579,7 @@ def get_lnz_iter(lnz: Iterable[float], x: ArrayLike) -> MyNDArray:
     x = np.asarray(x)
     z = np.zeros_like(x)
 
-    L = []
+    L: list[MyNDArray] = []
     for m in lnz:
         if m is None:
             L.append(x)
@@ -642,7 +645,7 @@ def distance_matrix(
     --------
     ~scipy.ndimage.distance_transform_edt
     """
-    from scipy.ndimage import distance_transform_edt
+    from scipy.ndimage import distance_transform_edt  # pyright: ignore
 
     mask = np.asarray(mask, dtype=bool)
     mask = mask_change_convention(mask, convention_in=convention, convention_out=True)
@@ -654,7 +657,7 @@ def distance_matrix(
     mask = np.pad(mask, pad_width=pad_width, mode="constant", constant_values=False)
 
     # distance filter
-    dist = distance_transform_edt(mask)
+    dist = distance_transform_edt(mask)  # pyright: ignore
 
     # remove padding
     s = (slice(None, -1),) * ndim
@@ -684,7 +687,7 @@ def dataset_to_lnpimasked(
     lnpi_name: str = "lnpi",
     pe_name: str = "PE",
     extra_kws: Mapping[str, Any] | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> lnPiMasked:
     """
     Convert a :class:`~xarray.Dataset` to a :class:`~lnpy.lnpidata.lnPiMasked` object.
@@ -713,3 +716,28 @@ def dataset_to_lnpimasked(
         extra_kws[pe_name] = ds[pe_name].values  # type: ignore
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
+
+
+# --- Root results ---------------------------------------------------------------------
+
+
+class RootResultDict(TypedDict):
+    """Interface to scipy.optimize.RootResult."""
+
+    root: float
+    iterations: int
+    function_calls: int
+    converged: bool
+    flag: str
+
+
+def rootresults_to_rootresultdict(r: RootResults) -> RootResultDict:
+    """Convert :func:`scipy.optimize.RootResults` to typed dictionary"""
+
+    return RootResultDict(
+        root=r.root,
+        iterations=r.iterations,
+        function_calls=r.function_calls,
+        converged=r.converged,  # pyright: ignore
+        flag=r.flag,
+    )

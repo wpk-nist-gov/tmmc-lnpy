@@ -26,8 +26,21 @@ class Options(TypedDict, total=False):
     joblib_len_build: int
 
 
-class OptionsReq(Options, total=True):
+class OptionsReq(TypedDict, total=True):
     """Options with required parameters."""
+
+    tqdm_use: bool
+    tqdm_len_calc: int
+    tqdm_len_build: int
+    tqdm_leave: bool
+    tqdm_bar: str
+
+    joblib_use: bool
+    joblib_n_jobs: int
+    joblib_backend: str | None
+    joblib_kws: dict[str, Any]
+    joblib_len_calc: int
+    joblib_len_build: int
 
 
 class Validators(TypedDict):

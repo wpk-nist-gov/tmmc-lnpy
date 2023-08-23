@@ -3,24 +3,33 @@ Examples (:mod:`~lnpy.examples`)
 ================================
 """
 
+from __future__ import annotations
+
 try:
     import importlib_resources as resources
 except ImportError:
-    import importlib.resources as resources
+    import importlib.resources as resources  # type: ignore[no-redef]
 
 import json
-from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING, TypedDict
 
 from ._lazy_imports import np, xr
 
 # from .lnpiseries import lnPiCollection
-from .lnpidata import lnPiMasked
-from .segment import PhaseCreator
+from .segment import BuildPhasesBase, PhaseCreator
 from .utils import dataset_to_lnpimasked
 
+if TYPE_CHECKING:
+    from typing import Any, Iterator, Literal, Sequence
 
-def json_to_dict(basename):
+    from ._typing import MyNDArray
+    from .lnpidata import lnPiMasked
+
+    _ExampleNames = Literal["lj_sub", "lj_sup", "ljmix_sup", "hsmix", "watermof"]
+
+
+def json_to_dict(basename: str) -> dict[str, Any]:
     """
     Load a json file into a dict.
 
@@ -42,15 +51,25 @@ def json_to_dict(basename):
 
         fopen = gzip.open
     else:
-        fopen = open
+        fopen = open  # type: ignore[assignment]
 
     with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:
         out = json.load(f)
 
-    return out
+    return out  # type: ignore
 
 
-def load_example_dict(name):
+class ExampleDict(TypedDict):
+    """Example dict"""
+
+    lnPi_data: MyNDArray
+    lnPi_mask: MyNDArray
+    state_kws: dict[str, Any]
+    extra_kws: dict[str, Any]
+    lnz: MyNDArray
+
+
+def load_example_dict(name: _ExampleNames) -> ExampleDict:
     """
     Load a dictionary of data
 
@@ -61,16 +80,16 @@ def load_example_dict(name):
 
     ref = load_example_lnpimasked(name)
 
-    return {
-        "lnPi_data": ref.data,
-        "lnPi_mask": ref.mask,
-        "state_kws": ref.state_kws,
-        "extra_kws": ref.extra_kws,
-        "lnz": ref.lnz,
-    }
+    return ExampleDict(
+        lnPi_data=ref.data,
+        lnPi_mask=ref.mask,
+        state_kws=ref.state_kws,
+        extra_kws=ref.extra_kws,
+        lnz=ref.lnz,
+    )
 
 
-def load_example_lnpimasked(name):
+def load_example_lnpimasked(name: _ExampleNames) -> lnPiMasked:
     """
     Load an example file
 
@@ -78,7 +97,6 @@ def load_example_lnpimasked(name):
     ----------
     name : {'lj_sub', 'lj_sup', 'ljmix_sup', 'hsmix', 'watermof}
     """
-
     extensions = {
         "lj_sub": "json",
         "lj_sup": "json",
@@ -107,20 +125,20 @@ class Example:
     #: :class:`~lnpy.segment.PhaseCreator` instance
     phase_creator: PhaseCreator
     #: Callable to build phases.
-    build_phases: Callable
+    build_phases: BuildPhasesBase | None
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Transform class to dictionary."""
         return asdict(self)
 
-    def unpack(self, keys=None):
+    def unpack(self, keys: list[str] | None = None) -> Iterator[Any]:
         """Unpack keys."""
         if keys is None:
             keys = ["ref", "phase_creator", "build_phases"]
         return (getattr(self, k) for k in keys)
 
 
-def lj_sup_example():
+def lj_sup_example() -> Example:
     """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
     ref = load_example_lnpimasked("lj_sup")
 
@@ -137,14 +155,14 @@ def lj_sup_example():
     return Example(ref=ref, phase_creator=phase_creator, build_phases=build_phases)
 
 
-def tag_phases_single_comp_simple(x):
+def tag_phases_single_comp_simple(x: Sequence[lnPiMasked]) -> MyNDArray:
     if len(x) > 2:
         raise ValueError("bad tag function")
     argmax0 = np.array([xx.local_argmax()[0] for xx in x])
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-def lj_sub_example():
+def lj_sub_example() -> Example:
     """Create an :class:`Example` instance for a Lennard-Jones fluid (subcritical)"""
     ref = load_example_lnpimasked("lj_sub")
 
@@ -161,7 +179,7 @@ def lj_sub_example():
     return Example(ref=ref, phase_creator=phase_creator, build_phases=build_phases)
 
 
-def ljmix_sup_example():
+def ljmix_sup_example() -> Example:
     """Create an :class:`Example` instance for a Lennard-Jones mixture (supercritical)."""
     ref = load_example_lnpimasked("ljmix_sup")
 
@@ -170,14 +188,14 @@ def ljmix_sup_example():
         ref=ref,
     )
 
-    build_phases = phase_creator.build_phases
+    build_phases = phase_creator.build_phases_mu([None])
     return Example(ref=ref, phase_creator=phase_creator, build_phases=build_phases)
 
 
-def hsmix_example():
+def hsmix_example() -> Example:
     """Create an :class:`Example` instance for a hard-sphere mixture."""
 
-    def tag_phases(x):
+    def tag_phases(x: Sequence[lnPiMasked]) -> MyNDArray:
         if len(x) > 2:
             raise ValueError("bad tag function")
         argmax0 = np.array([xx.local_argmax()[0] for xx in x])

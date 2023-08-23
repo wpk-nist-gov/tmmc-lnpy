@@ -189,11 +189,18 @@ def test_nice_grid(obj):
 
     other_course = get_test_table(o_course, ref)
     test_course = pd.read_csv(path_data / "data_0_course.csv")
-    pd.testing.assert_frame_equal(other_course, test_course)
 
     other_fine = get_test_table(o, ref)
-    test = pd.read_csv(path_data / "data_0_fine.csv")
-    pd.testing.assert_frame_equal(other_fine, test)
+    test_fine = pd.read_csv(path_data / "data_0_fine.csv")
+
+    v0 = other_fine.lnz_0.values
+    v1 = test_fine.lnz_0.values
+
+    np.testing.assert_allclose(v0, v1)
+
+    pd.testing.assert_frame_equal(other_course, test_course)
+
+    pd.testing.assert_frame_equal(other_fine, test_fine)
 
 
 # def test_deprecation():

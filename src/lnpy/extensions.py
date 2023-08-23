@@ -42,7 +42,7 @@ class _CachedAccessorSingle(Generic[S, R]):
         ...
 
     @overload
-    def __get__(self, obj: S, cls: type[S] | None = None) -> R:  # type: ignore[misc]
+    def __get__(self, obj: S, cls: type[S] | None = None) -> R:
         ...
 
     def __get__(self, obj: S | None, cls: type[S] | None = None) -> C_prop[S, R] | R:

@@ -30,4 +30,4 @@ dependencies:
   - ipywidgets
   - pip
   - pip:
-      - module-utilities >= 0.8.1
+      - module-utilities >= 0.9.0

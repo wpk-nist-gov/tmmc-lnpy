@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
 """routines to find constant molfracs"""
 
 from ._lazy_imports import np

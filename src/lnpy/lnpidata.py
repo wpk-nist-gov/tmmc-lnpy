@@ -38,25 +38,29 @@ def _get_shift(
     shape: tuple[int, ...], dlnz: tuple[float, ...], dtype: DTypeLike
 ) -> MyNDArray:
     shift = np.zeros([], dtype=dtype)
-    for i, (nr, m) in enumerate(zip(_get_n_ranges(shape, dtype), dlnz)):  # type: ignore
-        shift = np.add.outer(shift, nr * m)
+    for i, (nr, m) in enumerate(zip(_get_n_ranges(shape, dtype), dlnz)):
+        shift = np.add.outer(shift, nr * m)  # pyright: ignore
     return shift
 
 
 @lru_cache(maxsize=20)
 def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> MyNDArray:
     if all(x == 0 for x in dlnz):
-        return base._data
+        return base._data  # pyright: ignore
     else:
-        return _get_shift(base.shape, dlnz, base._data.dtype) + base._data
+        return (
+            _get_shift(base.shape, dlnz, base._data.dtype) + base._data
+        )  # pyright: ignore
 
 
 @lru_cache(maxsize=20)
 def _get_maskedarray(
     base: lnPiArray, self: lnPiMasked, dlnz: tuple[float, ...]
-) -> np.ma.core.MaskedArray:
-    return np.ma.MaskedArray(
-        _get_data(base, dlnz), mask=self._mask, fill_value=base._fill_value
+) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
+    return np.ma.MaskedArray(  # type: ignore
+        _get_data(base, dlnz),
+        mask=self._mask,
+        fill_value=base._fill_value,  # pyright: ignore
     )
 
 
@@ -66,7 +70,7 @@ def _get_filled(
     self: lnPiMasked,
     dlnz: tuple[float, ...],
     fill_value: float | None = None,
-) -> np.ma.core.MaskedArray:
+) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
     return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore
 
 
@@ -190,7 +194,7 @@ class lnPiArray:
             object with padded data
         """
 
-        import bottleneck
+        import bottleneck  # pyright: ignore
 
         from . import utils
 
@@ -200,7 +204,7 @@ class lnPiArray:
             axes = (axes,)
 
         data = self._data
-        datas = []
+        datas: list[MyNDArray] = []
 
         if ffill:
             datas += [utils.ffill(data, axis=axis, limit=limit) for axis in axes]
@@ -224,7 +228,7 @@ class lnPiArray:
             data is excluded from calculating maximum.
         """
 
-        data = self._data - np.ma.MaskedArray(self._data, mask).max()
+        data = self._data - np.ma.MaskedArray(self._data, mask).max()  # type: ignore
         return self.new_like(data=data)
 
 
@@ -339,7 +343,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def _data(self) -> MyNDArray:
-        return self._base._data
+        return self._base._data  # pyright: ignore
 
     @property
     def dtype(self) -> np.dtype[Any]:
@@ -360,7 +364,7 @@ class lnPiMasked(AccessorMixin):
         return self._base._extra_kws
 
     @property
-    def ma(self) -> np.ma.core.MaskedArray:
+    def ma(self) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
         """Masked array view of data reweighted data"""
         return _get_maskedarray(self._base, self, self._dlnz)
 
@@ -462,10 +466,12 @@ class lnPiMasked(AccessorMixin):
         numpy.ma.MaskedArray.argmax
         numpy.unravel_index
         """
-        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)
+        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)  # type: ignore
 
     # @cached.meth
-    def local_max(self, *args: Any, **kwargs: Any) -> np.ma.core.MaskedArray:
+    def local_max(
+        self, *args: Any, **kwargs: Any
+    ) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
         """
         Calculate index of maximum of masked data.
 
@@ -483,7 +489,9 @@ class lnPiMasked(AccessorMixin):
         return self.ma[self.local_argmax(*args, **kwargs)]  # type: ignore
 
     # @cached.meth
-    def local_maxmask(self, *args: Any, **kwargs: Any) -> np.ma.core.MaskedArray:
+    def local_maxmask(
+        self, *args: Any, **kwargs: Any
+    ) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
         """Calculate mask where ``self.ma == self.local_max()``"""
         return self.ma == self.local_max(*args, **kwargs)  # type: ignore
 

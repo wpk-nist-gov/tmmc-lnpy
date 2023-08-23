@@ -46,8 +46,8 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
 
     def __init__(
         self,
-        data: Sequence[T_Element] | pd.Series,
-        index: ArrayLike | pd.Index | pd.MultiIndex | None = None,
+        data: Sequence[T_Element] | pd.Series[Any],
+        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         dtype: DTypeLike | None = None,
         name: Hashable | None = None,
         base_class: str | type = "first",
@@ -64,7 +64,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         self._series = series
         self._cache: dict[str, Any] = {}
 
-    def _verify_series(self, series: pd.Series) -> None:
+    def _verify_series(self, series: pd.Series[Any]) -> None:
         if self._verify:
             base_class = self._base_class
             if isinstance(base_class, str) and base_class.lower() == "first":
@@ -76,18 +76,18 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
                     raise ValueError(f"all elements must be of type {base_class}")
 
     @property
-    def series(self) -> pd.Series:
+    def series(self) -> pd.Series[Any]:
         """View of the underlying :class:`pandas.Series`"""
         return self._series
 
     @series.setter
-    def series(self, series: pd.Series) -> None:
+    def series(self, series: pd.Series[Any]) -> None:
         self._cache = {}
         self._verify_series(series)
         self._series = series
 
     @property
-    def s(self) -> pd.Series:
+    def s(self) -> pd.Series[Any]:
         """Alias to :meth:`series`"""
         return self.series
 
@@ -100,12 +100,12 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         return self._series.values  # type: ignore
 
     @property
-    def items(self):
+    def items(self) -> MyNDArray:
         """Alias to :attr:`values`"""
         return self.values
 
     @property
-    def index(self) -> pd.Index:
+    def index(self) -> pd.Index[Any]:
         """Series index"""
         return self._series.index
 
@@ -119,8 +119,8 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
 
     def new_like(
         self,
-        data: Sequence[T_Element] | pd.Series | None = None,
-        index: ArrayLike | pd.Index | pd.MultiIndex | None = None,
+        data: Sequence[T_Element] | pd.Series[Any] | None = None,
+        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create new object with optional new data/index"""
@@ -138,27 +138,32 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
 
     def _wrapped_pandas_method(
         self, mtd: str, wrap: bool = False, *args: Any, **kwargs: Any
-    ) -> T_Element | pd.Series | Self:
+    ) -> T_Element | pd.Series[Any] | Self:
         """Wrap a generic pandas method to ensure it returns a GeoSeries"""
         val = getattr(self._series, mtd)(*args, **kwargs)
         if wrap and type(val) == pd.Series:
             val = self.new_like(val)
         return val  # type: ignore
 
-    def __getitem__(self, key) -> Self | T_Element:
+    def __getitem__(self, key: Any) -> Self | T_Element:
         """Interface to :meth:`pandas.Series.__getitem__`"""
         return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)  # type: ignore
 
     def xs(
-        self, key, axis=0, level=None, drop_level=False, wrap=True
-    ) -> Self | pd.Series | T_Element:
+        self,
+        key: Hashable | Sequence[Hashable],
+        axis: int = 0,
+        level: Hashable | Sequence[Hashable] | None = None,
+        drop_level: bool = False,
+        wrap: bool = True,
+    ) -> Self | pd.Series[Any] | T_Element:
         """Interface to :meth:`pandas.Series.xs`"""
         return self._wrapped_pandas_method(
             "xs", wrap=wrap, key=key, axis=axis, level=level, drop_level=drop_level
         )
 
     def __setitem__(
-        self, idx: Any, values: T_Element | Sequence[T_Element] | pd.Series
+        self, idx: Any, values: T_Element | Sequence[T_Element] | pd.Series[Any]
     ) -> None:
         """Interface to :meth:`pandas.Series.__setitem__`"""
         self._series[idx] = values
@@ -174,7 +179,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
 
     def append(
         self,
-        to_append: pd.Series | Self,
+        to_append: pd.Series[Any] | Self,
         ignore_index: bool = False,
         verify_integrity: bool = True,
         concat_kws: Mapping[str, Any] | None = None,
@@ -238,7 +243,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         args: tuple[Any, ...] = (),
         wrap: bool = False,
         **kwds: Any,
-    ) -> Self | pd.Series:
+    ) -> Self | pd.Series[Any]:
         """Interface to :meth:`pandas.Series.apply`"""
 
         return self._wrapped_pandas_method(  # type: ignore
@@ -266,7 +271,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         observed: bool = ...,
         dropna: bool = ...,
         wrap: Literal[False] = ...,
-    ) -> SeriesGroupBy:
+    ) -> SeriesGroupBy[Any, Any]:
         ...
 
     @overload
@@ -296,7 +301,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         observed: bool = ...,
         dropna: bool = ...,
         wrap: bool,
-    ) -> SeriesGroupBy | _Groupby[Self, T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby[Self, T_Element]:
         ...
 
     def groupby(
@@ -311,7 +316,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         observed: bool = False,
         dropna: bool = True,
         wrap: bool = False,
-    ) -> SeriesGroupBy | _Groupby[Self, T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby[Self, T_Element]:
         """
         Wrapper around :meth:`pandas.Series.groupby`.
 
@@ -349,7 +354,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         *,
         wrap: Literal[False] = ...,
         **kwargs: Any,
-    ) -> SeriesGroupBy:
+    ) -> SeriesGroupBy[Any, Any]:
         ...
 
     @overload
@@ -369,7 +374,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         *,
         wrap: bool,
         **kwargs: Any,
-    ) -> SeriesGroupBy | _Groupby[Self, T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby[Self, T_Element]:
         ...
 
     def groupby_allbut(
@@ -378,7 +383,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
         *,
         wrap: bool = False,
         **kwargs: Any,
-    ) -> SeriesGroupBy | _Groupby[Self, T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby[Self, T_Element]:
         """Groupby all but columns in drop"""
         from .utils import allbut
 
@@ -399,11 +404,11 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
     def _concat_to_series(
         cls,
         objs: Sequence[Self]
-        | Sequence[pd.Series]
+        | Sequence[pd.Series[Any]]
         | Mapping[Hashable, Self]
-        | Mapping[Hashable, pd.Series],
+        | Mapping[Hashable, pd.Series[Any]],
         **concat_kws: Any,
-    ) -> pd.Series:
+    ) -> pd.Series[Any]:
         from collections.abc import Mapping, Sequence
 
         if isinstance(objs, Sequence):
@@ -432,10 +437,10 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
     def concat_like(
         self,
         objs: Sequence[Self]
-        | Sequence[pd.Series]
+        | Sequence[pd.Series[Any]]
         | Mapping[Hashable, Self]
-        | Mapping[Hashable, pd.Series],
-        **concat_kws,
+        | Mapping[Hashable, pd.Series[Any]],
+        **concat_kws: Any,
     ) -> Self:
         """Concat a sequence of objects like `self`"""
         s = self._concat_to_series(objs, **concat_kws)
@@ -445,9 +450,9 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):
     def concat(
         cls,
         objs: Sequence[Self]
-        | Sequence[pd.Series]
+        | Sequence[pd.Series[Any]]
         | Mapping[Hashable, Self]
-        | Mapping[Hashable, pd.Series],
+        | Mapping[Hashable, pd.Series[Any]],
         concat_kws: Mapping[str, Any] | None = None,
         *args: Any,
         **kwargs: Any,
@@ -500,7 +505,7 @@ class _CallableResult(Generic[T_SeriesWrapper, T_Element]):
 
 
 class _Groupby(Generic[T_SeriesWrapper, T_Element]):
-    def __init__(self, parent: T_SeriesWrapper, group: SeriesGroupBy) -> None:
+    def __init__(self, parent: T_SeriesWrapper, group: SeriesGroupBy[Any, Any]) -> None:
         self._parent = parent
         self._group = group
 
@@ -538,7 +543,8 @@ class _LocIndexer(Generic[T_SeriesWrapper, T_Element]):
 
     @overload
     def __getitem__(
-        self, idx: Sequence[Scalar] | pd.Index | slice | Callable
+        self,
+        idx: Sequence[Scalar] | pd.Index[Any] | slice | Callable[[pd.Series[Any]], Any],
     ) -> T_SeriesWrapper:
         ...
 
@@ -553,7 +559,7 @@ class _LocIndexer(Generic[T_SeriesWrapper, T_Element]):
         return out  # type: ignore
 
     def __setitem__(
-        self, idx: Any, values: T_Element | pd.Series | Sequence[T_Element]
+        self, idx: Any, values: T_Element | pd.Series[Any] | Sequence[T_Element]
     ) -> None:
         self._parent._series.loc[idx] = values
 
@@ -575,7 +581,9 @@ class _iLocIndexer(Generic[T_SeriesWrapper, T_Element]):
         ...
 
     @overload
-    def __getitem__(self, idx: Sequence[int] | pd.Index | slice) -> T_SeriesWrapper:
+    def __getitem__(
+        self, idx: Sequence[int] | pd.Index[Any] | slice
+    ) -> T_SeriesWrapper:
         ...
 
     @overload
@@ -589,7 +597,7 @@ class _iLocIndexer(Generic[T_SeriesWrapper, T_Element]):
         return out  # type: ignore
 
     def __setitem__(
-        self, idx: Any, values: T_Element | pd.Series | Sequence[T_Element]
+        self, idx: Any, values: T_Element | pd.Series[Any] | Sequence[T_Element]
     ) -> None:
         self._parent._series.iloc[idx] = values
 
@@ -654,21 +662,21 @@ class _LocIndexer_unstack_mloc(Generic[T_SeriesWrapper, T_Element]):
         self._index_names = set(self._index.names)
         self._loc = self._parent._series.iloc
 
-    def _get_loc_idx(self, idx: pd.MultiIndex | pd.Index) -> Any:
+    def _get_loc_idx(self, idx: pd.MultiIndex | pd.Index[Any]) -> Any:
         index = self._index
         if isinstance(idx, pd.MultiIndex):
             # names in idx and
             drop: list[Hashable] = list(self._index_names - set(idx.names))
             index = index.droplevel(drop)
             # reorder idx
-            idx = idx.reorder_levels(index.names)
+            idx = idx.reorder_levels(index.names)  # type: ignore
         else:
             drop = list(set(index.names) - {idx.name})
             index = index.droplevel(drop)
-        indexer = index.get_indexer_for(idx)
+        indexer = index.get_indexer_for(idx)  # type: ignore
         return indexer
 
-    def __getitem__(self, idx: pd.MultiIndex | pd.Index) -> T_SeriesWrapper:
+    def __getitem__(self, idx: pd.MultiIndex | pd.Index[Any]) -> T_SeriesWrapper:
         indexer = self._get_loc_idx(idx)
         out = self._loc[indexer]
 
@@ -718,8 +726,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
 
     def __init__(
         self,
-        data: Sequence[lnPiMasked] | pd.Series,
-        index: ArrayLike | pd.Index | pd.MultiIndex | None = None,
+        data: Sequence[lnPiMasked] | pd.Series[Any],
+        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         xarray_output: bool = True,
         concat_dim: str | None = None,
         concat_coords: str | None = None,
@@ -742,8 +750,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
 
     def new_like(
         self,
-        data: Sequence[lnPiMasked] | pd.Series | None = None,
-        index: ArrayLike | pd.Index | pd.MultiIndex | None = None,
+        data: Sequence[lnPiMasked] | pd.Series[Any] | None = None,
+        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create new object with optional new data/index."""
@@ -758,7 +766,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
             **kwargs,
         )
 
-    def _verify_series(self, series: pd.Series) -> None:
+    def _verify_series(self, series: pd.Series[Any]) -> None:
         super()._verify_series(series)
         if self._verify:
             first = series.iloc[0]
@@ -775,7 +783,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
 
     # repr
     @cached.prop
-    def _lnz_series(self) -> pd.Series:
+    def _lnz_series(self) -> pd.Series[Any]:
         return self._series.apply(lambda x: x.lnz)  # type: ignore
 
     def __repr__(self) -> str:
@@ -845,7 +853,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
             lnz = lnz[component]
         return lnz  # type: ignore
 
-    def _get_level(self, level: str = "phase") -> pd.Index:
+    def _get_level(self, level: str = "phase") -> pd.Index[Any]:
         """Return level values from index"""
         index = self.index
         if isinstance(index, pd.MultiIndex):
@@ -853,7 +861,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
             index = index.levels[level_idx]
         return index
 
-    def get_index_level(self, level: str = "phase") -> pd.Index:
+    def get_index_level(self, level: str = "phase") -> pd.Index[Any]:
         """Get index values for specified level"""
         return self._get_level(level=level)
 
@@ -955,7 +963,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
     @classmethod
     def from_builder(
         cls,
-        lnzs: Sequence[float],
+        lnzs: Sequence[float] | MyNDArray,
         # TODO: make better type for build_phases.
         build_phases: Callable[..., tuple[list[lnPiMasked], MyNDArray]],
         ref: lnPiMasked | None = None,
@@ -1037,7 +1045,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
                 masks_to_labels(masks, features=features, convention=False, dtype=dtype)
             )
 
-        index = indexes[0].append(indexes[1:])
+        index = indexes[0].append(indexes[1:])  # type: ignore
 
         data = np.stack(labels)
 

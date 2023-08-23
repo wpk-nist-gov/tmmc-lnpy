@@ -261,7 +261,7 @@ class xGrandCanonical:
 
     # @cached_prop to much memory
     @property
-    def _rec_coords(self) -> dict[str, pd.Index | pd.MultiIndex | float | int]:
+    def _rec_coords(self) -> dict[str, pd.Index[Any] | pd.MultiIndex | float | int]:
         if isinstance(self._parent, lnPiMasked):
             return dict(self._parent._index_dict(), **self._parent.state_kws)
         else:
@@ -427,10 +427,11 @@ class xGrandCanonical:
     @xr_name()
     def mean_pi(
         self,
+        /,
         x: str | xArrayLike | Callable[..., xArrayLike],
         allow_extra_kws: bool = True,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> xr.DataArray:
         r"""
         Calculates :math:`\overline{x} = \sum_N \Pi_{\rm norm}(N) x(N)`
 
@@ -458,43 +459,43 @@ class xGrandCanonical:
         return self._mean_pi(x, **kwargs)
 
     # TODO: finish this
-    def _central_moment_bar(
-        self,
-        x,
-        y=None,
-        xmom=2,
-        ymom=None,
-        xmom_dim="xmom",
-        ymom_dim="ymom",
-        *args,
-        **kwargs,
-    ):
-        r"""
-        Calculate central moments of the form
+    # def _central_moment_bar(
+    #     self,
+    #     x,
+    #     y=None,
+    #     xmom=2,
+    #     ymom=None,
+    #     xmom_dim="xmom",
+    #     ymom_dim="ymom",
+    #     *args,
+    #     **kwargs,
+    # ):
+    #     r"""
+    #     Calculate central moments of the form
 
-        .. math::
+    #     .. math::
 
-            \sum_N \Pi(N)  (\bar{x}(N) - \langle \bar{x}(N) \rangle))^n
+    #         \sum_N \Pi(N)  (\bar{x}(N) - \langle \bar{x}(N) \rangle))^n
 
-        """
+    #     """
 
-        def _get_dx(xx, mom, mom_dim):
-            xx = self._array_or_callable_to_xarray(xx, *args, **kwargs)
-            if isinstance(mom, int):
-                mom = [mom]
+    #     def _get_dx(xx, mom, mom_dim):
+    #         xx = self._array_or_callable_to_xarray(xx, *args, **kwargs)
+    #         if isinstance(mom, int):
+    #             mom = [mom]
 
-            mom = xr.DataArray(mom, dims=mom_dim, coords={mom_dim: mom})
+    #         mom = xr.DataArray(mom, dims=mom_dim, coords={mom_dim: mom})
 
-            return (xx - self._mean_pi(xx)) ** mom
+    #         return (xx - self._mean_pi(xx)) ** mom
 
-        dx = _get_dx(x, xmom, xmom_dim)
+    #     dx = _get_dx(x, xmom, xmom_dim)
 
-        if y is not None:
-            dy = _get_dx(y, ymom, ymom_dim)
+    #     if y is not None:
+    #         dy = _get_dx(y, ymom, ymom_dim)
 
-            dx = dx * dy
+    #         dx = dx * dy
 
-        return self._mean_pi(dx)
+    #     return self._mean_pi(dx)
 
     def var_pi(
         self,
@@ -558,13 +559,13 @@ class xGrandCanonical:
 
     @cached_prop
     @xr_name(r"$var[{\bf n}(\mu,V,T)]$")
-    def nvec_var(self):
+    def nvec_var(self) -> xr.DataArray:
         r"""Variance in particle number :math:`{\rm var}\, \bf{N}`"""
         return self.var_pi(self.ncoords)
 
     @cached_prop
     @xr_name(r"$var[n(\mu,V,T)]$")
-    def ntot_var(self):
+    def ntot_var(self) -> xr.DataArray:
         r"""Variance in total number of particles :math:`{\rm var}\, N`"""
         return self.var_pi(self.ncoords_tot)
 
@@ -633,7 +634,9 @@ class xGrandCanonical:
     def _sample_argmax_indexer_dict(self) -> dict[str, xr.DataArray]:
         return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)
 
-    def lnpi_max(self, fill_value=None, add_n_coords=True):
+    def lnpi_max(
+        self, fill_value: float | None = None, add_n_coords: bool = True
+    ) -> xr.DataArray:
         r"""Maximum value of :math:`\max_N \ln \Pi(N, ...)`"""
         out = self.lnpi(fill_value).isel(self._sample_argmax_indexer_dict)
 
@@ -666,7 +669,7 @@ class xGrandCanonical:
     @xr_name("distance from edge of cut value")
     def edge_distance_val(
         self,
-        ref,
+        ref: lnPiMasked,
         val: float | xr.DataArray | None = None,
         max_frac: float | None = None,
     ) -> xr.DataArray:
@@ -813,8 +816,8 @@ class xGrandCanonical:
 
     def table(
         self,
-        keys: Sequence[Hashable] | None = None,
-        default_keys: Sequence[Hashable] | None = ("nvec", "betapV", "PE_n"),
+        keys: str | Sequence[str] | None = None,
+        default_keys: str | Sequence[str] | None = ("nvec", "betapV", "PE_n"),
         ref: lnPiMasked | None = None,
         mask_stable: bool = False,
         dim_to_suffix: Sequence[Hashable] | None = None,
@@ -849,7 +852,7 @@ class xGrandCanonical:
         if ref is not None:
             out.append(self.edge_distance(ref))
 
-        def _process_keys(x):
+        def _process_keys(x: str | Sequence[str] | None) -> list[str]:
             if x is None:
                 return []
             elif isinstance(x, str):
@@ -865,7 +868,7 @@ class xGrandCanonical:
         # this preserves order
         for key in dict.fromkeys(keys):
             try:
-                v = getattr(self, key, None)  # type: ignore
+                v = getattr(self, key, None)
                 if v is None:
                     raise ValueError(f"no attribute {key} in self")
                 if callable(v):
@@ -923,7 +926,7 @@ class xGrandCanonical:
     @xr_name(
         r"$\beta F(\mu,V,T)/n$", standard_name="helmholtz_free_energy_per_particle"
     )
-    def betaF_n(self, lnpi_zero: xArrayLike | None = None):
+    def betaF_n(self, lnpi_zero: xArrayLike | None = None) -> xr.DataArray:
         r"""Scaled Helmholtz free energy per particle :math:`\beta F / \overline{N}`."""
         return self.betaF(lnpi_zero) / self.ntot
 
@@ -969,7 +972,7 @@ class xCanonical:
         self._xge = parent.xge
         self._cache: dict[str, Any] = {}
 
-    def lnpi(self, fill_value=None):
+    def lnpi(self, fill_value: float | None = None) -> xr.DataArray:
         r""":class:`~xarray.DataArray` view of :math:`\ln Pi(N)`"""
         return self._xge.lnpi(fill_value=fill_value)
 
@@ -1125,8 +1128,9 @@ class xCanonical:
 
     def table(
         self,
-        keys: Sequence[str] | None = None,
-        default_keys: Sequence[str]
+        keys: str | Sequence[str] | None = None,
+        default_keys: str
+        | Sequence[str]
         | None = (
             "betamu",
             "betapV",
@@ -1155,7 +1159,7 @@ class xCanonical:
 
         out = []
 
-        def _process_keys(x):
+        def _process_keys(x: str | Sequence[str] | None) -> list[str]:
             if x is None:
                 return []
             elif isinstance(x, str):
