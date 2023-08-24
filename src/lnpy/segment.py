@@ -81,6 +81,7 @@ dlnz_buildphases_dmu | dlnz : list of float or None
     dlnz_i = lnz_i - lnz_index, where lnz_index is the value varied.
 phase_creator : :class:`PhaseCreator`
     Factory method to create phases collection object.
+    For example, :meth:`.lnPiCollection.from_list`.
 phases_factory : callable or bool, default=True
     Function to convert list of phases into Phases object.
     If `phases_factory` ``True``, revert to `self.phases_factory`.
@@ -369,7 +370,6 @@ class Segmenter:
         {num_peaks_max}
         {peak_style}
         {mask_image}
-
         **kwargs
             Extra arguments to :func:`peak_local_max_adaptive`.
 
@@ -416,18 +416,14 @@ class Segmenter:
         ----------
         {data}
         {markers}
-
         {mask_image}
-        connectivity : int
-            connectivity to use in watershed
         {connectivity_watershed}
         **kwargs
             Extra arguments to :func:`~skimage.segmentation.watershed`
 
         Returns
         -------
-        labels : ndarray of int
-            Values > 0 correspond to found regions
+        {labels}
 
         See Also
         --------
@@ -457,7 +453,7 @@ class Segmenter:
 
         Parameters
         ----------
-        lnPi : lnPiMasked
+        lnpi : lnPiMasked
             Object to be segmented
         {markers}
 
@@ -521,21 +517,21 @@ class PhaseCreator:
         if specified, the allowable number of peaks to locate.
         This can be useful for some cases.  These phases will be merged out at the end.
     ref : lnPiMasked, optional
-        Reference lnPiMasked object.
+        Reference object.
     segmenter : :class:`Segmenter`, optional
         segmenter object to create labels/masks. Defaults to using base segmenter.
     segment_kws : mapping, optional
-        Optional arguments to be passed to :meth`Segmenter.segmenter_lnpi`.
+        Optional arguments to be passed to :meth:`.Segmenter.segment_lnpi`.
     tag_phases : callable, optional
-        Optional function which takes a list of :class:`~lnpy.lnpidata.lnPiMasked` objects
+        Optional function which takes a list of :class:`~.lnPiMasked` objects
         and returns on integer label for each object.
     phases_factory : callable, optional
         Factory function for returning Collection from a list of :class:`~lnpy.lnpidata.lnPiMasked` object.
-        Defaults to :meth:`~lnpy.lnpiseries.lnPiCollection.from_list`.
+        Defaults to :meth:`.lnPiCollection.from_list`.
     lnPiFreeEnergy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
-        Optional arguments to ...
+        Optional arguments to :func:`.merge_regions`
 
     """
 

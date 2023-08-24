@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     _ExtremaArg = Union[int, "tuple[int, ...]", None]  # noqa
 
 
+@docfiller.decorate
 def find_boundaries(
     masks: Sequence[MyNDArray],
     mode: _FindBoundariesMode = "thick",
@@ -47,19 +48,16 @@ def find_boundaries(
 
     Parameters
     ----------
-    masks : list of array of bool
-        Convention is `masks[i][index] == True`` if `index` is active for the ith mask
+    {masks_image}
     mode : str, default="thick"
         mode to use in :func:`skimage.segmentation.find_boundaries`
-    Connectivity : int, optional
-        Defaults to ``masks[0].ndim``
+    {find_boundary_connectivity}
 
 
     Returns
     -------
-    boundaries : list of array of bool, optional
-        If supplied, use these areas as boundaries.  Otherwise, calculate
-        boundaries using `segmentation.find_boundaries`
+    boundaries : list of array of bool
+        Boundaries of each mask.
 
     See Also
     --------
@@ -115,6 +113,7 @@ def find_boundaries_overlap(
 # ) -> dict[tuple[int, int] | tuple[int, int, int], MyNDArray | None ]: ...
 
 
+@docfiller.decorate
 def find_boundaries_overlap(
     masks: Sequence[MyNDArray],
     *,
@@ -132,14 +131,14 @@ def find_boundaries_overlap(
 
     Parameters
     ----------
-    masks : list of array of bool
-        Convention is `masks[i][index] == True`` if `index` is active for the ith mask
+    {masks_image}
     boundaries : list of array of bool, optional
         If supplied, use these areas as boundaries.  Otherwise, calculate
         boundaries using `find_boundaries`
     flag_none : bool, default=True
         if True, replace overlap with None if no overlap between regions
-    method : str, {'approx', 'exact'}
+    {find_boundary_connectivity}
+    method : str, {{'approx', 'exact'}}
         * approx : consider regions where boundaries overlap and in one of the two region
         * exact : consider regions where boundaries overlap
 
@@ -210,8 +209,7 @@ def find_masked_extrema(
     ----------
     data : ndarray
         input data to consider
-    masks : list of ndarray of bool
-        masks for data regions
+    {masks_general}
     {mask_convention}
     extrema : {{'max','min}}
         Type of extrema to calculate
@@ -296,8 +294,7 @@ def merge_regions(
     This is the transitional free energy ()
     w_min : array
         Shape of array is ``(n, 1)``.
-    masks : sequence of ndarray of bool
-        Masks for each region using `convention`
+    {masks_general}
     nfeature_max : int
         maximum number of features/phases to allow
     efac : float, default=0.5
@@ -394,11 +391,9 @@ class wFreeEnergy:
     ----------
     data : ndarray
         lnPi data
-    masks : sequence of array of bool
-        `masks[i]` is the mask indicating the `ith` phase.  See `convention`.
+    {masks_general}
     {mask_convention}
-    connectivity : int, optional
-        connectivity parameter for boundary construction
+    {find_boundary_connectivity}
     index : sequence of int, optional
         Optional index to apply to phases.
         Not yet fully supported.
@@ -459,13 +454,9 @@ class wFreeEnergy:
         data : ndarray
             lnPi data
         {labels}
-        connectivity : int, optional
-            connectivity parameters
-        features : array-like, optional
-            list of features to extract from labels.  Note that returned
-            mask[i] corresponds to labels == feature[i].
-        include_boundary : bool, default=False
-            if True, include boundary regions in output mask
+        {find_boundary_connectivity}
+        {features}
+        {include_boundary}
         **kwargs
             Extra arguments to :func:`~lnpy.utils.labels_to_masks`
 
@@ -738,6 +729,7 @@ class wFreeEnergyCollection:
         """:mod:`xarray` representation of :attr:`dw`"""
         return self.dw.to_xarray()
 
+    @docfiller.decorate
     def get_dwx(
         self, idx: int, idx_nebr: int | list[int] | None = None
     ) -> xr.DataArray:
@@ -747,11 +739,8 @@ class wFreeEnergyCollection:
 
         Parameters
         ----------
-        idx : int
-            phase index to consider transitions from
-        idx_nebr : int or list, optional
-            if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
-            Default behavior is to return minimum transition from idx to all other neighboring regions
+        {energy_idx}
+        {energy_idx_nebr}
 
         Returns
         -------

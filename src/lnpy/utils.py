@@ -9,6 +9,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, TypedDict, cast, overload
 
 from ._lazy_imports import np
+from .docstrings import docfiller
 from .options import OPTIONS
 
 if TYPE_CHECKING:
@@ -299,6 +300,7 @@ def mask_change_convention(
     ...
 
 
+@docfiller.decorate
 def mask_change_convention(
     mask: MyNDArray | None,
     convention_in: MaskConvention = "image",
@@ -309,8 +311,7 @@ def mask_change_convention(
 
     Parameters
     ----------
-    mask : ndarray, optional
-        Masking array.
+    {mask_general}
     convention_in, convention_out : string or bool
         Convention for input and output.
         Convention for mask.  Allowable values are:
@@ -322,7 +323,7 @@ def mask_change_convention(
 
     Returns
     -------
-    new_mask : ndarray
+    ndarray
         New 'mask' array with specified convention.
     """
 
@@ -414,6 +415,7 @@ def masks_change_convention(
 ##################################################
 # labels/masks utilities
 ##################################################
+@docfiller.decorate
 def labels_to_masks(
     labels: MyNDArray,
     features: Sequence[int] | MyNDArray | None = None,
@@ -430,15 +432,10 @@ def labels_to_masks(
     labels : ndarray of int
         Each unique value `i` in `labels` indicates a mask.
         That is ``labels == i``.
-    features : array-like, optional
-        list of features to extract from labels.  Note that returned
-        mask[i] corresponds to labels == feature[i].
-    include_boundary : bool, default=False
-        if True, include boundary regions in output mask
-    convention : {'image','masked'} or bool
-        convention for output masks
-    check_features : bool, default=True
-        if True, and supply features, then make sure each feature is in labels
+    {features}
+    {include_boundary}
+    {mask_convention}
+    {check_features}
 
     **kwargs
         arguments to find_boundary if include_boundary is True
@@ -447,8 +444,8 @@ def labels_to_masks(
     Returns
     -------
     output : list of array of bool
-        list of mask arrays, each with same shape as ``labels``.
-        Mask for each feature.
+        list of mask arrays, each with same shape as ``labels``, with
+        mask convention `convention`.
     features : list
         features
 
@@ -486,6 +483,7 @@ def labels_to_masks(
     return output, features  # type: ignore
 
 
+@docfiller.decorate
 def masks_to_labels(
     masks: Sequence[MyNDArray],
     features: Sequence[int] | MyNDArray | None = None,
@@ -500,13 +498,8 @@ def masks_to_labels(
     ----------
     masks : list of array-like of bool
         list of mask arrays.
-    features : array-like of int, optional
-        Value for each feature.
-        labels[mask[i]] = features[i] + feature_offset
-        Default = range(1, len(masks) + 1)
-
-    convention : {'image','masked'} or bool
-        convention of masks
+    {features}
+    {mask_convention}
 
     Returns
     -------

@@ -1,7 +1,6 @@
 # Indices and tables
 
 ```{toctree}
-
 genindex
 modindex
 ```
@@ -10,4 +9,3 @@ modindex
 
 <!-- - {ref}`genindex` -->
 <!-- - {ref}`modindex` -->
-<!-- - {ref}`search` -->

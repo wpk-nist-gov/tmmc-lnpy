@@ -166,6 +166,7 @@ class lnPiArray:
             fill_value=self.fill_value,
         )
 
+    @docfiller.decorate
     def pad(
         self,
         axes: int | Iterable[int] | None = None,
@@ -178,15 +179,9 @@ class lnPiArray:
 
         Parameters
         ----------
-        ffill : bool, default=True
-            Do forward filling
-        bfill : bool, default=False
-            Do back filling
-        limit : int, default None
-            The maximum number of consecutive NaN values to forward fill.
-            If there is a gap with more than this number of
-            consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+        {ffill}
+        {bfill}
+        {fill_limit}
 
         Returns
         -------
@@ -552,6 +547,7 @@ class lnPiMasked(AccessorMixin):
 
         return type(self)(lnz=lnz, base=base, mask=mask, copy=copy)
 
+    @docfiller.decorate
     def pad(
         self,
         axes: int | Iterable[int] | None = None,
@@ -564,15 +560,9 @@ class lnPiMasked(AccessorMixin):
 
         Parameters
         ----------
-        ffill : bool, default=True
-            do forward filling
-        bfill : bool, default=False
-            do back filling
-        limit : int, default None
-            The maximum number of consecutive NaN values to forward fill. In
-            other words, if there is a gap with more than this number of
-            consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+        {ffill}
+        {bfill}
+        {fill_limit}
         inplace : bool, default=False
 
         Returns
@@ -624,7 +614,7 @@ class lnPiMasked(AccessorMixin):
         csv_kws: Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
+        r"""
         Create lnPi object from text file table with columns [n_0,...,n_ndim, lnpi]
 
         Parameters
@@ -632,7 +622,7 @@ class lnPiMasked(AccessorMixin):
         path : path-like
             file object to be read
         lnz : array-like
-            beta*(chemical potential) for each component
+            :math:`\beta \mu` for each component
         state_kws : dict, optional
             define state variables, like volume, beta
         sep : string, optional
@@ -769,14 +759,9 @@ class lnPiMasked(AccessorMixin):
         Parameters
         ----------
         {labels}
-        features : sequence of int, optional
-            If specified, extract only those locations where ``labels == feature``
-            for all values ``feature in features``.  That is, select a subset of
-            unique label values.
-        include_boundary : bool, default=False
-            if True, include boundary regions in output mask
-        check_features : bool, default=True
-            if True, and supply features, then make sure each feature is in labels
+        {features}
+        {include_boundary}
+        {check_features}
         **kwargs
             Extra arguments to to :func:`~lnpy.utils.labels_to_masks`
 

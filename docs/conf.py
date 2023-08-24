@@ -191,7 +191,7 @@ napoleon_type_aliases = {
     "array_like": ":term:`array_like`",
     "array-like": ":term:`array-like <array_like>`",
     "scalar": ":term:`scalar`",
-    "array": ":term:`array`",
+    "array": "~numpy.ndarray",
     # matplotlib terms
     "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
     "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",

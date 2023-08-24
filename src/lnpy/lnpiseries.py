@@ -1066,10 +1066,11 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
         return out
 
     @classmethod
+    @docfiller.decorate
     def from_labels(
         cls,
         ref: lnPiMasked,
-        labels: Sequence[MyNDArray] | MyNDArray,
+        labels: Sequence[MyNDArray],
         lnzs: Sequence[float | MyNDArray] | MyNDArray,
         features: Sequence[int] | MyNDArray | None = None,
         include_boundary: bool = False,
@@ -1084,15 +1085,15 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
         Parameters
         ----------
         ref : lnPiMasked
-        labels : array-like of int
-            Each `labels[i]` will be used to construct multiple phases from single
-            (reweighted)  :math:`ln \Pi(N)`
+        labels : sequence of ndarray of int
+            Each ``labels[i]`` is a labels array for each value of ``lnzs[i]``.
+            That is, the labels for different phases at a given value of `lnz`.
         lnzs : sequence
             Each lnzs[i] will be passed to ``ref.reweight``.
-        features : int, optional
-        include_boundary : bool, default=False
+        {features}
+        {include_boundary}
         labels_kws : mapping, optional
-        check_features : bool, default=True
+        {check_features}
         **kwargs
             Extra arguments past to :meth:`from_list`
 
@@ -1128,6 +1129,7 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
         return cls.from_list(items=items, index=indexes, **kwargs)
 
     @classmethod
+    @docfiller.decorate
     def from_dataarray(
         cls,
         ref: lnPiMasked,
@@ -1149,6 +1151,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
             Labels.
         grouper : Hashable
             Name of dimension(s) to group along to give a single label array
+        {features}
+        {check_features}
 
 
         See Also

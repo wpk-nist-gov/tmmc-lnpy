@@ -27,8 +27,9 @@ dependencies:
   - setuptools-scm
   - ipython
   - ipykernel
-  - matplotlib
+  - matplotlib-base
   - ipywidgets
+  - nbval
   - nox
   - ruamel.yaml
   - pip
