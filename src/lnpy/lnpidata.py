@@ -38,7 +38,7 @@ def _get_shift(
     shape: tuple[int, ...], dlnz: tuple[float, ...], dtype: DTypeLike
 ) -> MyNDArray:
     shift = np.zeros([], dtype=dtype)
-    for i, (nr, m) in enumerate(zip(_get_n_ranges(shape, dtype), dlnz)):
+    for i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):  # type: ignore
         shift = np.add.outer(shift, nr * m)  # pyright: ignore
     return shift
 
@@ -46,10 +46,10 @@ def _get_shift(
 @lru_cache(maxsize=20)
 def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> MyNDArray:
     if all(x == 0 for x in dlnz):
-        return base._data  # pyright: ignore
+        return base.data  # pyright: ignore
     else:
         return (
-            _get_shift(base.shape, dlnz, base._data.dtype) + base._data
+            _get_shift(base.shape, dlnz, base.data.dtype) + base.data
         )  # pyright: ignore
 
 
@@ -60,7 +60,7 @@ def _get_maskedarray(
     return np.ma.MaskedArray(  # type: ignore
         _get_data(base, dlnz),
         mask=self._mask,
-        fill_value=base._fill_value,  # pyright: ignore
+        fill_value=base.fill_value,  # pyright: ignore
     )
 
 
@@ -115,19 +115,19 @@ class lnPiArray:
         if extra_kws is None:
             extra_kws = {}
 
-        self._data = data
+        self.data = data
         # make data read only
-        self._data.flags.writeable = False
+        self.data.flags.writeable = False
 
-        self._state_kws = state_kws
-        self._extra_kws = extra_kws
+        self.state_kws = state_kws
+        self.extra_kws = extra_kws
 
-        self._lnz = lnz
-        self._fill_value = fill_value
+        self.lnz = lnz
+        self.fill_value = fill_value
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return self._data.shape
+        return self.data.shape
 
     def new_like(
         self,
@@ -153,17 +153,17 @@ class lnPiArray:
 
         """
         if lnz is None:
-            lnz = self._lnz
+            lnz = self.lnz
         if data is None:
-            data = self._data
+            data = self.data
 
         return type(self)(
             lnz=lnz,
             data=data,
             copy=copy,
-            state_kws=self._state_kws,
-            extra_kws=self._extra_kws,
-            fill_value=self._fill_value,
+            state_kws=self.state_kws,
+            extra_kws=self.extra_kws,
+            fill_value=self.fill_value,
         )
 
     def pad(
@@ -199,11 +199,11 @@ class lnPiArray:
         from . import utils
 
         if axes is None:
-            axes = range(self._data.ndim)
+            axes = range(self.data.ndim)
         elif isinstance(axes, int):
             axes = (axes,)
 
-        data = self._data
+        data = self.data
         datas: list[MyNDArray] = []
 
         if ffill:
@@ -228,7 +228,7 @@ class lnPiArray:
             data is excluded from calculating maximum.
         """
 
-        data = self._data - np.ma.MaskedArray(self._data, mask).max()  # type: ignore
+        data = self.data - np.ma.MaskedArray(self.data, mask).max()  # type: ignore
         return self.new_like(data=data)
 
 
@@ -278,13 +278,13 @@ class lnPiMasked(AccessorMixin):
         copy: bool = False,
     ) -> None:
         lnz = np.atleast_1d(lnz)
-        assert lnz.shape == base._lnz.shape
+        assert lnz.shape == base.lnz.shape
 
         if mask is None:
-            mask = np.full(base._data.shape, fill_value=False, dtype=bool)
+            mask = np.full(base.data.shape, fill_value=False, dtype=bool)
         else:
             mask = np.array(mask, copy=copy, dtype=bool)
-        assert mask.shape == base._data.shape
+        assert mask.shape == base.data.shape
 
         self._mask = mask
         # make mask read-only
@@ -292,7 +292,7 @@ class lnPiMasked(AccessorMixin):
 
         self._base = base
         self._lnz = lnz
-        self._dlnz = tuple(self._lnz - self._base._lnz)
+        self._dlnz = tuple(self._lnz - self._base.lnz)
 
         self._cache: dict[str, Any] = {}
 
@@ -343,7 +343,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def _data(self) -> MyNDArray:
-        return self._base._data  # pyright: ignore
+        return self._base.data  # pyright: ignore
 
     @property
     def dtype(self) -> np.dtype[Any]:
@@ -356,12 +356,12 @@ class lnPiMasked(AccessorMixin):
     @property
     def state_kws(self) -> dict[str, Any]:
         """State variables."""
-        return self._base._state_kws
+        return self._base.state_kws
 
     @property
     def extra_kws(self) -> dict[str, Any]:
         """Extra parameters."""
-        return self._base._extra_kws
+        return self._base.extra_kws
 
     @property
     def ma(self) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
@@ -801,13 +801,17 @@ class lnPiMasked(AccessorMixin):
         return self.list_from_masks(masks, convention=False)
 
     @cached.prop
+    @docfiller.decorate
     def xge(self) -> ensembles.xGrandCanonical:
+        """{accessor.xge}"""
         from .ensembles import xGrandCanonical
 
         return xGrandCanonical(self)
 
     @cached.prop
+    @docfiller.decorate
     def xce(self) -> ensembles.xCanonical:
+        """{accessor.xce}"""
         from .ensembles import xCanonical
 
         return xCanonical(self)

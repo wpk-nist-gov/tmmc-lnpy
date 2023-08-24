@@ -7,7 +7,6 @@ from __future__ import annotations
 import itertools
 import warnings
 from typing import TYPE_CHECKING, overload
-from warnings import warn
 
 from module_utilities import cached
 
@@ -845,35 +844,35 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
 
 # @lnPiCollection.decorate_accessor("wfe")
-def wfe_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
-    """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wfe`."""
-    return wFreeEnergyCollection(parent)
+# def wfe_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
+#     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wfe`."""
+#     return wFreeEnergyCollection(parent)
 
 
 # @lnPiCollection.decorate_accessor("wfe_phases")
-def wfe_phases_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
-    """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wfe_phases`."""
-    return wFreeEnergyPhases(parent)
+# def wfe_phases_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
+#     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wfe_phases`."""
+#     return wFreeEnergyPhases(parent)
 
 
 # create alias accessors
 # @lnPiCollection.decorate_accessor("wlnPi")
-def wlnPi_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
-    """
-    Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wlnPi`.
+# def wlnPi_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
+#     """
+#     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wlnPi`.
 
-    Alias to `self.wfe`
-    """
-    warn("Using `wlnPi` accessor is deprecated.  Please use `wfe` accessor instead")
-    return parent.wfe
+#     Alias to `self.wfe`
+#     """
+#     warn("Using `wlnPi` accessor is deprecated.  Please use `wfe` accessor instead")
+#     return parent.wfe
 
 
 # @lnPiCollection.decorate_accessor("wlnPi_single")
-def wlnPi_single_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
-    """
-    Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wlnPi_single`.
+# def wlnPi_single_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
+#     """
+#     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wlnPi_single`.
 
-    Alias to `self.wfe_single`
-    """
-    warn("Using `wlnPi_single is deprecated.  Please use `self.wfe_phases` instead")
-    return parent.wfe_phases
+#     Alias to `self.wfe_single`
+#     """
+#     warn("Using `wlnPi_single is deprecated.  Please use `self.wfe_phases` instead")
+#     return parent.wfe_phases

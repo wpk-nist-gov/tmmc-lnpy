@@ -148,6 +148,19 @@ autodoc_default_flags = [
 ]
 autodoc_typehints = "none"
 
+
+nitpick_ignore_regex = [
+    (r"py:.*", r"lnPi\..*"),
+    (r"py:.*", r"numpy\.ma\..*"),
+    (r"py:.*", r".*NDArray.*"),
+]
+
+# autodoc_type_aliases = {
+#     "lnPiMasked": "lnpy.lnpidata.lnPiMasked",
+#     "lnPiCollection": "lnpy.lnpiseries.lnPiCollection",
+#     "SeriesWrapper": "lnpy.lnpiseries.SeriesWrapper",
+# }
+
 # -- napoleon ------------------------------------------------------------------
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -213,6 +226,7 @@ napoleon_type_aliases = {
     # objects with namespace lnpy
     "lnPiMasked": "~lnpy.lnpidata.lnPiMasked",
     "lnPiCollection": "~lnpy.lnpiseries.lnPiCollection",
+    "NDArray": "~numpy.typing.NDArray",
 }
 
 

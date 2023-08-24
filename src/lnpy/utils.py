@@ -40,9 +40,9 @@ def _get_tqdm_default() -> Callable[..., Any]:
     _tqdm = _get_tqdm()
     if _tqdm:
         try:
-            from IPython.core.getipython import get_ipython
+            from IPython.core.getipython import get_ipython  # pyright: ignore
 
-            p = get_ipython()  # type: ignore
+            p = get_ipython()  # type: ignore[no-untyped-call, unused-ignore]
             if p is not None and p.has_trait("kernel"):
                 from tqdm.notebook import tqdm as tqdm_default
 
@@ -309,7 +309,7 @@ def mask_change_convention(
 
     Parameters
     ----------
-    mask : np.ndarray, optional
+    mask : ndarray, optional
         Masking array.
     convention_in, convention_out : string or bool
         Convention for input and output.
@@ -427,7 +427,7 @@ def labels_to_masks(
 
     Parameters
     ----------
-    labels : np.ndarray of int
+    labels : ndarray of int
         Each unique value `i` in `labels` indicates a mask.
         That is ``labels == i``.
     features : array-like, optional
@@ -475,7 +475,10 @@ def labels_to_masks(
     for i in features:
         m: NDArray[np.bool_] = labels == i
         if include_boundary:
-            b = cast("NDArray[np.bool_]", segmentation.find_boundaries(m.astype(int), **kwargs))  # type: ignore[reportUnknownMemberType]
+            b = cast(
+                "NDArray[np.bool_]",
+                segmentation.find_boundaries(m.astype(int), **kwargs),
+            )  # pyright: ignore[reportUnknownMemberType]
             m = m | b
         if not convention:
             m = ~m
@@ -721,9 +724,7 @@ def dataset_to_lnpimasked(
 # --- Root results ---------------------------------------------------------------------
 
 
-class RootResultDict(TypedDict):
-    """Interface to scipy.optimize.RootResult."""
-
+class _RootResultDictReq(TypedDict, total=True):
     root: float
     iterations: int
     function_calls: int
@@ -731,13 +732,25 @@ class RootResultDict(TypedDict):
     flag: str
 
 
-def rootresults_to_rootresultdict(r: RootResults) -> RootResultDict:
-    """Convert :func:`scipy.optimize.RootResults` to typed dictionary"""
+class RootResultDict(_RootResultDictReq, total=False):
+    """Interface to :class:`scipy.optimize.RootResults`."""
 
-    return RootResultDict(
+    residual: float | MyNDArray
+
+
+def rootresults_to_rootresultdict(
+    r: RootResults, residual: float | MyNDArray | None
+) -> RootResultDict:
+    """Convert :class:`scipy.optimize.RootResults` to typed dictionary"""
+
+    out = RootResultDict(
         root=r.root,
         iterations=r.iterations,
         function_calls=r.function_calls,
         converged=r.converged,  # pyright: ignore
         flag=r.flag,
     )
+
+    if residual is not None:
+        out["residual"] = residual
+    return out

@@ -13,27 +13,10 @@ if TYPE_CHECKING:
 
     import xarray as xr
     from numpy.typing import ArrayLike
-    from scipy.optimize import RootResults
 
     from ._typing import MyNDArray
     from .lnpidata import lnPiMasked
     from .segment import BuildPhasesBase
-
-
-class RootResultTotal(RootResultDict, total=False):
-    """Root results dictionary"""
-
-    residual: float | MyNDArray
-
-
-def _rootresults_to_rootresultstotal(
-    r: RootResults,
-    residual: float | MyNDArray | None = None,
-) -> RootResultTotal:
-    output = RootResultTotal(**rootresults_to_rootresultdict(r))  # type: ignore[typeddict-item]
-    if residual is not None:
-        output["residual"] = residual
-    return output
 
 
 def tag_phases_singlecomp(x: Sequence[lnPiMasked]) -> Sequence[int] | MyNDArray:
@@ -70,7 +53,7 @@ def get_lnz_min(
     target: float,
     C: lnPiCollection,
     build_phases: BuildPhasesBase,
-    phase_id: int = 0,
+    phase_id: int | None = 0,
     component: int | None = None,
     dlnz: float = 0.5,
     dfac: float = 1.0,
@@ -78,7 +61,7 @@ def get_lnz_min(
     build_kws: Mapping[str, Any] | None = None,
     ntry: int = 20,
     solve_kws: Mapping[str, Any] | None = None,
-) -> tuple[lnPiCollection, RootResultTotal]:
+) -> tuple[lnPiCollection, RootResultDict]:
     """
     Solve for target density
 
@@ -112,7 +95,7 @@ def get_lnz_min(
     -------
     phases : Phases object as solution lnz
         solution_parameters : optional
-    info : :class:`RootResultTotal`
+    info : :class:`RootResultDict`
     """
     from scipy.optimize import brentq
 
@@ -202,7 +185,7 @@ def get_lnz_min(
 
     xx, r = brentq(f, a, b, full_output=True, **(solve_kws or {}))
 
-    return f.lnpi, _rootresults_to_rootresultstotal(r, residual=f(xx))  # type: ignore[attr-defined]
+    return f.lnpi, rootresults_to_rootresultdict(r, residual=f(xx))  # type: ignore[attr-defined]
 
 
 def get_lnz_max(

@@ -50,7 +50,7 @@ test = [
     "pytest-sugar",
 ]
 viz = [
-    "matplotlib", #
+    "matplotlib-base", #
     "ipywidgets",
 ]
 dev-extras = [
@@ -59,6 +59,7 @@ dev-extras = [
     "ipython",
     "ipykernel",
     "tmmc-lnpy[viz]",
+    "nbval",
 ]
 typing-extras = [
     "pytype; python_version < '3.11'", #
@@ -84,6 +85,7 @@ tools = [
     "pre-commit", #
     "cruft",
     "scriv",
+    "nbqa",
 ]
 dev-complete = [
     "tmmc-lnpy[dev]", #
@@ -305,7 +307,7 @@ use_shortcuts = true
 [tool.cruft]
 
 [tool.mypy]
-files = ["src/lnpy"]
+files = ["src", "tests"]
 show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
@@ -323,6 +325,9 @@ module = [
     "scipy.ndimage.*",
     "scipy.spatial.*",
     "scipy.optimize.*",
+    "lnPi.*",
+    "IPython.*",
+    "matplotlib.*",
 ]
 
 [[tool.mypy.overrides]]

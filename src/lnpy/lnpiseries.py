@@ -13,6 +13,7 @@ from module_utilities import cached
 
 from ._lazy_imports import np, pd, xr
 from ._typing import T_Element, T_SeriesWrapper
+from .docstrings import docfiller
 from .extensions import AccessorMixin
 from .lnpidata import lnPiMasked
 from .utils import get_tqdm_build as get_tqdm
@@ -1026,8 +1027,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
 
         Parameters
         ----------
-        dtype : data-type, optional
-            Default to :class:`numpy.uint8`.
+        dtype : `numpy.dtype`, optional
+            Default to `numpy.uint8`.
         reset_index : bool, default=True
         """
 
@@ -1176,41 +1177,57 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):
         )  # yapf: disable
 
     @cached.prop
+    @docfiller.decorate
     def xge(self) -> ensembles.xGrandCanonical:
+        """{accessor.xge}"""
         from .ensembles import xGrandCanonical
 
         return xGrandCanonical(self)
 
     @cached.prop
     def wfe(self) -> lnpienergy.wFreeEnergyCollection:
+        """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from :attr:`wfe_phases`."""
         from .lnpienergy import wFreeEnergyCollection
 
         return wFreeEnergyCollection(self)
 
     @cached.prop
     def wfe_phases(self) -> lnpienergy.wFreeEnergyPhases:
+        """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from :attr:`wfe`."""
         from .lnpienergy import wFreeEnergyPhases
 
         return wFreeEnergyPhases(self)
 
     @property
     def wlnPi(self) -> lnpienergy.wFreeEnergyCollection:
+        """
+        Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from :attr:`wlnPi`.
+
+        Alias to :attr:`wfe`
+        """
         warn("Using `wlnPi` accessor is deprecated.  Please use `wfe` accessor instead")
         return self.wfe
 
     @property
     def wlnPi_single(self) -> lnpienergy.wFreeEnergyPhases:
+        """
+        Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from :attr:`wlnPi_single`.
+
+        Alias to :attr:`wfe_phases`
+        """
         warn("Using `wlnPi_single is deprecated.  Please use `self.wfe_phases` instead")
         return self.wfe_phases
 
     @cached.prop
     def spinodal(self) -> stability.Spinodals:
+        """Accessor to :class:`~lnpy.stability.Spinodals`"""
         from .stability import Spinodals
 
         return Spinodals(self)
 
     @cached.prop
     def binodal(self) -> stability.Binodals:
+        """Accessor to :class:`~lnpy.stability.Binodals`"""
         from .stability import Binodals
 
         return Binodals(self)

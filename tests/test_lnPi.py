@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
 import json
 from pathlib import Path
 
@@ -196,7 +197,7 @@ def test_nice_grid(obj):
     v0 = other_fine.lnz_0.values
     v1 = test_fine.lnz_0.values
 
-    np.testing.assert_allclose(v0, v1)
+    np.testing.assert_allclose(v0, v1)  # type: ignore
 
     pd.testing.assert_frame_equal(other_course, test_course)
 

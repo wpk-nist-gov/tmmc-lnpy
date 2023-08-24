@@ -52,4 +52,12 @@ watershed_kws : mapping, optional
 """
 
 
-docfiller = DocFiller.from_docstring(_docstrings, combine_keys="parameters")
+_accessor_docs = {
+    "xge": "Accessor to :class:`~lnpy.ensembles.xGrandCanonical`.",
+    "xce": "Accessor to :class:`~lnpy.ensembles.xCanonical`.",
+}
+
+
+docfiller = DocFiller.from_docstring(_docstrings, combine_keys="parameters").update(
+    accessor=_accessor_docs
+)

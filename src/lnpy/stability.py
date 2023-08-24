@@ -36,7 +36,6 @@ class RootResultTotal(RootResultDict, total=False):
     info: str
     bracket_iteration: int
     from_solve: bool
-    residual: float
 
 
 def _rootresults_to_rootresulttotal(
@@ -51,7 +50,7 @@ def _rootresults_to_rootresulttotal(
     from_solve: bool | None = None,
     residual: float | None = None,
 ) -> RootResultTotal:
-    output = RootResultTotal(**rootresults_to_rootresultdict(r))  # type: ignore[typeddict-item]
+    output = RootResultTotal(**rootresults_to_rootresultdict(r, residual=residual))  # type: ignore[typeddict-item]
 
     if left is not None:
         output["left"] = left
@@ -67,8 +66,6 @@ def _rootresults_to_rootresulttotal(
         output["bracket_iteration"] = bracket_iteration
     if from_solve is not None:
         output["from_solve"] = from_solve
-    if residual is not None:
-        output["residual"] = residual
 
     return output
 
@@ -626,10 +623,6 @@ class StabilityBase:
     collection: lnPiCollection
         Used to bracket the location limit of stability
 
-
-    Methods
-    -------
-    __call__ : set value
     """
 
     _NAME = "base"
@@ -644,6 +637,7 @@ class StabilityBase:
 
     @property
     def parent(self) -> lnPiCollection:
+        """Accessor to parent :class:`~lnpy.lnpiseries.lnPiCollection` object"""
         return self._parent
 
     def set_access_kws(self, **kwargs: Any) -> None:
@@ -687,11 +681,13 @@ class StabilityBase:
 
     @property
     def appender(self) -> lnPiCollection:
+        """View of :attr:`access` to be appended to :attr:`parent`"""
         return self._get_appender()
 
     def append_to_parent(
         self, sort: bool = True, copy_stability: bool = True
     ) -> lnPiCollection:
+        """New collection with spinodal data appended to parent."""
         new = self._parent.append(self.appender)
         if sort:
             new = new.sort_index()
@@ -714,13 +710,13 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[True] = ...,
         efac: float = ...,
-        ref: None = ...,
-        build_kws: None = ...,
+        ref: lnPiMasked | None = ...,
+        build_kws: Mapping[str, Any] | None = ...,
         force: bool = ...,
         as_dict: bool = ...,
         unstack: bool | None = ...,
@@ -732,13 +728,13 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[False],
         efac: float = ...,
-        ref: None = ...,
-        build_kws: None = ...,
+        ref: lnPiMasked | None = ...,
+        build_kws: Mapping[str, Any] | None = ...,
         force: bool = ...,
         as_dict: bool = ...,
         unstack: bool | None = ...,
@@ -752,13 +748,13 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool,
         efac: float = ...,
-        ref: None = ...,
-        build_kws: None = ...,
+        ref: lnPiMasked | None = ...,
+        build_kws: Mapping[str, Any] | None = ...,
         force: bool = ...,
         as_dict: bool = ...,
         unstack: bool | None = ...,
@@ -780,8 +776,8 @@ class Spinodals(StabilityBase):
         *,
         inplace: bool = True,
         efac: float = 1.0,
-        ref: None = None,
-        build_kws: None = None,
+        ref: lnPiMasked | None = None,
+        build_kws: Mapping[str, Any] | None = None,
         force: bool = False,
         as_dict: bool = True,
         unstack: bool | None = None,
@@ -925,7 +921,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[True] = ...,
@@ -943,7 +939,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[False],
@@ -961,7 +957,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int,
+        phase_ids: int | Sequence[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool,

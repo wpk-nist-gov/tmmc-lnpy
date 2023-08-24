@@ -8,13 +8,15 @@
    lnpienergy
    segment
    ensembles
-   options
-   stability
-   utils
-   examples
+
+
 
 .. autosummary::
    :toctree: generated/
    :template: autodocsumm/module.rst
 
+   stability
    lnpiseries
+   examples
+   utils
+   options

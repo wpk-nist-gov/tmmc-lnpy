@@ -66,6 +66,7 @@ If you are proposing a feature:
 [commitizen]: https://github.com/commitizen-tools/commitizen
 [nb_conda_kernels]: https://github.com/Anaconda-Platform/nb_conda_kernels
 [pyproject2conda]: https://github.com/wpk-nist-gov/pyproject2conda
+[nbqa]: https://github.com/nbQA-dev/nbQA
 
 This project uses a host of tools to (hopefully) make development easier. We
 recommend installing some of these tools system wide. For this, we recommend
@@ -83,6 +84,7 @@ Additional tools are:
 - [commitizen] (optional)
 - [pyproject2conda] (optional)
 - [cog] (optional)
+- [nbqa] (optional)
 
 These are setup using the following:
 
@@ -93,6 +95,7 @@ condax/pipx install commitizen # optional
 pipx install scriv
 pipx install pyproject2conda # optional
 condax/pipx install cogapp # optional
+condax/pipx install nbqa # optional
 ```
 
 if using pipx, nox can be installed with:
@@ -426,8 +429,10 @@ paths = ["~/.conda/envs/test-3.*/bin"]
 ```
 
 where `~/.conda/envs` should be replaced by whatever prefix you have setup on
-your machine. The noxfile will add this to the search path for python versions
-when creating virtualenvs.
+your machine. The `noxfile.py` will add this to the search path for python
+versions when creating virtualenvs. The file `.noxconfig.toml` should not be
+tracked by git. There is also an example file `.noxconfig.example.toml` to get
+you started.
 
 ## Serving the documentation
 

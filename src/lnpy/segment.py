@@ -85,7 +85,7 @@ phases_factory : callable or bool, default=True
     Function to convert list of phases into Phases object.
     If `phases_factory` ``True``, revert to `self.phases_factory`.
     If `phases_factory` is ``False``, do not apply a factory, and
-    return list of :class:`lnPiMasked` and array of phase indices.
+    return list of :class:`lnpy.lnpidata.lnPiMasked` and array of phase indices.
 """
 
 
@@ -729,7 +729,7 @@ class PhaseCreator:
 
         Returns
         -------
-        output : tuple[list[lnPiMasked], np.ndarray] or lnPiCollection
+        output : list of lnPiMasked and ndarray, or lnPiCollection
             If no phase creator, return list of lnPiMasked objects and array of phase indices.
             Otherwise, lnPiCollection object.
         """
@@ -991,7 +991,7 @@ class BuildPhasesBase:
 
         Returns
         -------
-        output : tuple[list[lnPiMasked], np.ndarray] or lnPiCollection
+        output : list of lnPiMasked and ndarray, or lnPiCollection
             If no phase creator, return list of lnPiMasked objects and array of phase indices.
             Otherwise, lnPiCollection object.
 

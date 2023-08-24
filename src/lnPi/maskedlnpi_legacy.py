@@ -1,7 +1,10 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
 """
 Legacy lnPi array routines (:mod:`~lnPi.maskedlnpi_legacy`)
 ===========================================================
 """
+from __future__ import annotations
+
 from warnings import warn
 
 from module_utilities import cached
@@ -16,7 +19,7 @@ from lnpy.utils import labels_to_masks, masks_change_convention
 # [ ] : split splitting into separate classes
 
 
-class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
+class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     r"""
     Class to store masked version of :math:`\ln\Pi(N)`.
     shape is (N0,N1,...) where Ni is the span of each dimension)
@@ -94,17 +97,17 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     @property
     def optinfo(self):
         """All extra properties"""
-        return self._optinfo
+        return self._optinfo  # type: ignore
 
     @property
     def state_kws(self):
         """State specific parameters"""
-        return self._optinfo["state_kws"]
+        return self.optinfo["state_kws"]
 
     @property
     def extra_kws(self):
         """All extra parameters"""
-        return self._optinfo["extra_kws"]
+        return self.optinfo["extra_kws"]
 
     def _index_dict(self, phase=None):
         out = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
@@ -138,7 +141,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
     @property
     def lnz(self):
-        return self._optinfo.get("lnz", None)
+        return self.optinfo.get("lnz", None)
 
     @property
     def betamu(self):
@@ -320,7 +323,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
         assert len(lnz) == len(self.lnz)
 
         new = self.copy()
-        new._optinfo["lnz"] = lnz
+        new.optinfo["lnz"] = lnz
 
         dlnz = new.lnz - self.lnz
 
@@ -403,7 +406,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
             self.data,
             mask=mask,
             fill_value=self.fill_value,
-            **dict(self._optinfo, **kwargs),
+            **dict(self.optinfo, **kwargs),
         )
 
     def or_mask(self, mask, **kwargs):
@@ -416,13 +419,13 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
     def __getstate__(self):
         ma = self.view(np.ma.MaskedArray).__getstate__()
-        opt = self._optinfo
+        opt = self.optinfo
         return ma, opt
 
     def __setstate__(self, state):
         ma, opt = state
         super().__setstate__(ma)
-        self._optinfo.update(opt)
+        self._optinfo.update(opt)  # type: ignore
 
     #        opt = self._optinfo
     #        return ma, opt
@@ -557,11 +560,11 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
 
     @cached.prop
     def xge(self) -> xGrandCanonical:
-        return xGrandCanonical(self)
+        return xGrandCanonical(self)  # type: ignore
 
     @cached.prop
     def xce(self) -> xCanonical:
-        return xCanonical(self)
+        return xCanonical(self)  # type: ignore
 
 
 # --- register accessors ---------------------------------------------------------------
