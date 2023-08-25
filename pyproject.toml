@@ -34,13 +34,13 @@ dependencies = [
     "bottleneck",
     "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.1",
+    "module-utilities >= 0.9.0",
     "lazy_loader",
 ] # additional packages
 
 [project.urls]
-homepage = "https://github.com/usnistgov/tmmc-lnpy"
-documentation = "https://pages.nist.gov/tmmc-lnpy/"
+Homepage = "https://github.com/usnistgov/tmmc-lnpy"
+Documentation = "https://pages.nist.gov/tmmc-lnpy/"
 
 [project.optional-dependencies]
 test = [
@@ -50,7 +50,7 @@ test = [
     "pytest-sugar",
 ]
 viz = [
-    "matplotlib", #
+    "matplotlib-base", #
     "ipywidgets",
 ]
 dev-extras = [
@@ -59,10 +59,13 @@ dev-extras = [
     "ipython",
     "ipykernel",
     "tmmc-lnpy[viz]",
+    "nbval",
 ]
 typing-extras = [
     "pytype; python_version < '3.11'", #
     "mypy >= 1.4.1",
+    "pandas-stubs",
+    "types-tqdm",
 ]
 typing = [
     "tmmc-lnpy[typing-extras]", #
@@ -82,6 +85,7 @@ tools = [
     "pre-commit", #
     "cruft",
     "scriv",
+    "nbqa",
 ]
 dev-complete = [
     "tmmc-lnpy[dev]", #
@@ -92,7 +96,7 @@ docs = [
     "ipython", #
     "pyenchant",
     "ghp-import",
-    "sphinx",
+    "sphinx >= 5.3.0",
     "sphinx-copybutton",
     "sphinxcontrib-spelling",
     "sphinx-autobuild",
@@ -141,8 +145,8 @@ write_to = "src/lnpy/_version.py"
 test = "pytest"
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.md'"
-testpaths = ["tests", "README.md"]
+addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
+testpaths = ["tests", "src", "README.md"]
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:", "@overload"]
@@ -303,17 +307,28 @@ use_shortcuts = true
 [tool.cruft]
 
 [tool.mypy]
-files = ["src/lnpy"]
+files = ["src", "tests"]
 show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
 exclude = [".eggs", ".tox", "doc", "docs", ".nox"]
 check_untyped_defs = true
+strict = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = []
+module = [
+    "joblib.*",
+    "skimage.*",
+    "bottleneck.*",
+    "scipy.ndimage.*",
+    "scipy.spatial.*",
+    "scipy.optimize.*",
+    "lnPi.*",
+    "IPython.*",
+    "matplotlib.*",
+]
 
 [[tool.mypy.overrides]]
 ignore_errors = true
@@ -322,6 +337,7 @@ module = []
 [tool.pyright]
 include = ["src", "tests"]
 exclude = ["**/__pycache__", ".tox/**", ".nox/**", "**/.mypy_cache"]
+# strict = ["src/lnpy"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
 # enable subset of "strict"

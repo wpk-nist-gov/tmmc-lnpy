@@ -22,14 +22,13 @@ from typing import (
 import nox
 from noxopt import NoxOpt, Option, Session
 
-from tools.noxtools import (
+from tools.noxtools import (  # session_install_package,
     combine_list_str,
     load_nox_config,
     open_webpage,
     prepend_flag,
     session_install_envs,
     session_install_envs_lock,
-    # session_install_package,
     session_install_pip,
     session_run_commands,
     sort_like,
@@ -985,13 +984,16 @@ def _typing(
         session.run(cmd, "--version", external=True)
 
     for c in cmd:
-        _run_info(c)
+        if not c.startswith("nbqa"):
+            _run_info(c)
         if c == "mypy":
             session.run("mypy", "--color-output")
         elif c == "pyright":
             session.run("pyright", external=True)
         elif c == "pytype":
             session.run("pytype", "-o", str(Path(session.create_tmp()) / ".pytype"))
+        elif c.startswith("nbqa"):
+            session.run("make", c, external=True)
         else:
             session.log(f"skipping unknown command {c}")
     session_run_commands(session, run_internal, external=False)
@@ -1001,7 +1003,15 @@ def _typing(
 def typing(
     session: nox.Session,
     typing_cmd: cmd_annotated(  # type: ignore
-        choices=["mypy", "pyright", "pytype", "all"],
+        choices=[
+            "mypy",
+            "pyright",
+            "pytype",
+            "all",
+            "nbqa-mypy",
+            "nbqa-pyright",
+            "nbqa-typing",
+        ],
         flags=("--typing-cmd", "-m"),
     ) = (),
     typing_run: RUN_CLI = [],  # noqa
@@ -1035,7 +1045,15 @@ def typing(
 def typing_venv(
     session: nox.Session,
     typing_cmd: cmd_annotated(  # type: ignore
-        choices=["mypy", "pyright", "pytype", "all"],
+        choices=[
+            "mypy",
+            "pyright",
+            "pytype",
+            "all",
+            "nbqa-mypy",
+            "nbqa-pyright",
+            "nbqa-typing",
+        ],
         flags=("--typing-cmd", "-m"),
     ) = (),
     typing_run: RUN_CLI = [],  # noqa

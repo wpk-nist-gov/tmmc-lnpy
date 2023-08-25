@@ -15,22 +15,25 @@ dependencies:
   - bottleneck
   - tqdm
   - importlib_resources
-  - module-utilities >= 0.1
   - lazy_loader
   - pytest
   - pytest-xdist
   - pytest-cov
   - pytest-sugar
   - pytype
-  - mypy
+  - mypy >= 1.4.1
+  - pandas-stubs
+  - types-tqdm
   - setuptools-scm
   - ipython
   - ipykernel
-  - matplotlib
+  - matplotlib-base
   - ipywidgets
+  - nbval
   - nox
   - ruamel.yaml
   - pip
   - pip:
+      - module-utilities >= 0.9.0
       - pytest-accept
       - noxopt
