@@ -9,9 +9,9 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, overload
 
+import numpy as np
 from module_utilities import cached
 
-from ._lazy_imports import np
 from .utils import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:

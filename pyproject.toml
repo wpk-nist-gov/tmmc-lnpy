@@ -312,7 +312,7 @@ show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
-exclude = [".eggs", ".tox", "doc", "docs", ".nox"]
+exclude = [".eggs", ".tox", "doc", "docs", ".nox", "envs"]
 check_untyped_defs = true
 strict = true
 
@@ -336,7 +336,7 @@ module = []
 
 [tool.pyright]
 include = ["src", "tests"]
-exclude = ["**/__pycache__", ".tox/**", ".nox/**", "**/.mypy_cache"]
+exclude = ["**/__pycache__", ".tox/**", ".nox/**", "envs/**", "**/.mypy_cache"]
 # strict = ["src/lnpy"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"

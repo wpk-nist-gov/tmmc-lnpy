@@ -31,9 +31,6 @@ dependencies:
   - matplotlib-base
   - ipywidgets
   - nbval
-  - nox
-  - ruamel.yaml
   - pip
   - pip:
       - pytest-accept
-      - noxopt

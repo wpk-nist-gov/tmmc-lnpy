@@ -16,9 +16,9 @@ from collections.abc import Iterable
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast, overload  # , TypedDict
 
+import numpy as np
 from module_utilities.docfiller import DocFiller
 
-from ._lazy_imports import np
 from .docstrings import docfiller
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
