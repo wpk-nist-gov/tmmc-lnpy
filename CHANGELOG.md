@@ -10,6 +10,16 @@ See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
 
 <!-- scriv-insert-here -->
 
+## v0.6.0 — 2023-08-24
+
+### Added
+
+- Added type hints to most all code. Passing mypy (with strict) and pyright
+  (non-strict).
+- Clean up doc strings in several places.
+- Added nbval testing.
+- Ran linters across all code and notebooks.
+
 ## v0.5.0 — 2023-07-06
 
 ### Added
