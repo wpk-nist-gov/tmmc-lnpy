@@ -6,7 +6,21 @@
 channels:
   - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.10
+  - numpy
+  - xarray
+  - scipy
+  - scikit-image
+  - joblib
+  - bottleneck
+  - tqdm
+  - importlib_resources
+  - module-utilities >= 0.9.0
+  - lazy_loader
+  - pytype
+  - mypy >= 1.4.1
+  - pandas-stubs
+  - types-tqdm
   - pytest
   - pytest-xdist
   - pytest-cov

@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
 import json
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def load_ref():
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified
     ref = lnpy.lnPiMasked.from_data(
-        data=data["lnPi"].values,
+        data=data["lnPi"].values,  # type: ignore
         fill_value=np.nan,
         lnz=lnz,
         lnz_data=lnz,

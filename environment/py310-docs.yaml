@@ -6,7 +6,7 @@
 channels:
   - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.10
   - numpy
   - xarray
   - scipy
@@ -15,21 +15,17 @@ dependencies:
   - bottleneck
   - tqdm
   - importlib_resources
-  - module-utilities >= 0.1
+  - module-utilities >= 0.9.0
   - lazy_loader
-  - pytest
-  - pytest-xdist
-  - pytest-cov
-  - pytest-sugar
-  - mypy
-  - setuptools-scm
   - ipython
-  - ipykernel
-  - matplotlib
+  - pyenchant
+  - ghp-import
+  - sphinx >= 5.3.0
+  - sphinx-copybutton
+  - sphinxcontrib-spelling
+  - sphinx-autobuild
+  - myst-nb
+  - sphinx-book-theme
+  - autodocsumm
+  - matplotlib-base
   - ipywidgets
-  - nox
-  - ruamel.yaml
-  - pip
-  - pip:
-      - pytest-accept
-      - noxopt

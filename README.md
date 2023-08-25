@@ -103,11 +103,11 @@ dtype: object
 # Access xarray backend for Grand Canonical properties with `xge` accessor
 >>> collection.xge.betaOmega()
 <xarray.DataArray 'betaOmega' (lnz_0: 5, phase: 1)>
-array([[-2.32445630e-02],
-       [-6.03695807e-01],
-       [-1.85523371e+02],
-       [-1.54471391e+03],
-       [-2.95801694e+03]])
+array([[-2.3245e-02],
+       [-6.0370e-01],
+       [-1.8552e+02],
+       [-1.5447e+03],
+       [-2.9580e+03]])
 Coordinates:
   * lnz_0    (lnz_0) float64 -10.0 -6.75 -3.5 -0.25 3.0
   * phase    (phase) int64 0
@@ -143,7 +143,7 @@ thermodynamically extrapolated macro state probability distributions.
 
 ## Contact
 
-The author can be reached at wpk@nist.gov.
+The author can be reached at <wpk@nist.gov>.
 
 ## Credits
 

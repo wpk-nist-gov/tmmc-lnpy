@@ -1,4 +1,9 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
+
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
@@ -6,12 +11,13 @@ import pytest
 
 import lnpy
 import lnpy.stability
+from lnpy.lnpidata import lnPiMasked
 
 path_data = Path(__file__).parent / "../examples/archived/HS_mix"
 
 
 # function to tag 'LD' and 'HD' phases
-def tag_phases2(x):
+def tag_phases2(x: Sequence[lnPiMasked]) -> np.ndarray[Any, np.dtype[Any]]:
     if len(x) > 2:
         raise ValueError("bad tag function")
     argmax0 = np.array([xx.local_argmax()[0] for xx in x])
