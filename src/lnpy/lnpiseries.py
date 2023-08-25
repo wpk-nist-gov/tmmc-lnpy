@@ -16,9 +16,9 @@ from ._typing import T_Element, T_SeriesWrapper
 from .docstrings import docfiller
 from .extensions import AccessorMixin
 from .lnpidata import lnPiMasked
-from .utils import get_tqdm_build as get_tqdm
 
 # lazy loads
+from .utils import get_tqdm_build as get_tqdm
 from .utils import labels_to_masks, masks_to_labels
 from .utils import parallel_map_build as parallel_map
 

@@ -22,14 +22,13 @@ from typing import (
 import nox
 from noxopt import NoxOpt, Option, Session
 
-from tools.noxtools import (
+from tools.noxtools import (  # session_install_package,
     combine_list_str,
     load_nox_config,
     open_webpage,
     prepend_flag,
     session_install_envs,
     session_install_envs_lock,
-    # session_install_package,
     session_install_pip,
     session_run_commands,
     sort_like,

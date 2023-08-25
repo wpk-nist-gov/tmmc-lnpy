@@ -13,11 +13,7 @@ from module_utilities import cached
 from ._lazy_imports import np, pd, xr
 from .docstrings import docfiller
 from .utils import get_tqdm_calc as get_tqdm
-from .utils import (
-    labels_to_masks,
-    masks_change_convention,
-    parallel_map_func_starargs,
-)
+from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Sequence, Union

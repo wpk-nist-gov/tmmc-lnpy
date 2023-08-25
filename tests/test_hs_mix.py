@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from typing import Sequence, Any
-
 import lnpy
-from lnpy.lnpidata import lnPiMasked
 import lnpy.stability
+from lnpy.lnpidata import lnPiMasked
 
 path_data = Path(__file__).parent / "../examples/archived/HS_mix"
 
