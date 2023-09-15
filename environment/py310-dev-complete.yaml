@@ -6,18 +6,37 @@
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.10
   - bottleneck
   - importlib_resources
+  - ipykernel
+  - ipython
+  - ipywidgets
   - joblib
   - lazy_loader
+  - matplotlib-base
   - module-utilities >= 0.9.0
+  - mypy >= 1.4.1
+  - nbqa
+  - nbval
+  - nox
   - numpy
+  - pandas-stubs
+  - pre-commit
   - pytest
   - pytest-cov
   - pytest-sugar
   - pytest-xdist
+  - pytype
+  - ruamel.yaml
   - scikit-image
   - scipy
+  - setuptools-scm
   - tqdm
+  - types-tqdm
   - xarray
+  - pip
+  - pip:
+      - noxopt
+      - pytest-accept
+      - scriv
