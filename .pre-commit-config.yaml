@@ -34,7 +34,7 @@ repos:
         stages: [commit]
         additional_dependencies:
           - prettier-plugin-toml
-        exclude: ^environment/lock/.*[.]yml|^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
+        exclude: ^requirements/lock/.*[.]yml|^examples/archived/|^src/lnpy/data/|^tests/water_cluster/
 
   # * Markdown
   - repo: https://github.com/DavidAnson/markdownlint-cli2
