@@ -53,14 +53,14 @@ Full set of changes:
 - Moved from local cached module to module-utilities.cached
 - Add support for python3.11
 
-Full set of changes:
-[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...v0.3.0)
-
 ### Changed
 
 - Update package layout
 - New linters via pre-commit
 - Development env now handled by tox
+
+Full set of changes:
+[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...v0.3.0)
 
 ## v0.2.2 - 2023-04-05
 
