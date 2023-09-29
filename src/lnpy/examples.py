@@ -14,7 +14,8 @@ import json
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, TypedDict
 
-from ._lazy_imports import np, xr
+import numpy as np
+import xarray as xr
 
 # from .lnpiseries import lnPiCollection
 from .segment import BuildPhasesBase, PhaseCreator

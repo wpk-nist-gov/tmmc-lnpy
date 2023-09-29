@@ -7,9 +7,10 @@ from __future__ import annotations
 from functools import lru_cache, wraps
 from typing import TYPE_CHECKING
 
+import numpy as np
+import xarray as xr
 from module_utilities import cached
 
-from ._lazy_imports import np, xr
 from .lnpidata import lnPiMasked
 from .lnpiseries import lnPiCollection
 from .utils import dim_to_suffix_dataset
@@ -17,9 +18,9 @@ from .utils import dim_to_suffix_dataset
 if TYPE_CHECKING:
     from typing import Any, Callable, Hashable, Mapping, Sequence
 
+    import pandas as pd
     from numpy.typing import ArrayLike
 
-    from ._lazy_imports import pd
     from ._typing import C_Ensemble, MyNDArray, P, R, T_Ensemble, xArrayLike
 
 # from lnpy.lnpidata import lnPiMasked

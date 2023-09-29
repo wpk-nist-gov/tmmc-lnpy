@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._lazy_imports import np
+import numpy as np
+
 from .utils import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:

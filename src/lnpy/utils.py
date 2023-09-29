@@ -8,7 +8,8 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING, TypedDict, cast, overload
 
-from ._lazy_imports import np
+import numpy as np
+
 from .docstrings import docfiller
 from .options import OPTIONS
 

@@ -9,9 +9,11 @@ import functools
 from typing import TYPE_CHECKING, Generic, overload
 from warnings import warn
 
+import numpy as np
+import pandas as pd
+import xarray as xr
 from module_utilities import cached
 
-from ._lazy_imports import np, pd, xr
 from ._typing import T_Element, T_SeriesWrapper
 from .docstrings import docfiller
 from .extensions import AccessorMixin
