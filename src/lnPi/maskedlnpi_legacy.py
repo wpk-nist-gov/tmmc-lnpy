@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from warnings import warn
 
+import numpy as np
+import pandas as pd
 from module_utilities import cached
 
-from lnpy._lazy_imports import np, pd
 from lnpy.ensembles import xCanonical, xGrandCanonical
 from lnpy.extensions import AccessorMixin
 from lnpy.utils import labels_to_masks, masks_change_convention

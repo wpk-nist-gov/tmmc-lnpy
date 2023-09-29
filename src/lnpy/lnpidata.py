@@ -9,9 +9,10 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING, Iterable
 
+import numpy as np
+import pandas as pd
 from module_utilities import cached
 
-from ._lazy_imports import np, pd
 from .docstrings import docfiller
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention

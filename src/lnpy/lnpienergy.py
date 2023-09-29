@@ -8,9 +8,11 @@ import itertools
 import warnings
 from typing import TYPE_CHECKING, overload
 
+import numpy as np
+import pandas as pd
+import xarray as xr
 from module_utilities import cached
 
-from ._lazy_imports import np, pd, xr
 from .docstrings import docfiller
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
