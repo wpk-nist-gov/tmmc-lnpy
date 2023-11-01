@@ -15,7 +15,7 @@ from module_utilities import cached
 from .utils import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Mapping, Sequence
+    from typing import Any, Iterable, Literal, Mapping
 
     from scipy.optimize import RootResults
     from typing_extensions import Self
@@ -710,7 +710,7 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[True] = ...,
@@ -728,7 +728,7 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[False],
@@ -748,7 +748,7 @@ class Spinodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool,
@@ -771,7 +771,7 @@ class Spinodals(StabilityBase):
 
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool = True,
@@ -846,8 +846,8 @@ class Spinodals(StabilityBase):
 
         if isinstance(phase_ids, int):
             phase_ids = list(range(phase_ids))
-        if not isinstance(phase_ids, list):
-            raise ValueError("phase_ids must be an int or list")
+        else:
+            phase_ids = list(phase_ids)
 
         out: dict[int, lnPiCollection | None] = {}
         info: dict[int, RootResultTotal] = {}
@@ -921,7 +921,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[True] = ...,
@@ -939,7 +939,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: Literal[False],
@@ -957,7 +957,7 @@ class Binodals(StabilityBase):
     @overload
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool,
@@ -977,7 +977,7 @@ class Binodals(StabilityBase):
 
     def __call__(
         self,
-        phase_ids: int | Sequence[int],
+        phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
         *,
         inplace: bool = True,
@@ -1050,8 +1050,8 @@ class Binodals(StabilityBase):
 
         if isinstance(phase_ids, int):
             phase_ids = list(range(phase_ids))
-        if not isinstance(phase_ids, list):
-            raise ValueError("phase_ids must be an int or list")
+        else:
+            phase_ids = list(phase_ids)
 
         out = {}
         info = {}

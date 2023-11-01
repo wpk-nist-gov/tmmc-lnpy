@@ -555,7 +555,7 @@ def build_grid(
         if x_range is None:
             x_range = x0 + np.array(offsets)
         else:
-            x_range = np.asarray(x)
+            x_range = np.asarray(x_range)
         assert len(x_range) == 2
 
         # for consistancy with previous code.
