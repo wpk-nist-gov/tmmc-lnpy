@@ -7,7 +7,9 @@ You can contribute in many ways:
 
 ## Types of Contributions
 
+<!-- prettier-ignore-start -->
 [issues]: https://github.com/usnistgov/tmmc-lnpy/issues
+<!-- prettier-ignore-end -->
 
 ### Report Bugs
 
@@ -31,8 +33,8 @@ and "help wanted" is open to whoever wants to implement it.
 
 ### Write Documentation
 
-`tmmc-lnpy` could always use more documentation, whether as part of the official
-`tmmc-lnpy` docs, in docstrings, or even on the web in blog posts, articles, and
+This project could always use more documentation, whether as part of the
+official docs, in docstrings, or even on the web in blog posts, articles, and
 such.
 
 ### Submit Feedback
@@ -48,9 +50,9 @@ If you are proposing a feature:
 
 ## Making a contribution
 
-Ready to contribute? Here's how to set up `tmmc-lnpy` for local development.
+Ready to contribute? Here's how to make a contribution.
 
-- Fork the `tmmc-lnpy` repo on GitHub.
+- Fork the repo on GitHub.
 
 - Clone your fork locally:
 

@@ -504,7 +504,9 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
+    # fmt: off
     fn = os.path.relpath(fn, start=os.path.dirname(lnpy.__file__))
+    # fmt: on
 
     return f"https://github.com/{github_username}/tmmc-lnpy/blob/{html_context['github_version']}/src/lnpy/{fn}{linespec}"
 
