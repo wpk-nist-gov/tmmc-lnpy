@@ -207,6 +207,50 @@ def dev_venv(
     session_run_commands(session, dev_run)
 
 
+# ** Notebooks
+@NOPYTHON_SESSION
+def notebook(
+    session: Session,
+    notebook_cmd: cmd_annotated(  # type: ignore
+        choices=["pytest", "mypy", "pyright", "all"], flags=("--notebook-cmd", "-n")
+    ) = [],  # noqa
+    notebooks: Annotated[
+        list[str], Option(nargs="*", type=str, help="notebooks to run on")
+    ] = [],  # noqa
+) -> None:
+    python = f".nox/{PACKAGE_NAME}/envs/dev/bin/python"
+
+    cmd = notebook_cmd
+    if not cmd or "all" in cmd:
+        cmd = ["mypy", "pyright", "pytest"]
+
+    if not notebooks:
+        notebooks = ["examples/usage"]
+
+    for c in cmd:
+        if c == "mypy":
+            session.run("nbqa", "--nbqa-shell", "mypy", *notebooks, external=True)
+        elif c == "pyright":
+            session.run(
+                "nbqa",
+                "--nbqa-shell",
+                "pyright",
+                *notebooks,
+                "--pythonpath",
+                python,
+                external=True,
+            )
+        elif c == "pytest":
+            session.run(
+                "pytest",
+                "--nbval",
+                "--current-env",
+                "--sanitize-with=config/nbval.ini",
+                *notebooks,
+                external=True,
+            )
+
+
 # ** bootstrap
 @NOPYTHON_SESSION
 def bootstrap(session: Session) -> None:

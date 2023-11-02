@@ -29,7 +29,7 @@ dependencies = [
     "numpy",
     "xarray",
     "scipy",
-    "scikit-image",
+    "scikit-image >= 0.21",
     "joblib",
     "bottleneck",
     "tqdm",
@@ -63,7 +63,7 @@ dev-extras = [
 ]
 typing-extras = [
     "pytype; python_version < '3.11'", #
-    "mypy >= 1.4.1",
+    "mypy >= 1.6.1",
     "pandas-stubs",
     "types-tqdm",
 ]
@@ -349,6 +349,7 @@ warn_unused_configs = true
 exclude = [".eggs", ".tox", "doc", "docs", ".nox", "envs"]
 check_untyped_defs = true
 strict = true
+untyped_calls_exclude = ["skimage"]
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true

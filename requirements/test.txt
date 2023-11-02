@@ -17,7 +17,7 @@ pytest
 pytest-cov
 pytest-sugar
 pytest-xdist
-scikit-image
+scikit-image >= 0.21
 scipy
 tqdm
 xarray

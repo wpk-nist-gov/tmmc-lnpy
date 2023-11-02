@@ -473,10 +473,12 @@ def labels_to_masks(
     for i in features:
         m: NDArray[np.bool_] = labels == i
         if include_boundary:
+            # fmt: off
             b = cast(
                 "NDArray[np.bool_]",
-                segmentation.find_boundaries(m.astype(int), **kwargs),
-            )  # pyright: ignore[reportUnknownMemberType]
+                segmentation.find_boundaries(m.astype(int), **kwargs),  # pyright: ignore[reportUnknownMemberType]
+            )
+            # fmt: on
             m = m | b
         if not convention:
             m = ~m

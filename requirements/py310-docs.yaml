@@ -24,7 +24,7 @@ dependencies:
   - myst-nb
   - numpy
   - pyenchant
-  - scikit-image
+  - scikit-image >= 0.21
   - scipy
   - sphinx >= 5.3.0
   - sphinx-autobuild

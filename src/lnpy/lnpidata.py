@@ -403,12 +403,12 @@ class lnPiMasked(AccessorMixin):
     @property
     def volume(self) -> float | None:
         """Accessor to self.state_kws['volume']."""
-        return self.state_kws.get("volume", None)
+        return self.state_kws.get("volume", None)  # type: ignore
 
     @property
     def beta(self) -> float | None:
         """Accessor to self.state_kws['beta']."""
-        return self.state_kws.get("beta", None)
+        return self.state_kws.get("beta", None)  # type: ignore
 
     def __repr__(self) -> str:
         return f"<lnPi(lnz={self._lnz})>"
