@@ -548,12 +548,28 @@ def _docs(
     if open_page := "open" in cmd:
         cmd.remove("open")
 
+    if serve := "serve" in cmd:
+        open_webpage(url="http://localhost:8000")
+        cmd.remove("serve")
+
     if cmd:
         args = ["make", "-C", "docs"] + combine_list_str(cmd)
         session.run(*args, external=True)
 
     if open_page:
         open_webpage(path="./docs/_build/html/index.html")
+
+    if serve and "livehtml" not in cmd:
+        session.run(
+            "python",
+            "-m",
+            "http.server",
+            "-d",
+            "docs/_build/html",
+            "-b",
+            "127.0.0.1",
+            "8000",
+        )
 
 
 @DEFAULT_SESSION
@@ -571,6 +587,7 @@ def docs(
             "showlinks",
             "release",
             "open",
+            "serve",
         ],
         flags=("--docs-cmd", "-d"),
     ) = (),
@@ -611,6 +628,7 @@ def docs_venv(
             "showlinks",
             "release",
             "open",
+            "serve",
         ],
         flags=("--docs-cmd", "-d"),
     ) = (),
