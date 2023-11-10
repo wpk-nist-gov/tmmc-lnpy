@@ -24,9 +24,12 @@ else:
 
 
 # updated versioning scheme
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
+
 try:
-    from ._version import __version__
-except Exception:
+    __version__ = _version("tmmc-lnpy")
+except PackageNotFoundError:  # pragma: no cover
     __version__ = "999"
 
 __author__ = """William P. Krekelberg"""
