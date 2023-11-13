@@ -248,7 +248,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "tmmc-lnpy"
-# copyright = "2022, William P. Krekelberg"
+copyright = "2015, William P. Krekelberg"
 author = "William P. Krekelberg"
 
 # The version info for the project you're documenting, acts as replacement
