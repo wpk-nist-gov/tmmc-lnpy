@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 """
 Ensemble averages (:mod:`~lnpy.ensembles`)
 ==========================================
@@ -113,7 +114,7 @@ class xlnPiWrapper:
             "dims_state": self.dims_lnz + list(args),
         }
 
-        if self.dims_rec is not None:
+        if self.dims_rec:
             d["dims_rec"] = self.dims_rec
         return d
 
@@ -194,16 +195,12 @@ def xr_name(
             self: T_Ensemble, /, *args: P.args, **kwargs: P.kwargs
         ) -> xr.DataArray:
             out = func(self, *args, **kwargs).rename(_name)
-            if hasattr(self, "_standard_attrs"):
-                attrs = self._standard_attrs
-            else:
-                attrs = {}
-            attrs = dict(attrs, **kws)
+            attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
 
             if long_name is not None:
                 attrs["long_name"] = long_name
             out = out.assign_attrs(**attrs)
-            if unstack and self._xarray_unstack:
+            if unstack and self._xarray_unstack:  # pyright: ignore
                 out = out.unstack()
 
             return out
@@ -232,13 +229,15 @@ class xGrandCanonical:
 
         self._rec_name: str | None
         if isinstance(parent, lnPiCollection):
-            self._rec_name = parent._concat_dim
-            first = parent._series.iloc[0]
+            self._rec_name = parent._concat_dim  # pyright: ignore
+            first = parent._series.iloc[0]  # pyright: ignore
         else:
             self._rec_name = None
             first = parent
 
-        self._wrapper = get_xrlnPiWrapper(shape=first.shape, rec_name=self._rec_name)
+        self._wrapper = get_xrlnPiWrapper(
+            shape=first.shape, rec_name=self._rec_name
+        )  # pyright: ignore
         self._cache: dict[str, Any] = {}
 
     @property

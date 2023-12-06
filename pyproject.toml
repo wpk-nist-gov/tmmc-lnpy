@@ -359,7 +359,7 @@ module = []
 [tool.pyright]
 include = ["src", "tests"]
 exclude = ["**/__pycache__", ".tox/**", ".nox/**", "envs/**", "**/.mypy_cache"]
-# strict = ["src/lnpy"]
+# strict = ["src/lnpy"]  # TODO: enable strict mode for src
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
 # enable subset of "strict"
