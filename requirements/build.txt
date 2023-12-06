@@ -7,18 +7,6 @@
 # You should not manually edit this file.
 # Instead edit the corresponding pyproject.toml file.
 #
-bottleneck
-importlib_resources
-joblib
-lazy_loader
-module-utilities>=0.9.0
-mypy>=1.6.1
-numpy
-pandas-stubs
-pytest
-pytype;python_version<"3.11"
-scikit-image>=0.21
-scipy
-tqdm
-types-tqdm
-xarray
+build
+setuptools>=61.2
+setuptools_scm[toml]>=8.0

@@ -10,9 +10,18 @@
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
-  - anaconda-client
-  - boa
-  - conda-build
-  - conda-verify
-  - grayskull
+  - python=3.12
+  - bottleneck
+  - importlib_resources
+  - joblib
+  - lazy_loader
+  - module-utilities>=0.9.0
+  - mypy>=1.6.1
+  - numpy
+  - pandas-stubs
+  - pytest
+  - scikit-image>=0.21
+  - scipy
+  - tqdm
+  - types-tqdm
+  - xarray

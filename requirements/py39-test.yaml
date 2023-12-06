@@ -15,13 +15,14 @@ dependencies:
   - importlib_resources
   - joblib
   - lazy_loader
-  - module-utilities >= 0.9.0
+  - module-utilities>=0.9.0
   - numpy
   - pytest
   - pytest-cov
   - pytest-sugar
   - pytest-xdist
-  - scikit-image >= 0.21
+  - scikit-image>=0.21
   - scipy
   - tqdm
   - xarray
+  - pip

@@ -15,17 +15,17 @@ ipython
 ipywidgets
 joblib
 lazy_loader
-matplotlib-base
-module-utilities >= 0.9.0
+matplotlib
+module-utilities>=0.9.0
 myst-nb
 numpy
 pyenchant
-scikit-image >= 0.21
+scikit-image>=0.21
 scipy
-sphinx >= 5.3.0
 sphinx-autobuild
 sphinx-book-theme
 sphinx-copybutton
+sphinx>=5.3.0
 sphinxcontrib-spelling
 tqdm
 xarray

@@ -14,9 +14,9 @@ ipython
 ipywidgets
 joblib
 lazy_loader
-matplotlib-base
-module-utilities >= 0.9.0
-mypy >= 1.6.1
+matplotlib
+module-utilities>=0.9.0
+mypy>=1.6.1
 nbval
 numpy
 pandas-stubs
@@ -25,10 +25,9 @@ pytest-accept
 pytest-cov
 pytest-sugar
 pytest-xdist
-pytype; python_version < '3.11'
-scikit-image >= 0.21
+pytype;python_version<"3.11"
+scikit-image>=0.21
 scipy
-setuptools-scm
 tqdm
 types-tqdm
 xarray

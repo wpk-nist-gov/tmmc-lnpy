@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
 dynamic = ["readme", "version"]
@@ -50,16 +51,15 @@ test = [
     "pytest-sugar",
 ]
 viz = [
-    "matplotlib-base", #
+    "matplotlib", # p2c: -s matplotlib-base
     "ipywidgets",
 ]
+nbval = ["nbval"]
 dev-extras = [
-    "setuptools-scm", #
     "pytest-accept", # p2c: -p
     "ipython",
     "ipykernel",
     "tmmc-lnpy[viz]",
-    "nbval",
 ]
 typing-extras = [
     "pytype; python_version < '3.11'", #
@@ -69,21 +69,17 @@ typing-extras = [
 ]
 typing = [
     "tmmc-lnpy[typing-extras]", #
-    "tmmc-lnpy[test]",
+    "pytest",
 ]
-nox = [
-    "nox",
-    "noxopt", # p2c: -p
-    "ruamel.yaml",
-]
+nox = ["nox", "ruamel.yaml"]
 dev = [
+    "tmmc-lnpy[nbval]", # optional
     "tmmc-lnpy[test]", #
     "tmmc-lnpy[typing-extras]",
     "tmmc-lnpy[dev-extras]",
 ]
 tools = [
     "pre-commit", #
-    # "cruft",
     "scriv", # p2c: -p
     "nbqa",
     "pyright",
@@ -106,51 +102,43 @@ docs = [
     "autodocsumm",
     "tmmc-lnpy[viz]",
 ]
-# to be parsed with pyproject2conda with --no-base option
-dist-pypi = ["twine", "build"]
-dist-conda = [
-    "anaconda-client", #
-    "grayskull",
-    "conda-build",
-    "conda-verify",
-    "boa",
-]
 
 [tool.pyproject2conda]
 user_config = "config/userconfig.toml"
 template_python = "requirements/py{py}-{env}"
 template = "requirements/{env}"
 # defaults
-python = ["3.10"]
+python = ["3.11"]
 channels = ["conda-forge"]
 style = ["yaml", "requirements"]
-default_envs = [
-    "test",
-    "typing",
-    "docs",
-    "dev",
-    "dev-complete",
-    "dist-conda",
-    "dist-pypi"
-]
+default_envs = ["test", "typing", "docs", "dev", "dev-complete"]
 
 [tool.pyproject2conda.envs.test-extras]
 extras = ["test"]
+base = false
 
 [tool.pyproject2conda.envs.dev-base]
 extras = ["dev"]
 
-[[tool.pyproject2conda.overrides]]
-envs = ["test-extras", "dist-conda", "dist-pypi"]
+[tool.pyproject2conda.envs.build]
+extras = "build-system.requires"
+reqs = ["build"]
 base = false
+style = "requirements"
+
+# make sure pip available to all conda environments
+# that install the package
+[[tool.pyproject2conda.overrides]]
+envs = ["test", "dev", "dev-complete", "dev-base", "docs"]
+deps = ["pip"]
 
 [[tool.pyproject2conda.overrides]]
 envs = ["test", "typing", "test-extras"]
-python = ["3.8", "3.9", "3.10", "3.11"]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
-[[tool.pyproject2conda.overrides]]
-envs = ["dist-conda"]
-style = ["yaml"]
+# Project specific
+[tool.pyproject2conda.envs.test-notebook]
+extras = ["test", "nbval", "viz"]
 
 ## grayskull still messes some things up, but use scripts/recipe-append.sh for this
 [tool.setuptools]
@@ -340,7 +328,7 @@ use_shortcuts = true
 [tool.cruft]
 
 [tool.mypy]
-files = ["src", "tests", "noxfile.py", "tools"]
+files = ["src", "tests"]
 show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
@@ -372,7 +360,7 @@ module = []
 include = ["src", "tests"]
 exclude = ["**/__pycache__", ".tox/**", ".nox/**", "envs/**", "**/.mypy_cache"]
 # strict = ["src/lnpy"]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode = "basic"
 # enable subset of "strict"
 reportDuplicateImport = true
