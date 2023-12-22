@@ -1,22 +1,21 @@
 [build-system]
-requires = ["setuptools>=61.2", "setuptools_scm[toml]>=8.0"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.2", "setuptools_scm[toml]>=8.0"]
 
 [project]
 name = "tmmc-lnpy"
-authors = [{ name = "William P. Krekelberg", email = "wpk@nist.gov" }]
-license = { text = "NIST-PD" }
 description = "Analysis of lnPi results from TMMC simulation"
-# if using markdown
-# long_description_content_type = text/markdown
 keywords = ["tmmc-lnpy"]
+license = { text = "NIST-PD" }
+authors = [{ name = "William P. Krekelberg", email = "wpk@nist.gov" }]
+requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
     "License :: Public Domain",
     "Operating System :: OS Independent",
-    "Intended Audience :: Science/Research",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -25,122 +24,58 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dynamic = ["readme", "version"]
-requires-python = ">=3.8"
 dependencies = [
-    "numpy",
-    "xarray",
-    "scipy",
-    "scikit-image >= 0.21",
-    "joblib",
     "bottleneck",
-    "tqdm",
     "importlib_resources",
-    "module-utilities >= 0.9.0",
+    "joblib",
     "lazy_loader",
+    "module-utilities >= 0.9.0",
+    "numpy",
+    "scikit-image >= 0.21",
+    "scipy",
+    "tqdm",
+    "xarray",
 ] # additional packages
 
-[project.urls]
-Homepage = "https://github.com/usnistgov/tmmc-lnpy"
-Documentation = "https://pages.nist.gov/tmmc-lnpy/"
-
 [project.optional-dependencies]
-test = [
-    "pytest", #
-    "pytest-xdist",
-    "pytest-cov",
-    "pytest-sugar",
-]
-viz = [
-    "matplotlib", # p2c: -s matplotlib-base
-    "ipywidgets",
-]
-nbval = ["nbval"]
-dev-extras = [
-    "pytest-accept", # p2c: -p
-    "ipython",
-    "ipykernel",
-    "tmmc-lnpy[viz]",
-]
-typing-extras = [
-    "pytype; python_version < '3.11'", #
-    "mypy >= 1.6.1",
-    "pandas-stubs",
-    "types-tqdm",
-]
-typing = [
-    "tmmc-lnpy[typing-extras]", #
-    "pytest",
-]
-nox = ["nox", "ruamel.yaml"]
 dev = [
-    "tmmc-lnpy[nbval]", # optional
-    "tmmc-lnpy[test]", #
+    "tmmc-lnpy[nbval]",
+    "tmmc-lnpy[test]",
     "tmmc-lnpy[typing-extras]",
     "tmmc-lnpy[dev-extras]",
 ]
-tools = [
-    "pre-commit", #
-    "scriv", # p2c: -p
-    "nbqa",
-    "pyright",
-]
-dev-complete = [
-    "tmmc-lnpy[dev]", #
-    "tmmc-lnpy[tools]",
-    "tmmc-lnpy[nox]",
-]
+dev-complete = ["tmmc-lnpy[dev]", "tmmc-lnpy[tools]", "tmmc-lnpy[nox]"]
+dev-extras = ["ipykernel", "ipython", "pytest-accept", "tmmc-lnpy[viz]"]
 docs = [
-    "ipython", #
-    "pyenchant",
+    "autodocsumm",
     "ghp-import",
+    "ipython",
+    "myst-nb",
+    "pyenchant",
     "sphinx >= 5.3.0",
+    "sphinx-autobuild",
+    "sphinx-book-theme",
     "sphinx-copybutton",
     "sphinxcontrib-spelling",
-    "sphinx-autobuild",
-    "myst-nb",
-    "sphinx-book-theme",
-    "autodocsumm",
     "tmmc-lnpy[viz]",
 ]
+nbval = ["nbval"]
+nox = ["nox", "ruamel.yaml"]
+test = ["pytest", "pytest-cov", "pytest-sugar", "pytest-xdist"]
+tools = ["nbqa", "pre-commit", "pyright", "scriv"]
+typing = ["pytest", "tmmc-lnpy[typing-extras]"]
+typing-extras = [
+    "mypy >= 1.6.1",
+    "pandas-stubs",
+    "pytype; python_version < '3.11'",
+    "types-tqdm",
+]
+viz = ["ipywidgets", "matplotlib"]
 
-[tool.pyproject2conda]
-user_config = "config/userconfig.toml"
-template_python = "requirements/py{py}-{env}"
-template = "requirements/{env}"
-# defaults
-python = ["3.11"]
-channels = ["conda-forge"]
-style = ["yaml", "requirements"]
-default_envs = ["test", "typing", "docs", "dev", "dev-complete"]
+[project.urls]
+Documentation = "https://pages.nist.gov/tmmc-lnpy/"
+Homepage = "https://github.com/usnistgov/tmmc-lnpy"
 
-[tool.pyproject2conda.envs.test-extras]
-extras = ["test"]
-base = false
-
-[tool.pyproject2conda.envs.dev-base]
-extras = ["dev"]
-
-[tool.pyproject2conda.envs.build]
-extras = "build-system.requires"
-reqs = ["build"]
-base = false
-style = "requirements"
-
-# make sure pip available to all conda environments
-# that install the package
-[[tool.pyproject2conda.overrides]]
-envs = ["test", "dev", "dev-complete", "dev-base", "docs"]
-deps = ["pip"]
-
-[[tool.pyproject2conda.overrides]]
-envs = ["test", "typing", "test-extras"]
-python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-
-# Project specific
-[tool.pyproject2conda.envs.test-notebook]
-extras = ["test", "nbval", "viz"]
-
-## grayskull still messes some things up, but use scripts/recipe-append.sh for this
 [tool.setuptools]
 zip-safe = true # if using mypy, must be False
 include-package-data = true
@@ -161,23 +96,6 @@ readme = { file = [
 
 [tool.setuptools_scm]
 fallback_version = "999"
-
-[tool.aliases]
-test = "pytest"
-
-[tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
-testpaths = ["tests", "lnpy", "lnPi", "README.md"]
-
-[tool.coverage.report]
-exclude_also = ["if TYPE_CHECKING:", "@overload"]
-omit = ["*/vendored/*"]
-include = ["src/*"]
-
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-known_first_party = ["lnpy"]
 
 [tool.ruff]
 fix = true
@@ -282,8 +200,10 @@ known-first-party = ["lnpy"]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 10
 
-[tool.nbqa.addopts]
-ruff = ["--fix", "--extend-ignore=D100,B018"]
+[tool.isort]
+profile = "black"
+skip_gitignore = true
+known_first_party = ["lnpy"]
 
 [tool.flake8]
 docstring-convention = "numpy"
@@ -317,15 +237,17 @@ ignore = [
     "D212",
 ]
 
-[tool.scriv]
-format = "md"
-md_header_level = "2"
-new_fragment_template = "file: changelog.d/templates/new_fragment.md.j2"
+[tool.nbqa.addopts]
+ruff = ["--fix", "--extend-ignore=D100,B018"]
 
-[tool.commitizen]
-use_shortcuts = true
+[tool.pytest.ini_options]
+addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
+testpaths = ["tests", "lnpy", "lnPi", "README.md"]
 
-[tool.cruft]
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "@overload"]
+omit = ["*/vendored/*"]
+include = ["src/*"]
 
 [tool.mypy]
 files = ["src", "tests"]
@@ -381,6 +303,62 @@ reportOptionalOperand = false
 reportOptionalSubscript = false
 reportPrivateImportUsage = false
 reportUnboundVariable = false
+
+[tool.pyproject2conda]
+user_config = "config/userconfig.toml"
+template_python = "requirements/py{py}-{env}"
+template = "requirements/{env}"
+# defaults
+python = ["3.11"]
+channels = ["conda-forge"]
+style = ["yaml", "requirements"]
+default_envs = ["test", "typing", "docs", "dev", "dev-complete"]
+
+[tool.pyproject2conda.dependencies]
+pytest-accept = { pip = true }
+scriv = { pip = true }
+matplotlib = { skip = true, packages = "matplotlib-base" }
+
+[tool.pyproject2conda.envs.test-extras]
+extras = ["test"]
+base = false
+
+[tool.pyproject2conda.envs.dev-base]
+extras = ["dev"]
+
+[tool.pyproject2conda.envs.build]
+extras = "build-system.requires"
+reqs = ["build"]
+base = false
+style = "requirements"
+
+# make sure pip available to all conda environments
+# that install the package
+[tool.pyproject2conda.envs.test-notebook]
+extras = ["test", "nbval", "viz"]
+
+## grayskull still messes some things up, but use scripts/recipe-append.sh for this
+[[tool.pyproject2conda.overrides]]
+envs = ["test", "dev", "dev-complete", "dev-base", "docs"]
+deps = ["pip"]
+
+[[tool.pyproject2conda.overrides]]
+envs = ["test", "typing", "test-extras"]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+# Project specific
+[tool.aliases]
+test = "pytest"
+
+[tool.scriv]
+format = "md"
+md_header_level = "2"
+new_fragment_template = "file: changelog.d/templates/new_fragment.md.j2"
+
+[tool.commitizen]
+use_shortcuts = true
+
+[tool.cruft]
 
 [tool.pytype]
 inputs = ["src", "tests"]
