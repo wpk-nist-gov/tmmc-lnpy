@@ -22,6 +22,7 @@ nbval
 nox
 numpy
 pandas-stubs
+pip-tools
 pre-commit
 pyright
 pytest
@@ -30,7 +31,6 @@ pytest-cov
 pytest-sugar
 pytest-xdist
 pytype;python_version<"3.11"
-ruamel.yaml
 scikit-image>=0.21
 scipy
 scriv

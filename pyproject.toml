@@ -1,14 +1,19 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=61.2", "setuptools_scm[toml]>=8.0"]
+requires = [
+    "setuptools>=61.2",
+    "setuptools_scm[toml]>=8.0",
+]
 
 [project]
 name = "tmmc-lnpy"
 description = "Analysis of lnPi results from TMMC simulation"
-keywords = ["tmmc-lnpy"]
+keywords = [
+    "tmmc-lnpy",
+]
 license = { text = "NIST-PD" }
 authors = [{ name = "William P. Krekelberg", email = "wpk@nist.gov" }]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<=3.12"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
@@ -23,7 +28,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
-dynamic = ["readme", "version"]
+dynamic = [
+    "readme",
+    "version",
+]
 dependencies = [
     "bottleneck",
     "importlib_resources",
@@ -35,17 +43,25 @@ dependencies = [
     "scipy",
     "tqdm",
     "xarray",
-] # additional packages
-
+]
 [project.optional-dependencies]
 dev = [
     "tmmc-lnpy[nbval]",
     "tmmc-lnpy[test]",
     "tmmc-lnpy[typing-extras]",
     "tmmc-lnpy[dev-extras]",
+    "tmmc-lnpy[viz]",
 ]
-dev-complete = ["tmmc-lnpy[dev]", "tmmc-lnpy[tools]", "tmmc-lnpy[nox]"]
-dev-extras = ["ipykernel", "ipython", "pytest-accept", "tmmc-lnpy[viz]"]
+dev-complete = [
+    "tmmc-lnpy[dev]",
+    "tmmc-lnpy[tools]",
+]
+dev-extras = [
+    "ipykernel",
+    "ipython",
+    "nox",
+    "pytest-accept",
+]
 docs = [
     "autodocsumm",
     "ghp-import",
@@ -59,19 +75,36 @@ docs = [
     "sphinxcontrib-spelling",
     "tmmc-lnpy[viz]",
 ]
-nbval = ["nbval"]
-nox = ["nox", "ruamel.yaml"]
-test = ["pytest", "pytest-cov", "pytest-sugar", "pytest-xdist"]
-tools = ["nbqa", "pre-commit", "pyright", "scriv"]
-typing = ["pytest", "tmmc-lnpy[typing-extras]"]
+nbval = [
+    "nbval",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-sugar",
+    "pytest-xdist",
+]
+tools = [
+    "nbqa",
+    "pip-tools",
+    "pre-commit",
+    "pyright",
+    "scriv",
+]
+typing = [
+    "pytest",
+    "tmmc-lnpy[typing-extras]",
+]
 typing-extras = [
     "mypy >= 1.6.1",
     "pandas-stubs",
     "pytype; python_version < '3.11'",
     "types-tqdm",
 ]
-viz = ["ipywidgets", "matplotlib"]
-
+viz = [
+    "ipywidgets",
+    "matplotlib",
+]
 [project.urls]
 Documentation = "https://pages.nist.gov/tmmc-lnpy/"
 Homepage = "https://github.com/usnistgov/tmmc-lnpy"
@@ -85,8 +118,6 @@ license-files = ["LICENSE"]
 namespaces = true
 where = ["src"]
 
-## include = []
-## exclude = []
 [tool.setuptools.dynamic]
 readme = { file = [
     "README.md",
@@ -97,43 +128,12 @@ readme = { file = [
 [tool.setuptools_scm]
 fallback_version = "999"
 
+# * Linting --------------------------------------------------------------------
+
 [tool.ruff]
 fix = true
 line-length = 88
 target-version = "py38"
-select = [
-    # pyflakes
-    "F",
-    # pycodestyle
-    "E",
-    "W",
-    # isort
-    "I",
-    # pyupgrade
-    "UP",
-    # pydocstyle
-    "D",
-    # # flake8-2020
-    "YTT",
-    # # flake8-bugbear
-    # "B",
-    # flake8-quotes
-    "Q",
-    # # pylint
-    # "PLE", "PLR", "PLW",
-    # # misc lints
-    "PIE",
-    # # tidy imports
-    "TID",
-    # # implicit string concatenation
-    # "ISC",
-    # # type-checking imports
-    "TCH",
-]
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-# fixable = ["A", "B", "C", "D", "E", "F", "..."]
-unfixable = []
-# Exclude a variety of commonly ignored directories.
 exclude = [
     ".bzr",
     ".direnv",
@@ -158,96 +158,79 @@ exclude = [
     "tests/",
     "src/lnpy/tests",
 ]
-ignore = [
-    # # whitespace before ':' - doesn't work well with black
-    # "E203",
-    # module level import not at top of file
-    "E402",
-    # line too long - let black worry about that
-    "E501",
-    # do not assign a lambda expression, use a def
-    "E731",
-    # # line break before binary operator
-    # "W503",
-    # allow black line after docstring
-    "D202",
-    "D105",
-    "D205",
-    # this leads to errors with placing titles in module
-    # docstrings
-    "D400",
-    "D401",
-    "D415",
-    "D102",
-    "D103",
-    # these are useful, but too many errors
-    # due to use of docfiller
-    "D417",
-    "D107",
-    "D203",
-    "D212",
-    # Allow relative imports
-    "TID252",
+
+[tool.ruff.lint]
+select = [
+    "F",      ## pyflakes
+    "E", "W", ## pycodestyle
+    "I",      ## isort
+    "UP",     ## pyupgrade
+    "D",      ## pydocstyle
+    "YTT",    ## flake8-2020
+    # "B",    ## flake8-bugbear
+    "Q",      ## flake8-quotes
+    # "PLE",  ## pylint
+    # "PLR"   ## pylint
+    # "PLW",  ## pylint
+    "PIE",    ## misc lints
+    "TID",    ## tidy imports
+    # "ISC",  ## implicit string concatenation
+    "TCH",    ## type-checking imports
 ]
-per-file-ignores = {  }
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+# fixable = ["A", "B", "C", "D", "E", "F", "..."]
+unfixable = []
+# Exclude a variety of commonly ignored directories.
+ignore = [
+    # "E203", ## whitespace before ':' - doesn't work well with black
+    "E402",   ## module level import not at top of file
+    "E501",   ## line too long - let black worry about that
+    "E731",   ## do not assign a lambda expression, use a def
+    # "W503", ## line break before binary operator
+    "D202",   ## blank line after docstring
+    "D105",   ## Missing magic method docstring
+    "D205",   ## blank line after summary
+    # this leads to errors with placing titles in module
+    "D400",   ## First line should end with a period
+    "D401",   ## First line of docstring should be in imperative mood: "{first_line}"
+    "D415",   ## First line should end with a period, question mark, or exclamation point
+    "D102",   ## Missing docstring in public method
+    "D103",   ## Missing docstring in public function
+    # these are useful, but too many errors with docfiller
+    "D417",   ## Missing argument description in the docstring for {definition}: {name}
+    "D107",   ## Missing docstring in __init__
+    "D203",   ## 1 blank line required before class docstring
+    "D212",   ## Multi-line docstring summary should start at the first line
+    "TID252", ## Allow relative imports
+]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# per-file-ignores = {  }
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["lnpy"]
 
-[tool.ruff.mccabe]
-# Unlike Flake8, default to a complexity level of 10.
-max-complexity = 10
-
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-known_first_party = ["lnpy"]
-
-[tool.flake8]
-docstring-convention = "numpy"
-ignore = [
-    # # whitespace before ':' - doesn't work well with black
-    "E203",
-    # module level import not at top of file
-    "E402",
-    # line too long - let black worry about that
-    "E501",
-    # do not assign a lambda expression, use a def
-    "E731",
-    # # line break before binary operator
-    "W503",
-    # allow black line after docstring
-    "D202",
-    "D105",
-    "D205",
-    # this leads to errors with placing titles in module
-    # docstrings
-    "D400",
-    "D401",
-    "D415",
-    "D102",
-    "D103",
-    # these are useful, but too many errors
-    # due to use of docfiller
-    "D417",
-    "D107",
-    "D203",
-    "D212",
-]
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.nbqa.addopts]
 ruff = ["--fix", "--extend-ignore=D100,B018"]
 
+# * Testing --------------------------------------------------------------------
+
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
-testpaths = ["tests", "lnpy", "lnPi", "README.md"]
+testpaths = ["lnpy", "lnPi", "tests", "README.md"]
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:", "@overload"]
-omit = ["*/vendored/*"]
+omit = ["*/vendored/*", "*/_typing.py"]
 include = ["src/*"]
+
+[tool.coverage.paths]
+source = ["src/", ".nox/**/site-packages/"]
+
+# * Typing
 
 [tool.mypy]
 files = ["src", "tests"]
@@ -255,7 +238,7 @@ show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
-exclude = [".eggs", ".tox", "doc", "docs", ".nox", "envs"]
+exclude = [".eggs", ".tox", "doc", "docs", ".nox"]
 check_untyped_defs = true
 strict = true
 untyped_calls_exclude = ["skimage"]
@@ -280,7 +263,7 @@ module = []
 
 [tool.pyright]
 include = ["src", "tests"]
-exclude = ["**/__pycache__", ".tox/**", ".nox/**", "envs/**", "**/.mypy_cache"]
+exclude = ["**/__pycache__", ".tox/**", ".nox/**", "**/.mypy_cache"]
 # strict = ["src/lnpy"]  # TODO: enable strict mode for src
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
@@ -304,11 +287,15 @@ reportOptionalSubscript = false
 reportPrivateImportUsage = false
 reportUnboundVariable = false
 
+[tool.pytype]
+inputs = ["src", "tests"]
+
+# * Dependency creation --------------------------------------------------------
+
 [tool.pyproject2conda]
 user_config = "config/userconfig.toml"
 template_python = "requirements/py{py}-{env}"
 template = "requirements/{env}"
-# defaults
 python = ["3.11"]
 channels = ["conda-forge"]
 style = ["yaml", "requirements"]
@@ -319,36 +306,33 @@ pytest-accept = { pip = true }
 scriv = { pip = true }
 matplotlib = { skip = true, packages = "matplotlib-base" }
 
-[tool.pyproject2conda.envs.test-extras]
-extras = ["test"]
-base = false
-
-[tool.pyproject2conda.envs.dev-base]
-extras = ["dev"]
-
 [tool.pyproject2conda.envs.build]
 extras = "build-system.requires"
 reqs = ["build"]
 base = false
 style = "requirements"
 
-# make sure pip available to all conda environments
-# that install the package
+[tool.pyproject2conda.envs.test-extras]
+extras = ["test"]
+base = false
+
 [tool.pyproject2conda.envs.test-notebook]
 extras = ["test", "nbval", "viz"]
 
-## grayskull still messes some things up, but use scripts/recipe-append.sh for this
 [[tool.pyproject2conda.overrides]]
-envs = ["test", "dev", "dev-complete", "dev-base", "docs"]
+# Ensure these have pip in yaml file
+envs = ["test", "docs", "dev", "dev-complete"]
 deps = ["pip"]
 
 [[tool.pyproject2conda.overrides]]
 envs = ["test", "typing", "test-extras"]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
-# Project specific
-[tool.aliases]
-test = "pytest"
+[tool.pip-tools]
+allow-unsafe = true
+strip-extras = true
+
+# * Other tools ----------------------------------------------------------------
 
 [tool.scriv]
 format = "md"
@@ -359,6 +343,3 @@ new_fragment_template = "file: changelog.d/templates/new_fragment.md.j2"
 use_shortcuts = true
 
 [tool.cruft]
-
-[tool.pytype]
-inputs = ["src", "tests"]

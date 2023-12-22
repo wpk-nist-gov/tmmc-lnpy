@@ -26,13 +26,13 @@ dependencies:
   - nox
   - numpy
   - pandas-stubs
+  - pip-tools
   - pre-commit
   - pyright
   - pytest
   - pytest-cov
   - pytest-sugar
   - pytest-xdist
-  - ruamel.yaml
   - scikit-image>=0.21
   - scipy
   - tqdm
