@@ -50,11 +50,11 @@ class _CachedAccessorSingle(Generic[S, R]):
             return self._accessor
         try:
             accessor_obj = self._accessor(obj)
-        except AttributeError:
+        except AttributeError as err:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError("error initializing %r accessor." % self._name)
+            raise RuntimeError("error initializing %r accessor." % self._name) from err
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
@@ -63,8 +63,7 @@ class _CachedAccessorSingle(Generic[S, R]):
         return accessor_obj
 
 
-# TODO: add functionality to "set" the value
-def _CachedAccessorCleared(name: str, accessor: C_prop[S, R]) -> CachedProperty[S, R]:
+def _cachedaccessorcleared(name: str, accessor: C_prop[S, R]) -> CachedProperty[S, R]:
     """
     Wrap accessor in a cached property
 
@@ -88,33 +87,32 @@ def _CachedAccessorCleared(name: str, accessor: C_prop[S, R]) -> CachedProperty[
 
 
 @overload
-def _CachedAccessorWrapper(
+def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: Literal[True]
 ) -> _CachedAccessorSingle[S, R]:
     ...
 
 
 @overload
-def _CachedAccessorWrapper(
+def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: Literal[False] = ...
 ) -> CachedProperty[S, R]:
     ...
 
 
 @overload
-def _CachedAccessorWrapper(
+def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: bool
 ) -> _CachedAccessorSingle[S, R] | CachedProperty[S, R]:
     ...
 
 
-def _CachedAccessorWrapper(
+def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: bool = False
 ) -> _CachedAccessorSingle[S, R] | CachedProperty[S, R]:
     if single_create:
         return _CachedAccessorSingle(name, accessor)
-    else:
-        return _CachedAccessorCleared(name, accessor)
+    return _cachedaccessorcleared(name, accessor)
 
 
 class AccessorMixin:  # (Generic[S, R]):
@@ -137,7 +135,7 @@ class AccessorMixin:  # (Generic[S, R]):
         setattr(
             cls,
             name,
-            _CachedAccessorWrapper(name, accessor, single_create=single_create),
+            _cachedaccessorwrapper(name, accessor, single_create=single_create),
         )
 
     # @classmethod
@@ -164,14 +162,12 @@ class AccessorMixin:  # (Generic[S, R]):
         --------
         >>> class parent(AccessorMixin):
         ...     pass
-        ...
         >>> class hello(AccessorMixin):
         ...     def __init__(self, parent):
         ...         self._parent = parent
         ...
         ...     def there(self):
         ...         return f"{type(self._parent)}"
-        ...
 
         >>> parent.register_accessor("hello", hello)
         >>> x = parent()
@@ -191,7 +187,6 @@ class AccessorMixin:  # (Generic[S, R]):
         --------
         >>> class parent(AccessorMixin):
         ...     pass
-        ...
 
         >>> @parent.decorate_accessor("hello")
         ... class hello(AccessorMixin):
@@ -200,7 +195,6 @@ class AccessorMixin:  # (Generic[S, R]):
         ...
         ...     def there(self):
         ...         return f"{type(self._parent)}"
-        ...
 
         >>> x = parent()
         >>> x.hello.there()

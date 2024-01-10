@@ -10,7 +10,7 @@ import lnpy
 path_data = Path(__file__).parent / "../examples/archived/LJ_mix"
 
 
-@pytest.fixture
+@pytest.fixture()
 def ref():
     path = path_data / "ljmix4_full.t080.v512.r1.lnpi_o.dat.gz"
     temp = 0.8
@@ -22,10 +22,10 @@ def ref():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def phase_creator(ref):
     return lnpy.segment.PhaseCreator(
-        nmax=2, nmax_peak=4, ref=ref, merge_kws=dict(efac=0.8)
+        nmax=2, nmax_peak=4, ref=ref, merge_kws={"efac": 0.8}
     )
 
 
@@ -41,8 +41,7 @@ def obj(request, ref, phase_creator):
             build_phases=phase_creator.build_phases,
         )
 
-    else:
-        return lnpy.examples.ljmix_sup_example()
+    return lnpy.examples.ljmix_sup_example()
 
 
 def get_test_table(o, ref):
@@ -61,7 +60,7 @@ def get_test_table(o, ref):
     )
 
 
-def test_collection(obj):
+def test_collection(obj) -> None:
     ref, phase_creator = obj.unpack(["ref", "phase_creator"])
 
     test = pd.read_csv(path_data / "data_0.csv")

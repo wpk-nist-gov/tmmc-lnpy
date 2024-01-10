@@ -1,2 +1,2 @@
 """Interface to :mod:`lnpy.lnpicollectionutils`."""
-from lnpy.lnpicollectionutils import *  # noqa: F403, F401 # pyright: ignore
+from lnpy.lnpicollectionutils import *  # noqa: F403 # pyright: ignore

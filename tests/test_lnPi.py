@@ -1,93 +1,40 @@
 # mypy: disable-error-code="no-untyped-def, no-untyped-call"
-import json
-from pathlib import Path
 
+import lnPi
 import numpy as np
 import pandas as pd
 import pytest
 
-import lnPi
-
-path_data = Path(__file__).parent / "../examples/archived/LJ_cfs_2.5sig"
-
-
-def get_lnz(path):
-    kB = 1.3806503e-23  # J/K
-    kg = 1.66054e-27  # 1/amu
-    hPlanck = 6.62606876e-34  # Js
-
-    with open(path) as f:
-        metadata = json.load(f)
-
-    deBroglie = (
-        hPlanck
-        / np.sqrt(
-            2.0
-            * np.pi
-            * (metadata["mass"] * kg)
-            * kB
-            * (metadata["T*"] * metadata["eps_kB"])
-        )
-        * 1.0e10
-    )  # ang
-
-    mu = metadata["mu*"] + 3.0 * metadata["T*"] * np.log(metadata["sigma"] / deBroglie)
-    temp = metadata["T*"]
-
-    lnz = mu / temp
-
-    return lnz, {"beta": 1.0 / temp, "volume": metadata["V*"]}
-
 
 # get meta data
-@pytest.fixture
-def ref():
-    lnz, state_kws = get_lnz(path_data / "t150.metadata.json")
-    print(state_kws)
-
-    # read in potential energy
-    pe = pd.read_csv(
-        path_data / "ljsf.t150.bulk.v512.r1.energy.dat",
-        header=None,
-        sep="\\s+",
-        names=["n", "e"],
-    )["e"].values
-
-    return (
-        lnPi.MaskedlnPiDelayed.from_table(
-            path_data / "ljsf.t150.bulk.v512.r1.lnpi.dat",
-            fill_value=np.nan,
-            lnz=lnz,
-            # state_kws needs to be defined if want to calculate some properties
-            # down the road
-            state_kws=state_kws,
-            # extra_kws is where you pass things which will be passed along to
-            # new lnPis, like potential energy
-            extra_kws={"PE": pe},
-        )
-        .zeromax()
-        .pad()
-    )
+@pytest.fixture(scope="session")
+def ref(ref_lnPi):  # noqa: N803
+    return ref_lnPi
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def path_data(path_data_lnPi):  # noqa: N803
+    return path_data_lnPi
+
+
+@pytest.fixture(scope="session")
 def phase_creator(ref):
     return lnPi.segment.PhaseCreator(
         nmax=1,
         nmax_peak=4,
         ref=ref,
-        merge_kws=dict(efac=0.8),
+        merge_kws={"efac": 0.8},
         # if want to id phases based on some
         # callable, then set this.
         # the callable is passes a list of
         # MaskedlnPi objects, and should return
         # a list of phaseid
-        tag_phases=None
+        tag_phases=None,
         # tag_phases=tag_phases2
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def build_phases(phase_creator):
     # choose a particular factory method for creating phases
     return phase_creator.build_phases_mu([None])
@@ -104,14 +51,12 @@ def obj(request, ref, phase_creator, build_phases):
             ref=ref, phase_creator=phase_creator, build_phases=build_phases
         )
 
-    else:
-        return lnpy.examples.lj_sup_example()
+    return lnpy.examples.lj_sup_example()
 
 
-@pytest.fixture
-def test_table():
-    table = pd.read_csv(path_data / "data_0.csv")
-    return table
+@pytest.fixture(scope="session")
+def test_table(path_data):
+    return pd.read_csv(path_data / "data_0.csv")
 
 
 def get_test_table(o, ref):
@@ -134,7 +79,7 @@ def get_test_table(o, ref):
     )  # .to_csv('data_0.csv', index=False)
 
 
-def test_collection_properties(obj, test_table):
+def test_collection_properties(obj, test_table) -> None:
     ref, build_phases = obj.unpack(["ref", "build_phases"])
 
     # for big builds, take advantage of progress bar, and parallel builds
@@ -150,11 +95,9 @@ def test_collection_properties(obj, test_table):
     pd.testing.assert_frame_equal(test_table, other)
 
 
-@pytest.fixture
-def test_table_can():
-    table = pd.read_csv(path_data / "data_0_can.csv")
-
-    return table
+@pytest.fixture(scope="session")
+def test_table_can(path_data):
+    return pd.read_csv(path_data / "data_0_can.csv")
 
 
 def get_test_table_can(ref):
@@ -167,13 +110,13 @@ def get_test_table_can(ref):
     )
 
 
-def test_canonical_properties(obj, test_table_can):
+def test_canonical_properties(obj, test_table_can) -> None:
     ref = obj.ref
     other = get_test_table_can(ref)
     pd.testing.assert_frame_equal(other, test_table_can)
 
 
-def test_nice_grid(obj):
+def test_nice_grid(obj, path_data) -> None:
     ref, build_phases = obj.unpack(["ref", "build_phases"])
     import lnPi.collectionlnpiutils
 
@@ -197,7 +140,7 @@ def test_nice_grid(obj):
     v0 = other_fine.lnz_0.values
     v1 = test_fine.lnz_0.values
 
-    np.testing.assert_allclose(v0, v1)  # type: ignore
+    np.testing.assert_allclose(v0, v1)  # type: ignore[arg-type]
 
     pd.testing.assert_frame_equal(other_course, test_course)
 
