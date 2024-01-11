@@ -90,8 +90,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         super().__array_finalize__(obj)
         self._clear_cache()
 
-    def _clear_cache(self):
-        self._cache = {}
+    def _clear_cache(self) -> None:
+        self._cache = {}  # type: ignore[var-annotated]
 
     ##################################################
     # properties
@@ -159,22 +159,23 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def beta(self):
         return self.state_kws.get("beta", None)
 
-    def __repr__(self):
-        L = []
-        L.append(f"lnz={repr(self.lnz)}")
-        L.append(f"state_kws={repr(self.state_kws)}")
-
-        L.append(f"data={super().__repr__()}")
+    def __repr__(self) -> str:
+        L = []  # type: ignore[var-annotated]
+        L.extend(
+            (
+                f"lnz={self.lnz!r}",
+                f"state_kws={self.state_kws!r}",
+                f"data={super().__repr__()}",
+            )
+        )
         if len(self.extra_kws) > 0:
-            L.append(f"extra_kws={repr(self.extra_kws)}")
+            L.append(f"extra_kws={self.extra_kws!r}")
 
         indent = " " * 5
-        p = "MaskedlnPi(\n" + "\n".join([indent + x for x in L]) + "\n)"
+        return "MaskedlnPi(\n" + "\n".join([indent + x for x in L]) + "\n)"
 
-        return p
-
-    def __str__(self):
-        return f"MaskedlnPi(lnz={str(self.lnz)})"
+    def __str__(self) -> str:
+        return f"MaskedlnPi(lnz={self.lnz!s})"
 
     # @cached.meth
     def local_argmax(self, *args, **kwargs):
@@ -219,7 +220,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     #     zval = lnpi_zero - self.local_max()
     #     return  (zval - np.log(self.pi_sum))
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, index, value) -> None:
         self._clear_cache()
         super().__setitem__(index, value)
 
@@ -287,10 +288,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def adjust(self, zeromax=False, pad=False, inplace=False):
         """Do multiple adjustments in one go"""
 
-        if inplace:
-            new = self
-        else:
-            new = self.copy()
+        new = self if inplace else self.copy()
 
         if zeromax:
             new.zeromax(inplace=True)
@@ -341,7 +339,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         # shift = (self.ncoords.values.T * dmu).sum(-1).T
 
         shift = np.zeros([], dtype=float)
-        for i, (s, m) in enumerate(zip(self.shape, dlnz)):
+        for _i, (s, m) in enumerate(zip(self.shape, dlnz)):
             shift = np.add.outer(shift, np.arange(s) * m)
 
         # scale by beta

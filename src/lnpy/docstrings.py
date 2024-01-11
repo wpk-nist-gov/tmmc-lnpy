@@ -11,7 +11,7 @@ copy_kws : mapping, optional
     extra arguments to copy
 lnz : float or sequence of float
     Value(s) of ``lnz`` (log of activity)
-state_kws : Mapping, optiona
+state_kws : Mapping, optional
     'State' variables.  Common key/value pairs used by other methods:
 
     * beta (float) : inverse temperature

@@ -1,11 +1,10 @@
-from pytest import approx
-
 import numpy as np
+import pytest
 
 from lnpy.lnpicollectionutils import build_grid
 
 
-def test_build_grid0():
+def test_build_grid0() -> None:
     x0 = -0.2124
 
     grid = build_grid(
@@ -18,10 +17,10 @@ def test_build_grid0():
         outlier=False,
     )
 
-    assert grid == approx(np.arange(-2, +2 + 0.25, 0.5))
+    assert grid == pytest.approx(np.arange(-2, +2 + 0.25, 0.5))
 
 
-def test_build_grid0():
+def test_build_grid1() -> None:
     x0 = -0.2124
 
     grid = build_grid(
@@ -34,4 +33,4 @@ def test_build_grid0():
         outlier=False,
     )
 
-    assert grid == approx(np.arange(-2, +2, 0.5))
+    assert grid == pytest.approx(np.arange(-2, +2, 0.5))

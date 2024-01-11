@@ -8,7 +8,7 @@ from __future__ import annotations
 try:
     import importlib_resources as resources
 except ImportError:
-    import importlib.resources as resources  # type: ignore[no-redef]
+    from importlib import resources  # type: ignore[no-redef]
 
 import json
 from dataclasses import asdict, dataclass
@@ -55,9 +55,7 @@ def json_to_dict(basename: str) -> dict[str, Any]:
         fopen = open  # type: ignore[assignment]
 
     with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:
-        out = json.load(f)
-
-    return out  # type: ignore
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 class ExampleDict(TypedDict):
@@ -113,8 +111,7 @@ def load_example_lnpimasked(name: _ExampleNames) -> lnPiMasked:
     d = json_to_dict(basename)
     ds = xr.Dataset.from_dict(d)
 
-    ref = dataset_to_lnpimasked(ds)
-    return ref
+    return dataset_to_lnpimasked(ds)
 
 
 @dataclass
@@ -158,7 +155,8 @@ def lj_sup_example() -> Example:
 
 def tag_phases_single_comp_simple(x: Sequence[lnPiMasked]) -> MyNDArray:
     if len(x) > 2:
-        raise ValueError("bad tag function")
+        msg = "bad tag function"
+        raise ValueError(msg)
     argmax0 = np.array([xx.local_argmax()[0] for xx in x])
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
@@ -198,7 +196,8 @@ def hsmix_example() -> Example:
 
     def tag_phases(x: Sequence[lnPiMasked]) -> MyNDArray:
         if len(x) > 2:
-            raise ValueError("bad tag function")
+            msg = "bad tag function"
+            raise ValueError(msg)
         argmax0 = np.array([xx.local_argmax()[0] for xx in x])
         return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 

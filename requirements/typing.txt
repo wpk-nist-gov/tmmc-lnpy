@@ -11,16 +11,13 @@ bottleneck
 importlib_resources
 joblib
 lazy_loader
-module-utilities >= 0.9.0
-mypy >= 1.4.1
+module-utilities>=0.9.0
+mypy>=1.6.1
 numpy
 pandas-stubs
 pytest
-pytest-cov
-pytest-sugar
-pytest-xdist
-pytype; python_version < '3.11'
-scikit-image
+pytype;python_version<"3.11"
+scikit-image>=0.21
 scipy
 tqdm
 types-tqdm

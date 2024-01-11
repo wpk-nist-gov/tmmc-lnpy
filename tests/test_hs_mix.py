@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,9 @@ import pytest
 
 import lnpy
 import lnpy.stability
-from lnpy.lnpidata import lnPiMasked
+
+if TYPE_CHECKING:
+    from lnpy.lnpidata import lnPiMasked
 
 path_data = Path(__file__).parent / "../examples/archived/HS_mix"
 
@@ -19,12 +21,13 @@ path_data = Path(__file__).parent / "../examples/archived/HS_mix"
 # function to tag 'LD' and 'HD' phases
 def tag_phases2(x: Sequence[lnPiMasked]) -> np.ndarray[Any, np.dtype[Any]]:
     if len(x) > 2:
-        raise ValueError("bad tag function")
+        msg = "bad tag function"
+        raise ValueError(msg)
     argmax0 = np.array([xx.local_argmax()[0] for xx in x])
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-@pytest.fixture
+@pytest.fixture()
 def ref():
     return (
         lnpy.lnPiMasked.from_table(
@@ -37,14 +40,14 @@ def ref():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def phase_creator(ref):
     return lnpy.segment.PhaseCreator(
         nmax=2,
         nmax_peak=4,
         ref=ref,
         tag_phases=tag_phases2,
-        merge_kws=dict(efac=0.8),
+        merge_kws={"efac": 0.8},
     )
 
 
@@ -57,21 +60,20 @@ def obj(request, ref, phase_creator):
         return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=None
         )
-    else:
-        return lnpy.examples.hsmix_example()
+    return lnpy.examples.hsmix_example()
 
 
-@pytest.fixture
-def lnz2():
+@pytest.fixture()
+def lnz2() -> float:
     return 0.5
 
 
-@pytest.fixture
+@pytest.fixture()
 def lnzs():
     return np.linspace(-8, 8, 20)
 
 
-@pytest.fixture
+@pytest.fixture()
 def build_phases(obj, lnz2):
     return obj.phase_creator.build_phases_mu([None, lnz2])
 
@@ -96,24 +98,24 @@ def get_test_table(o, ref):
     )  # .to_csv('data_0.csv', index=False)
 
 
-def test_collection(obj, build_phases, lnzs):
+def test_collection(obj, build_phases, lnzs) -> None:
     ref = obj.ref
 
     c = lnpy.lnPiCollection.from_builder(lnzs, build_phases)
     c.spinodal(2, build_phases, inplace=True, unstack=True)
     c.binodal(2, build_phases, inplace=True, unstack=True)
 
-    for path, obj in [
+    for path, y in [
         ("data_0", c),
         ("data_0_spin", c.spinodal.access),
         ("data_0_bino", c.binodal.access),
     ]:
         test = pd.read_csv(path_data / (path + ".csv"))
-        other = get_test_table(obj, ref)
+        other = get_test_table(y, ref)
 
         pd.testing.assert_frame_equal(test, other)
 
         test = pd.read_csv(path_data / (path + "_dw.csv"))
-        other = obj.wfe.dw.to_frame().reset_index()
+        other = y.wfe.dw.to_frame().reset_index()
 
         pd.testing.assert_frame_equal(test, other)

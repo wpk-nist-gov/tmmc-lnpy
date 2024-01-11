@@ -19,9 +19,6 @@ if TYPE_CHECKING:
 
     from .ensembles import xCanonical, xGrandCanonical
 
-    # from .lnpidata import lnpy.lnpidata.lnPiMasked
-    # from .lnpiseries import lnpy.lnpiseries.SeriesWrapper, lnpy.lnpiseries.lnPiCollection
-
 
 __all__ = [
     "T_Ensemble",
@@ -71,7 +68,7 @@ IndexingInt: TypeAlias = Union[
 ]
 
 
-xArrayLike: TypeAlias = "ArrayLike | xr.DataArray"
+xArrayLike: TypeAlias = "ArrayLike | xr.DataArray"  # noqa: N816
 
 IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
 Scalar: TypeAlias = IndexIterScalar
@@ -81,7 +78,7 @@ T_Element = TypeVar("T_Element", bound="lnpy.lnpidata.lnPiMasked")
 """TypeVar for element of lnpy.lnpiseries.SeriesWrapper."""
 
 # T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper[T_Element]")
-T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper")  # type: ignore
+T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper")  # type: ignore[type-arg]
 """TypeVar for lnpy.lnpiseries.SeriesWrapper"""
 
 # Segmentation stuff

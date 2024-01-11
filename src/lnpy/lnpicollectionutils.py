@@ -41,18 +41,19 @@ def tag_phases_singlecomp(x: Sequence[lnPiMasked]) -> Sequence[int] | MyNDArray:
         Phase code for each element in ``x``.
     """
     if len(x) > 2:
-        raise ValueError("bad tag function")
-    else:
-        argmax0 = np.array([xx.local_argmax()[0] for xx in x])
-        if len(x) == 2:
-            return np.argsort(argmax0)
-        else:
-            return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
+        msg = "bad tag function"
+        raise ValueError(msg)
+
+    argmax0 = np.array([xx.local_argmax()[0] for xx in x])
+    if len(x) == 2:
+        return np.argsort(argmax0)
+
+    return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-def get_lnz_min(
+def get_lnz_min(  # noqa: C901,PLR0912,PLR0915
     target: float,
-    C: lnPiCollection,
+    collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     phase_id: int | None = 0,
     component: int | None = None,
@@ -70,7 +71,7 @@ def get_lnz_min(
     ----------
     target : float
         target density of specified component
-    C : CollectionPhases
+    collection : CollectionPhases
         initial guess to work from.  This is assumed to be sorted in ascending `lnz` order
     build_phases : callable
         function to build new phases objects
@@ -81,7 +82,7 @@ def get_lnz_min(
         If component is None, use build_phases.index.
         If component=='None', then consider total density
     dlnz : float, default=0.5
-        how to change the chemical potential if `C` doesn't already
+        how to change the chemical potential if `collection` doesn't already
         bracket solution
     ref : lnPiMasked, optional
         optional lnPiMasked object to pass to build_phases
@@ -100,8 +101,11 @@ def get_lnz_min(
     """
     from scipy.optimize import brentq
 
-    if phase_id is not None and phase_id not in C.index.get_level_values("phase"):
-        raise ValueError(f"no phase {phase_id}")
+    if phase_id is not None and phase_id not in collection.index.get_level_values(
+        "phase"
+    ):
+        msg = f"no phase {phase_id}"
+        raise ValueError(msg)
 
     lnz_idx = build_phases.index
     if isinstance(component, str) and component.lower() == "none":
@@ -125,7 +129,7 @@ def get_lnz_min(
         def getter(x: lnPiCollection) -> xr.DataArray:
             return getter_comp(x).sel(phase=phase_id)
 
-    s = getter(C).to_series().dropna()
+    s = getter(collection).to_series().dropna()
     # builder
     if build_kws is None:
         build_kws = {}
@@ -134,11 +138,11 @@ def get_lnz_min(
     left = None
     ss = s[s < target]
     if len(ss) > 0:
-        left = C.mloc[ss.index[[-1]]]
+        left = collection.mloc[ss.index[[-1]]]
     else:
-        new_lnz = C.mloc[s.index[[0]]]._get_lnz(lnz_idx)
+        new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)
         dlnz_left = dlnz
-        for i in range(ntry):
+        for _i in range(ntry):
             new_lnz -= dlnz_left
             p = build_phases(new_lnz, ref=ref, **build_kws)
             if phase_id in p._get_level("phase") and getter(p).values < target:
@@ -147,18 +151,19 @@ def get_lnz_min(
             dlnz_left *= dfac
 
     if left is None:
-        raise RuntimeError("could not find left bounds")
+        msg = "could not find left bounds"
+        raise RuntimeError(msg)
 
     # right bracket
     right = None
     ss = s[s > target]
     if len(ss) > 0:
-        right = C.mloc[ss.index[[0]]]
+        right = collection.mloc[ss.index[[0]]]
     else:
-        new_lnz = C.mloc[s.index[[-1]]]._get_lnz(lnz_idx)
+        new_lnz = collection.mloc[s.index[[-1]]]._get_lnz(lnz_idx)
         dlnz_right = dlnz
 
-        for i in range(ntry):
+        for _i in range(ntry):
             new_lnz += dlnz_right
             p = build_phases(new_lnz, ref=ref, **build_kws)
 
@@ -174,12 +179,13 @@ def get_lnz_min(
                 dlnz_right *= dfac
 
     if right is None:
-        raise RuntimeError("could not find right bounds")
+        msg = "could not find right bounds"
+        raise RuntimeError(msg)
 
     def f(x: float) -> MyNDArray:
         lnz_new = x
         p = build_phases(lnz_new, ref=ref, **build_kws)
-        f.lnpi = p  # type: ignore
+        f.lnpi = p  # type: ignore[attr-defined]
         return getter(p).values - target
 
     a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])
@@ -189,12 +195,12 @@ def get_lnz_min(
     return f.lnpi, rootresults_to_rootresultdict(r, residual=f(xx))  # type: ignore[attr-defined]
 
 
-def get_lnz_max(
+def get_lnz_max(  # noqa: C901,PLR0912,PLR0915
     edge_distance_min: int,
     build_phases: BuildPhasesBase,
     ref: lnPiMasked | None = None,
     lnz_start: float | None = None,
-    C: lnPiCollection | None = None,
+    collection: lnPiCollection | None = None,
     dlnz: float = 0.5,
     dfac: float = 1.0,
     threshold_abs: float = 1e-4,
@@ -207,9 +213,8 @@ def get_lnz_max(
     ref = ref or build_phases.phase_creator.ref
 
     if ref is None:
-        raise ValueError(
-            "must specify `ref` or build_phases must have access to reference lnPiMasked object"
-        )
+        msg = "must specify `ref` or build_phases must have access to reference lnPiMasked object"
+        raise ValueError(msg)
 
     lnz_idx = build_phases.index
     lnz_start = lnz_start or ref.lnz[lnz_idx]
@@ -227,25 +232,25 @@ def get_lnz_max(
             v = v.unstack(p._concat_dim)
         return v.min("phase")
 
-    # if have C, try to use it
-    if C is not None:
-        # see if bound contained in C
+    # if have collection, try to use it
+    if collection is not None:
+        # see if bound contained in collection
 
-        s = getter(C).to_series()
+        s = getter(collection).to_series()
 
         # left
         ss = s[s > edge_distance_min]
         if len(ss) > 0:
-            left = C.mloc[ss.index[[-1]]]
+            left = collection.mloc[ss.index[[-1]]]
         else:
-            lnz_left = C.zloc[[0]]._get_lnz(lnz_idx)
+            lnz_left = collection.zloc[[0]]._get_lnz(lnz_idx)
 
         # right
         ss = s[s < edge_distance_min]
         if len(ss) > 0:
-            right = C.mloc[ss.index[[0]]]
+            right = collection.mloc[ss.index[[0]]]
         else:
-            lnz_right = C.zloc[[-1]]._get_lnz(lnz_idx)
+            lnz_right = collection.zloc[[-1]]._get_lnz(lnz_idx)
 
     # if left not set, try to find it
     if left is None:
@@ -263,7 +268,8 @@ def get_lnz_max(
             dlnz_loc *= dfac
 
     if left is None:
-        raise RuntimeError("could not find left bound")
+        msg = "could not find left bound"
+        raise RuntimeError(msg)
 
     # if right not set, try to find it
     if right is None:
@@ -283,14 +289,15 @@ def get_lnz_max(
             dlnz_loc *= dfac
 
     if right is None:
-        raise RuntimeError("could not find right bound")
+        msg = "could not find right bound"
+        raise RuntimeError(msg)
 
     # not do bisection
-    P = [left, right]
-    Y = [getter(x).values for x in P]
+    bracket = [left, right]
+    values = [getter(x).values for x in bracket]
 
-    for i in range(ntry):
-        lnz = [x._get_lnz(lnz_idx) for x in P]
+    for i in range(ntry):  # noqa: B007
+        lnz = [x._get_lnz(lnz_idx) for x in bracket]
         delta = np.abs(lnz[1] - lnz[0])
         if delta < threshold_abs:
             break
@@ -298,215 +305,18 @@ def get_lnz_max(
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
         y_mid = getter(mid).values
 
-        if y_mid >= edge_distance_min:
-            index = 0
-        else:
-            index = 1
+        index = 0 if y_mid >= edge_distance_min else 1
 
-        P[index] = mid
-        Y[index] = y_mid
+        bracket[index] = mid
+        values[index] = y_mid
 
-    left, right = P
+    left, right = bracket
 
-    info = dict(ntry=i, ntry_left=n_left, ntry_right=n_right, precision=delta)
+    info = {"ntry": i, "ntry_left": n_left, "ntry_right": n_right, "precision": delta}
     return left, info
 
 
-# class _BaseLimit:
-#     _bound_side = None  # -1 for lower bound, +1 for upper bound
-
-#     def __init__(self, parent):
-#         self._parent = parent
-
-#     @property
-#     def parent(self):
-#         return self._parent
-
-#     def __call__(self, *args, **kwargs):
-#         raise NotImplementedError("to be implemented in subclass")
-
-#     @property
-#     def lnz_idx(self):
-#         return self._lnz_idx
-
-#     @lnz_idx.setter
-#     def lnz_idx(self, i):
-#         self._lnz_idx = i
-
-#     @property
-#     def access(self):
-#         return self._access
-
-#     @access.setter
-#     def access(self, val):
-#         if not isinstance(val, lnPiCollection):
-#             raise ValueError("access should be lnPiCollection")
-#         self._access = val
-
-#     def _get_bound(self, sign, access=None, lnz_idx=None):
-#         if access is None:
-#             access = self.access
-#         if lnz_idx is None:
-#             lnz_idx = self.lnz_idx
-#         if sign == self._bound_side:
-#             return access._get_lnz(lnz_idx)
-#         else:
-#             return sign * np.inf
-
-#     def get_bounds(self, access=None, lnz_idx=None):
-#         return np.array(
-#             [
-#                 self._get_bound(sign=sign, access=access, lnz_idx=lnz_idx)
-#                 for sign in [-1, +1]
-#             ]
-#         )
-
-#     @property
-#     def bounds(self):
-#         return self._bounds
-
-#     @bounds.setter
-#     def bounds(self, bounds):
-#         assert len(bounds) == 2
-#         self._bounds = np.array(bounds)
-
-#     def set_bounds(self, access=None, lnz_idx=None):
-#         self.bounds = self.get_bounds(access=access, lnz_idx=lnz_idx)
-
-#     @property
-#     def lb(self):
-#         return self.bounds[0]
-
-#     @property
-#     def ub(self):
-#         return self.bounds[1]
-
-#     @property
-#     def lnz_list(self):
-#         return self._lnz_list
-
-#     def get_lnz_list(self, lnz=None, lnz_idx=None):
-#         if lnz is None:
-#             lnz = self.access.iloc[0].lnz
-#         if lnz_idx is None:
-#             lnz_idx = self.lnz_idx
-#         lnz = list(lnz)
-#         lnz[lnz_idx] = None
-#         return lnz
-
-#     def set_lnz_list(self, lnz=None, lnz_idx=None):
-#         self._lnz_list = self.get_lnz_list(lnz, lnz_idx)
-
-
-# @lnPiCollection.decorate_accessor("bounds_lower", single_create=True)
-# class LowerBounds(_BaseLimit):
-#     """Class to hold lower bounds."""
-
-#     _bound_side = -1
-
-#     def __call__(
-#         self,
-#         dens_min,
-#         build_phases,
-#         phase_id=0,
-#         component=None,
-#         dlnz=0.5,
-#         dfac=1.0,
-#         ref=None,
-#         build_kws=None,
-#         ntry=20,
-#         solve_kws=None,
-#         inplace=True,
-#         force=False,
-#     ):
-#         if hasattr(self, "_access") and not force:
-#             p = self.access
-#             info = self._info
-#             lnz_idx = self.lnz_idx
-#             bounds = self.bounds
-
-#         else:
-#             lnz_idx = build_phases.index
-#             p, info = get_lnz_min(
-#                 target=dens_min,
-#                 C=self._parent,
-#                 build_phases=build_phases,
-#                 phase_id=phase_id,
-#                 component=component,
-#                 dlnz=dlnz,
-#                 dfac=1.0,
-#                 ref=ref,
-#                 build_kws=build_kws,
-#                 ntry=ntry,
-#                 solve_kws=solve_kws,
-#             )
-
-#             bounds = self.get_bounds(p, lnz_idx)
-
-#         if inplace:
-#             self.access = p
-#             self._info = info
-#             self.lnz_idx = lnz_idx
-#             self.bounds = bounds
-#             self.set_lnz_list()
-#         else:
-#             return bounds, p, lnz_idx, info
-
-
-# @lnPiCollection.decorate_accessor("bounds_upper", single_create=True)
-# class UpperBounds(_BaseLimit):
-#     """Class to hold upper bounds."""
-
-#     _bound_side = +1
-
-#     def __call__(
-#         self,
-#         edge_distance_min,
-#         build_phases,
-#         ref=None,
-#         lnz_start=None,
-#         dlnz=0.5,
-#         dfac=1.0,
-#         threshold_abs=1e-4,
-#         ntry=20,
-#         build_kws=None,
-#         inplace=True,
-#         force=False,
-#     ):
-#         if hasattr(self, "_access") and not force:
-#             p = self.access
-#             info = self._info
-#             lnz_idx = self.lnz_idx
-#             bounds = self.bounds
-
-#         else:
-#             lnz_idx = build_phases.index
-#             p, info = get_lnz_max(
-#                 edge_distance_min=edge_distance_min,
-#                 C=self._parent,
-#                 build_phases=build_phases,
-#                 lnz_start=None,
-#                 dlnz=dlnz,
-#                 dfac=1.0,
-#                 threshold_abs=threshold_abs,
-#                 ntry=ntry,
-#                 ref=ref,
-#                 build_kws=build_kws,
-#                 full_output=True,
-#             )
-#             bounds = self.get_bounds(p, lnz_idx)
-
-#         if inplace:
-#             self.access = p
-#             self._info = info
-#             self.lnz_idx = lnz_idx
-#             self.bounds = bounds
-#             self.set_lnz_list()
-#         else:
-#             return bounds, p, lnz_idx, info
-
-
-def build_grid(
+def build_grid(  # noqa: C901
     x: ArrayLike | MyNDArray | None = None,
     dx: float | None = None,
     x_range: Sequence[float] | MyNDArray | None = None,
@@ -548,17 +358,13 @@ def build_grid(
 
     if x is None:
         if (dx is None) or (x_range is None and offsets is None):
-            raise ValueError(
-                "must specify dx and one of x_range or offsets if not passing x"
-            )
+            msg = "must specify dx and one of x_range or offsets if not passing x"
+            raise ValueError(msg)
 
-        if x_range is None:
-            x_range = x0 + np.array(offsets)
-        else:
-            x_range = np.asarray(x_range)
+        x_range = x0 + np.array(offsets) if x_range is None else np.asarray(x_range)
         assert len(x_range) == 2
 
-        # for consistancy with previous code.
+        # for consistency with previous code.
         if even_grid:
             new_range = np.round(x_range / dx) * dx
             if new_range[0] < x_range[0]:
@@ -566,7 +372,7 @@ def build_grid(
             if new_range[1] > x_range[1]:
                 new_range[1] -= dx
             x_range = new_range
-        x = np.arange(x_range[0], x_range[1] + dx * 0.5, dx)  # type: ignore
+        x = np.arange(x_range[0], x_range[1] + dx * 0.5, dx)  # type: ignore[index]
     else:
         x = np.asarray(x)
 
@@ -578,18 +384,18 @@ def build_grid(
         x = np.round(x / dx) * dx
 
     if digits is not None:
-        x = np.round(x, digits)  # type: ignore
+        x = np.round(x, digits)  # type: ignore[arg-type]
 
     if unique:
-        x = np.unique(x)  # type: ignore
+        x = np.unique(x)  # type: ignore[arg-type]
 
     if not outlier:
-        x = x[(lb <= x) & (x <= ub)]  # type: ignore
+        x = x[(lb <= x) & (x <= ub)]  # type: ignore[index]
 
-    return x  # type: ignore
+    return x  # type: ignore[return-value]
 
 
-def limited_collection(
+def limited_collection(  # noqa: C901,PLR0912,PLR0913,PLR0917
     build_phases: BuildPhasesBase,
     dlnz: float,
     lnz_range: Sequence[float] | MyNDArray | None = None,
@@ -603,7 +409,7 @@ def limited_collection(
     lnz_max_kws: Mapping[str, Any] | None = None,
     ref: lnPiMasked | None = None,
     build_kws: Mapping[str, Any] | None = None,
-    build_stability_kws: Mapping[str, Any] | None = None,
+    # build_stability_kws: Mapping[str, Any] | None = None,
     nmax: int | None = None,
     xarray_output: bool = True,
     collection_kws: Mapping[str, Any] | None = None,
@@ -620,14 +426,13 @@ def limited_collection(
     if lnz_range is None:
         ref = ref or build_phases.phase_creator.ref
         if ref is None:
-            raise ValueError(
-                "Must pass in ref or build_phases must have access to reference lnPiMasked object"
-            )
+            msg = "Must pass in ref or build_phases must have access to reference lnPiMasked object"
+            raise ValueError(msg)
         x0 = ref.lnz[build_phases.index]
     else:
         x0 = None
 
-    # TODO: update tests to get rid of outlier=True
+    # TODO: update tests to get rid of outlier=True  # noqa: TD002
     lnzs = build_grid(
         dx=dlnz,
         x_range=lnz_range,
@@ -665,7 +470,7 @@ def limited_collection(
                 )
                 if o["converged"]:
                     lnz_min = p_min.iloc[0].lnz[build_phases.index] - dlnz
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         if edge_distance_min is not None:
@@ -676,11 +481,11 @@ def limited_collection(
                     edge_distance_min,
                     build_phases,
                     build_kws=build_kws,
-                    C=c_course,
+                    collection=c_course,
                     **lnz_max_kws,
                 )
                 lnz_max = p_max.iloc[0].lnz[build_phases.index]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]
