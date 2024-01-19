@@ -258,24 +258,12 @@ project = "tmmc-lnpy"
 copyright = "2015, William P. Krekelberg"  # noqa: A001
 author = "William P. Krekelberg"
 
+
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
 # the built documents.
 #
 # The short X.Y version.
-# versioning with scm with editable install has issues.
-# instead, try to use scm if available.
-# try:
-#     from setuptools_scm import get_version
-
-#     version = get_version(root="..", relative_to=__file__)
-#     release = version
-# except ImportError:
-#     version = lnpy.__version__
-#     # The full version, including alpha/beta/rc tags.
-#     release = lnpy.__version__
-
-
 def _get_version() -> str:
     if (version := os.environ.get("SETUPTOOLS_SCM_PRETEND_VERSION")) is None:
         version = lnpy.__version__
@@ -362,7 +350,7 @@ def get_ipython_savefig_dir() -> str:
     d = Path(__file__).parent / "_build" / "html" / "_static"
     if not d.is_dir():
         d.mkdir(parents=True)
-    return d
+    return str(d)
 
 
 ipython_savefig_dir = get_ipython_savefig_dir()
