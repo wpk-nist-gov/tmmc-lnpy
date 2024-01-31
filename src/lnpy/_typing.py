@@ -35,7 +35,7 @@ __all__ = [
     "T",
     "T_Element",
     "T_Ensemble",
-    "T_SeriesWrapper",
+    # "T_SeriesWrapper",
     "TagPhasesSignature",
     "xArrayLike",
 ]
@@ -78,8 +78,9 @@ T_Element = TypeVar("T_Element", bound="lnpy.lnpidata.lnPiMasked")
 """TypeVar for element of lnpy.lnpiseries.SeriesWrapper."""
 
 # T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper[T_Element]")
-T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper")  # type: ignore[type-arg]
-"""TypeVar for lnpy.lnpiseries.SeriesWrapper"""
+# T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper")  # type: ignore[type-arg]
+# T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper[T_Element]")
+# """TypeVar for lnpy.lnpiseries.SeriesWrapper"""
 
 # Segmentation stuff
 PeakStyle = Literal["indices", "mask", "marker"]
