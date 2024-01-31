@@ -54,7 +54,7 @@ def json_to_dict(basename: str) -> dict[str, Any]:
     else:
         fopen = open  # type: ignore[assignment]
 
-    with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:
+    with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:  # pyright: ignore[reportCallIssue,reportArgumentType]
         return json.load(f)  # type: ignore[no-any-return]
 
 
@@ -104,7 +104,9 @@ def load_example_lnpimasked(name: _ExampleNames) -> lnPiMasked:
         "watermof": "json",
     }
 
-    assert name in extensions
+    if name not in extensions:
+        msg = f"{name=} not in {extensions=}"
+        raise ValueError(msg)
 
     basename = f"{name}_example.{extensions[name]}"
 

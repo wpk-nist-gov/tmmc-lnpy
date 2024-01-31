@@ -104,7 +104,10 @@ class lnPiArray:  # noqa: N801
 
         lnz = np.atleast_1d(lnz)
         data = np.array(data, copy=copy)
-        assert data.ndim == len(lnz)
+        # assert data.ndim == len(lnz)
+        if data.ndim != len(lnz):
+            msg = f"Length of {lnz=} must be {data.ndim}"
+            raise ValueError(msg)
 
         fill_value = fill_value or np.nan
 
@@ -270,14 +273,19 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         copy: bool = False,
     ) -> None:
         lnz = np.atleast_1d(lnz)
-        assert lnz.shape == base.lnz.shape
+        # assert lnz.shape == base.lnz.shape
+        if lnz.shape != base.lnz.shape:
+            msg = f"{lnz.shape=} must be {base.lnz.shape}"
+            raise ValueError(msg)
 
         if mask is None:
             mask = np.full(base.data.shape, fill_value=False, dtype=bool)
         else:
             mask = np.array(mask, copy=copy, dtype=bool)
-        assert mask.shape == base.data.shape
-
+        # assert mask.shape == base.data.shape
+        if mask.shape != base.data.shape:
+            msg = f"{mask.shape=} must be {base.data.shape}."
+            raise ValueError(msg)
         self._mask = mask
         # make mask read-only
         self._mask.flags.writeable = False

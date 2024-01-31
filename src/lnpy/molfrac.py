@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .segment import BuildPhasesBase
 
 
-def _initial_bracket_molfrac(  # noqa: C901,PLR0912,PLR0915
+def _initial_bracket_molfrac(
     target: float,
     collection: lnPiCollection,
     build_phases: BuildPhasesBase,
@@ -118,7 +118,7 @@ def _initial_bracket_molfrac(  # noqa: C901,PLR0912,PLR0915
     return left, right, info
 
 
-def _solve_lnz_molfrac(  # noqa: C901
+def _solve_lnz_molfrac(
     target: float,
     left: lnPiCollection | float,
     right: lnPiCollection | float,

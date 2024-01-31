@@ -30,11 +30,11 @@ warn(msg, VisibleDeprecationWarning)
 
 
 __all__ = [
-    "MaskedlnPiDelayed",
     "CollectionlnPi",
-    "segment",
-    "stability",
-    "options",
-    "set_options",
+    "MaskedlnPiDelayed",
     "__version__",
+    "options",
+    "segment",
+    "set_options",
+    "stability",
 ]

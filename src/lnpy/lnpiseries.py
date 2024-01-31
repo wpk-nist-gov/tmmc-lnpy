@@ -73,12 +73,13 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
             base_class = self._base_class
             if isinstance(base_class, str) and base_class.lower() == "first":
                 base_class = type(series.iloc[0])
-            assert not isinstance(base_class, str)
+            if isinstance(base_class, str):
+                raise TypeError
 
             for d in series:
                 if not issubclass(type(d), base_class):
                     msg = f"all elements must be of type {base_class}"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
 
     @property
     def series(self) -> pd.Series[Any]:
@@ -432,7 +433,7 @@ class SeriesWrapper(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
             objs = out
         else:
             msg = f"bad input type {type(objs[0])}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]
 
     def concat_like(
@@ -641,7 +642,7 @@ class _LocIndexer_unstack_zloc(Generic[T_SeriesWrapper, T_Element]):  # noqa: N8
             out = self._parent.new_like(out)
         else:
             msg = "unknown indexer for zloc"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return out  # type: ignore[no-any-return]
 
 
@@ -682,7 +683,7 @@ class _LocIndexer_unstack_mloc(Generic[T_SeriesWrapper, T_Element]):  # noqa: N8
             out = self._parent.new_like(out)
         else:
             msg = "unknown indexer for mloc"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return out  # type: ignore[no-any-return]
 
 
@@ -774,8 +775,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):  # noqa: N801
             # _base  = first._base
 
             for lnpi in series:
-                assert lnpi.state_kws == state_kws
-                assert lnpi.shape == shape
+                if lnpi.state_kws != state_kws or lnpi.shape != shape:
+                    raise ValueError
                 # would like to do this, but
                 # fails for parallel builds
                 # assert lnpi._base is _base
@@ -1096,7 +1097,8 @@ class lnPiCollection(SeriesWrapper[lnPiMasked]):  # noqa: N801
 
         if labels_kws is None:
             labels_kws = {}
-        assert len(labels) == len(lnzs)
+        if len(labels) != len(lnzs):
+            raise ValueError
 
         items = []
         indexes = []

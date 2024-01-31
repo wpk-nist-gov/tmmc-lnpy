@@ -147,7 +147,7 @@ def peak_local_max_adaptive(
 
 
 @docfiller_local
-def peak_local_max_adaptive(  # noqa: C901
+def peak_local_max_adaptive(
     data: MyNDArray,
     *,
     mask: MyNDArray | None = None,
@@ -155,7 +155,7 @@ def peak_local_max_adaptive(  # noqa: C901
     style: PeakStyle | str = "indices",
     threshold_rel: float = 0.0,
     threshold_abs: float = 0.2,
-    num_peaks_max: int | float | None = None,
+    num_peaks_max: float | None = None,
     connectivity: int | None = None,
     errors: PeakError = "warn",
     **kwargs: Any,
@@ -201,7 +201,10 @@ def peak_local_max_adaptive(  # noqa: C901
     from skimage.feature import peak_local_max
     from skimage.morphology import label as morphology_label
 
-    assert style in {"indices", "mask", "marker"}
+    possible_styles = {"indices", "mask", "marker"}
+    if style not in possible_styles:
+        msg = f"{style=} not in {possible_styles}"
+        raise ValueError(msg)
 
     if min_distance is None:
         min_distance = [5, 10, 15, 20, 25]
@@ -491,7 +494,9 @@ class Segmenter:
             else:
                 markers = num_peaks_max
 
-        assert isinstance(markers, (int, np.ndarray))
+        if not isinstance(markers, (int, np.ndarray)):
+            msg = f"{type(markers)=} must be int or np.ndarray"
+            raise TypeError(msg)
 
         if watershed_kws is None:
             watershed_kws = {}
@@ -658,7 +663,7 @@ class PhaseCreator:
         ...
 
     @docfiller_local
-    def build_phases(  # noqa: C901,PLR0912,PLR0913
+    def build_phases(
         self,
         lnz: float | Sequence[float] | ArrayLike | MyNDArray | None = None,
         ref: lnPiMasked | None = None,
@@ -915,7 +920,10 @@ class BuildPhasesBase:
         return self._phase_creator
 
     def _set_x(self, x: list[float | None]) -> None:
-        assert sum([x is None for x in x]) == 1
+        # assert sum([x is None for x in x]) == 1
+        if sum([x is None for x in x]) != 1:
+            msg = f"{x=} must have a single element which is None.  This will be the dimension varied."
+            raise ValueError(msg)
         self._x = x
         self._ncomp = len(self._x)
         self._index = self._x.index(None)

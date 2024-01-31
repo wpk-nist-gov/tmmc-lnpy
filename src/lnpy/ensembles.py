@@ -407,7 +407,9 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         elif allow_extra_kws:
             x = self._get_prop_from_extra_kws(func_or_array)
         else:
-            assert not isinstance(func_or_array, str)
+            # assert not isinstance(func_or_array, str)
+            if isinstance(func_or_array, str):
+                raise TypeError
             x = func_or_array
 
         if not isinstance(x, xr.DataArray):
@@ -577,7 +579,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         # return self.ntot.pipe(lambda x: x / x["volume"])
         return self.ntot / self.volume
 
-    def max(self) -> xr.DataArray:  # noqa: A003
+    def max(self) -> xr.DataArray:
         r""":math:`\max_N \ln \Pi(N)`"""
         return self.lnpi().max(self.dims_n)
 
@@ -604,7 +606,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     def _argmax_indexer_dict(self) -> dict[str, xr.DataArray]:
         if not isinstance(self._parent, lnPiCollection):
             msg = "only implemented for lnPiCollection"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         return {
             k: xr.DataArray(v, dims=self._parent._concat_dim)
@@ -615,7 +617,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     def _sample_indexer_dict(self) -> dict[str, xr.DataArray]:
         if not isinstance(self._parent, lnPiCollection):
             msg = "only implemented for lnPiCollection"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         return {
             self._parent._concat_dim: xr.DataArray(
@@ -680,10 +682,13 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         """
 
         if max_frac is not None:
-            assert max_frac < 1.0
+            if not (0.0 < max_frac < 1.0):
+                msg = f"{max_frac=} outside range (0.0, 1.0)."
+                raise ValueError(msg)
             val = self.pi_norm_max(add_n_coords=False) * max_frac
-        else:
-            assert val is not None
+        elif val is None:
+            msg = "If not passing max_frac, must set `val`"
+            raise TypeError(msg)
 
         e = xr.DataArray(ref.edge_distance_matrix, dims=self.dims_n)
         mask = self.pi_norm > val
@@ -774,7 +779,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
 
         if not isinstance(self._parent, lnPiCollection):
             msg = "only implemented for lnPiCollection"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if not self._xarray_unstack:
             # raise Value'only mask with unstack')
@@ -808,7 +813,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         r"""Potential energy per particle :math:`\overline{PE}/\overline{N}`"""
         return self.PE / self.ntot
 
-    def table(  # noqa: C901, PLR0912
+    def table(
         self,
         keys: str | Sequence[str] | None = None,
         default_keys: str | Sequence[str] | None = ("nvec", "betapV", "PE_n"),
@@ -863,13 +868,11 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         for key in dict.fromkeys(keys):
             try:
                 v = getattr(self, key, None)
-                if v is None:
-                    msg = f"no attribute {key} in self"
-                    raise ValueError(msg)
-                if callable(v):
-                    v = v()
-                out.append(v)
-            except Exception:  # noqa: PERF203, BLE001
+                if v is not None:
+                    if callable(v):
+                        v = v()
+                    out.append(v)
+            except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 
         ds: xr.Dataset = xr.merge(out)
@@ -1169,7 +1172,7 @@ class xCanonical:  # noqa: N801
                 if callable(v):
                     v = v()
                 out.append(v)
-            except Exception:  # noqa: PERF203, BLE001
+            except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 
         ds = xr.merge(out)

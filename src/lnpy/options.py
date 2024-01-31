@@ -4,7 +4,10 @@ Options (:mod:`~lnpy.options`)
 """
 from __future__ import annotations
 
-from typing import Any, Callable, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Callable, TypedDict, cast
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 ValidatorFunc = Callable[[Any], bool]
 
@@ -164,5 +167,10 @@ class set_options:  # noqa: N801
     def __enter__(self) -> None:
         return
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> None:  # noqa: A002
+    def __exit__(
+        self,
+        type: type[BaseException] | None,  # noqa: A002
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         _apply_update(self.old)

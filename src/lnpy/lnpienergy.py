@@ -112,7 +112,7 @@ def find_boundaries_overlap(
 
 
 @docfiller.decorate
-def find_boundaries_overlap(  # noqa: C901
+def find_boundaries_overlap(
     masks: Sequence[MyNDArray],
     *,
     boundaries: list[MyNDArray] | None = None,
@@ -152,12 +152,19 @@ def find_boundaries_overlap(  # noqa: C901
     """
 
     n = len(masks)
-    assert method in {"approx", "exact"}
+    possible_methods = {"approx", "exact"}
+
+    if method not in possible_methods:
+        msg = f"{method=} not in {possible_methods}"
+        raise ValueError(msg)
 
     if boundaries is None:
         boundaries = find_boundaries(masks, mode=mode, connectivity=connectivity)
 
-    assert n == len(boundaries)
+    # assert n == len(boundaries)
+    if n != len(boundaries):
+        msg = "{boundaries=} must have length {n}."
+        raise ValueError(msg)
 
     def _get_approx() -> dict[tuple[int, int], MyNDArray | None]:
         result: dict[tuple[int, int], MyNDArray | None] = {}
