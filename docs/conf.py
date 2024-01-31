@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # python_boilerplate documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
@@ -25,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, Path("../src").resolve())
+sys.path.insert(0, str(Path("../src").resolve()))
 
 import lnpy
 
@@ -124,6 +123,9 @@ nb_execution_mode = "cache"
 nb_kernel_rgx_aliases = {"lnpy.*": "python3", "conda.*": "python3"}
 
 nb_execution_allow_errors = True
+
+# Whether to remove stderr
+nb_output_stderr = "remove"
 
 # - top level variables --------------------------------------------------------
 # set github_username variable to be subbed later.
@@ -255,24 +257,12 @@ project = "tmmc-lnpy"
 copyright = "2015, William P. Krekelberg"  # noqa: A001
 author = "William P. Krekelberg"
 
+
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
 # the built documents.
 #
 # The short X.Y version.
-# versioning with scm with editable install has issues.
-# instead, try to use scm if available.
-# try:
-#     from setuptools_scm import get_version
-
-#     version = get_version(root="..", relative_to=__file__)
-#     release = version
-# except ImportError:
-#     version = lnpy.__version__
-#     # The full version, including alpha/beta/rc tags.
-#     release = lnpy.__version__
-
-
 def _get_version() -> str:
     if (version := os.environ.get("SETUPTOOLS_SCM_PRETEND_VERSION")) is None:
         version = lnpy.__version__
@@ -355,9 +345,14 @@ html_static_path = ["_static"]
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
 # becomes obsolete when we can pin ipython>=5.2; see ci/requirements/doc.yml
-ipython_savefig_dir = Path(__file__).parent / "_build" / "html" / "_static"
-if not ipython_savefig_dir.is_dir():
-    ipython_savefig_dir.mkdir(parents=True)
+def _get_ipython_savefig_dir() -> str:
+    d = Path(__file__).parent / "_build" / "html" / "_static"
+    if not d.is_dir():
+        d.mkdir(parents=True)
+    return str(d)
+
+
+ipython_savefig_dir = _get_ipython_savefig_dir()
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -462,7 +457,7 @@ linkcheck_ignore = [
 
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain: str, info: dict[str, Any]) -> str | None:
-    """Determine the URL corresponding to Python object"""
+    """Determine the URL corresponding to Python object."""
     import inspect
     from operator import attrgetter
 

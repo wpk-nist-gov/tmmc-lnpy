@@ -136,10 +136,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def _lnz_tot(self):
         return self.lnz
 
-    # @property
-    # def _lnpi_0_tot(self):
-    #     return self.data.ravel()[0]
-
     @property
     def lnz(self):
         return self.optinfo.get("lnz", None)
@@ -148,9 +144,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def betamu(self):
         return self.lnz
 
-    # @property
-    # def mu(self):
-    #     return self._optinfo.get('mu', None)
     @property
     def volume(self):
         return self.state_kws.get("volume", None)
@@ -160,7 +153,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         return self.state_kws.get("beta", None)
 
     def __repr__(self) -> str:
-        L = []  # type: ignore[var-annotated]
+        L: list[str] = []
         L.extend(
             (
                 f"lnz={self.lnz!r}",
@@ -534,7 +527,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """
 
         return [
-            self.or_mask(m) for m in masks_change_convention(masks, convention, False)
+            self.or_mask(m)
+            for m in masks_change_convention(masks, convention, False)  # pyright: ignore[reportCallIssue,reportArgumentType]
         ]
 
     def list_from_labels(
@@ -555,7 +549,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
             check_features=check_features,
             **kwargs,
         )
-        return self.list_from_masks(masks, convention=False)
+        return self.list_from_masks(masks, convention=False)  # pyright: ignore[reportArgumentType]
 
     @cached.prop
     def xge(self) -> xGrandCanonical:

@@ -51,7 +51,7 @@ def tag_phases_singlecomp(x: Sequence[lnPiMasked]) -> Sequence[int] | MyNDArray:
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-def get_lnz_min(  # noqa: C901,PLR0912,PLR0915
+def get_lnz_min(
     target: float,
     collection: lnPiCollection,
     build_phases: BuildPhasesBase,
@@ -140,7 +140,9 @@ def get_lnz_min(  # noqa: C901,PLR0912,PLR0915
     if len(ss) > 0:
         left = collection.mloc[ss.index[[-1]]]
     else:
-        new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)
+        # TODO(wpk): Need to make collection work better.  Might need to just have a single class for everything...
+        # reveal_type(collection.mloc[s.index[[0]]])
+        new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
         dlnz_left = dlnz
         for _i in range(ntry):
             new_lnz -= dlnz_left
@@ -160,7 +162,7 @@ def get_lnz_min(  # noqa: C901,PLR0912,PLR0915
     if len(ss) > 0:
         right = collection.mloc[ss.index[[0]]]
     else:
-        new_lnz = collection.mloc[s.index[[-1]]]._get_lnz(lnz_idx)
+        new_lnz = collection.mloc[s.index[[-1]]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
         dlnz_right = dlnz
 
         for _i in range(ntry):
@@ -188,14 +190,14 @@ def get_lnz_min(  # noqa: C901,PLR0912,PLR0915
         f.lnpi = p  # type: ignore[attr-defined]
         return getter(p).values - target
 
-    a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])
+    a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])  # pyright: ignore[reportAttributeAccessIssue]
 
     xx, r = brentq(f, a, b, full_output=True, **(solve_kws or {}))
 
     return f.lnpi, rootresults_to_rootresultdict(r, residual=f(xx))  # type: ignore[attr-defined]
 
 
-def get_lnz_max(  # noqa: C901,PLR0912,PLR0915
+def get_lnz_max(
     edge_distance_min: int,
     build_phases: BuildPhasesBase,
     ref: lnPiMasked | None = None,
@@ -222,9 +224,12 @@ def get_lnz_max(  # noqa: C901,PLR0912,PLR0915
     # need left/right bounds
     # left is greatest lnz point with edge_distance > edge_distance_min
     # right is least lnz point with edge_distance < edge_distance_min
-    left = right = None
-    lnz_left = lnz_right = None
-    n_left = n_right = None
+    left: lnPiCollection | None = None
+    right: lnPiCollection | None = None
+    lnz_left: float | None = None
+    lnz_right: float | None = None
+    n_left: int | None = None
+    n_right: int | None = None
 
     def getter(p: lnPiCollection) -> xr.DataArray:
         v = p.xge.edge_distance(ref)
@@ -243,14 +248,14 @@ def get_lnz_max(  # noqa: C901,PLR0912,PLR0915
         if len(ss) > 0:
             left = collection.mloc[ss.index[[-1]]]
         else:
-            lnz_left = collection.zloc[[0]]._get_lnz(lnz_idx)
+            lnz_left = collection.zloc[[0]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
 
         # right
         ss = s[s < edge_distance_min]
         if len(ss) > 0:
             right = collection.mloc[ss.index[[0]]]
         else:
-            lnz_right = collection.zloc[[-1]]._get_lnz(lnz_idx)
+            lnz_right = collection.zloc[[-1]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
 
     # if left not set, try to find it
     if left is None:
@@ -316,7 +321,7 @@ def get_lnz_max(  # noqa: C901,PLR0912,PLR0915
     return left, info
 
 
-def build_grid(  # noqa: C901
+def build_grid(
     x: ArrayLike | MyNDArray | None = None,
     dx: float | None = None,
     x_range: Sequence[float] | MyNDArray | None = None,
@@ -362,7 +367,8 @@ def build_grid(  # noqa: C901
             raise ValueError(msg)
 
         x_range = x0 + np.array(offsets) if x_range is None else np.asarray(x_range)
-        assert len(x_range) == 2
+        if len(x_range) != 2:
+            raise ValueError
 
         # for consistency with previous code.
         if even_grid:
@@ -380,7 +386,8 @@ def build_grid(  # noqa: C901
         lb, ub = x.min(), x.max()
 
     if even_grid:
-        assert dx is not None
+        if dx is None:
+            raise TypeError
         x = np.round(x / dx) * dx
 
     if digits is not None:
@@ -395,7 +402,7 @@ def build_grid(  # noqa: C901
     return x  # type: ignore[return-value]
 
 
-def limited_collection(  # noqa: C901,PLR0912,PLR0913,PLR0917
+def limited_collection(
     build_phases: BuildPhasesBase,
     dlnz: float,
     lnz_range: Sequence[float] | MyNDArray | None = None,
@@ -470,7 +477,7 @@ def limited_collection(  # noqa: C901,PLR0912,PLR0913,PLR0917
                 )
                 if o["converged"]:
                     lnz_min = p_min.iloc[0].lnz[build_phases.index] - dlnz
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S110
                 pass
 
         if edge_distance_min is not None:
@@ -485,7 +492,7 @@ def limited_collection(  # noqa: C901,PLR0912,PLR0913,PLR0917
                     **lnz_max_kws,
                 )
                 lnz_max = p_max.iloc[0].lnz[build_phases.index]
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001,S110
                 pass
 
     lnzs = lnzs[(lnzs >= lnz_min) & (lnzs <= lnz_max)]

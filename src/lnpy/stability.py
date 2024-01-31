@@ -72,7 +72,7 @@ def _rootresults_to_rootresulttotal(
 
 # ###############################################################################
 # Spinodal routines
-def _initial_bracket_spinodal_right(  # noqa: C901,PLR0912
+def _initial_bracket_spinodal_right(
     collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     idx: int,
@@ -378,7 +378,7 @@ class _SolveSpinodal:
         )
 
 
-def get_spinodal(  # noqa: PLR0913,PLR0917
+def get_spinodal(
     collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     idx: int,
@@ -441,14 +441,17 @@ def get_spinodal(  # noqa: PLR0913,PLR0917
         Info object
 
     """
-    assert len(collection) > 1
+    if len(collection) < 2:
+        raise ValueError
     build_kws = build_kws or {}
     close_kws = close_kws or {}
     solve_kws = solve_kws or {}
 
     step = step or _get_step(collection, idx=idx, idx_nebr=idx_nebr)
 
-    assert step in {-1, +1}
+    if step not in {-1, +1}:
+        msg = f"{step=} must by +/- 1"
+        raise ValueError(msg)
 
     # get initial bracket
     left_initial, right_initial = _initial_bracket_spinodal_right(
@@ -492,8 +495,11 @@ def get_spinodal(  # noqa: PLR0913,PLR0917
         r["bracket_iteration"] = rr["iterations"]
         r["from_solve"] = False
     else:
-        assert left is not None
-        assert right is not None
+        # assert left is not None
+        # assert right is not None
+        if left is None or right is None:
+            msg = f"{left=} and {right=} cannot be None"
+            raise ValueError(msg)
         # solve
         if step == -1:
             left, right = right, left
@@ -581,7 +587,10 @@ class _SolveBinodal:
 
         from scipy.optimize import brentq
 
-        assert len(ids) == 2
+        if len(ids) != 2:
+            msg = f"{ids=} must have length 2."
+            raise ValueError(msg)
+
         self.ids = ids
 
         a, b = min(lnz_min, lnz_max), max(lnz_min, lnz_max)
@@ -748,7 +757,7 @@ class Spinodals(StabilityBase):
     ):
         ...
 
-    def __call__(  # noqa: C901
+    def __call__(
         self,
         phase_ids: int | Iterable[int],
         build_phases: BuildPhasesBase,
@@ -817,7 +826,7 @@ class Spinodals(StabilityBase):
                 "Its likely an instance of `PhaseCreator.builphases`."
                 "Instead, use an instance of `PhaseCreator.buildphases_mu`."
             )
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if isinstance(phase_ids, int):
             phase_ids = list(range(phase_ids))
@@ -881,7 +890,8 @@ class Binodals(StabilityBase):
             spinodals = self._parent.spinodal
 
         def _get_lnz(idx: int) -> float:
-            assert spinodals is not None
+            if spinodals is None:
+                raise ValueError
             s = spinodals[idx]
             if s is None:
                 msg = f"spinodal with index={idx} is None"

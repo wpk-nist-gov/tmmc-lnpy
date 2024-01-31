@@ -21,23 +21,23 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "T_Ensemble",
+    "C_Ensemble",
+    "F",
+    "FuncType",
+    "IndexingInt",
+    "MaskConvention",
+    "MyNDArray",
     "P",
+    "PeakError",
+    "PeakStyle",
+    "PhasesFactorySignature",
     "R",
     "T",
-    "FuncType",
-    "F",
-    "C_Ensemble",
-    "MyNDArray",
-    "IndexingInt",
-    "xArrayLike",
     "T_Element",
+    "T_Ensemble",
     "T_SeriesWrapper",
     "TagPhasesSignature",
-    "PhasesFactorySignature",
-    "MaskConvention",
-    "PeakStyle",
-    "PeakError",
+    "xArrayLike",
 ]
 
 
@@ -68,7 +68,7 @@ IndexingInt: TypeAlias = Union[
 ]
 
 
-xArrayLike: TypeAlias = "ArrayLike | xr.DataArray"  # noqa: N816
+xArrayLike: TypeAlias = "ArrayLike | xr.DataArray"  # noqa: N816, PYI042
 
 IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
 Scalar: TypeAlias = IndexIterScalar

@@ -32,10 +32,10 @@ if TYPE_CHECKING:
 def _get_tqdm() -> ModuleType | None:
     try:
         import tqdm
-
-        return tqdm
     except ImportError:
         return None
+    else:
+        return tqdm
 
 
 @lru_cache
@@ -465,7 +465,8 @@ def labels_to_masks(
 
     elif check_features:
         vals = np.unique(labels)
-        assert np.all([x in vals for x in features])
+        if not np.all([x in vals for x in features]):
+            raise ValueError
 
     convention = _convention_to_bool(convention)
 
@@ -516,8 +517,8 @@ def masks_to_labels(
 
     if features is None:
         features = range(1, len(masks) + 1)
-    else:
-        assert len(features) == len(masks)
+    elif len(features) != len(masks):
+        raise ValueError
 
     labels = np.full(masks[0].shape, fill_value=0, dtype=dtype)
 

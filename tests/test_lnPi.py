@@ -1,9 +1,10 @@
 # mypy: disable-error-code="no-untyped-def, no-untyped-call"
 
-import lnPi
 import numpy as np
 import pandas as pd
 import pytest
+
+import lnPi
 
 
 # get meta data

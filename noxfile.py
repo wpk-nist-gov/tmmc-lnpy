@@ -8,7 +8,9 @@ import sys
 from functools import lru_cache, wraps
 
 # Should only use on python version > 3.10
-assert sys.version_info >= (3, 10)
+if sys.version_info < (3, 10):
+    msg = "python>=3.10 required"
+    raise RuntimeError(msg)
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -180,6 +182,7 @@ class SessionParams(DataclassParser):
     )
     pip_compile_opts: OPT_TYPE = add_option(help="options to pip-compile")
     pip_compile_run: RUN_ANNO = None
+    pip_compile_run_internal: RUN_ANNO = None
 
     # test
     test_no_pytest: bool = False
@@ -273,6 +276,8 @@ def parse_posargs(*posargs: str) -> SessionParams:
 def add_opts(
     func: Callable[[Session, SessionParams], None],
 ) -> Callable[[Session], None]:
+    """Fill in `opts` from cli options."""
+
     @wraps(func)
     def wrapped(session: Session) -> None:
         opts = parse_posargs(*session.posargs)
@@ -288,8 +293,7 @@ def dev(
     session: Session,
     opts: SessionParams,
 ) -> None:
-    """Create development environment using either conda (dev) or virtualenv (dev-venv) in location ~/.venv"""
-
+    """Create development environment using either conda (dev) or virtualenv (dev-venv) in location `.venv`"""
     (
         Installer.from_envname(
             session=session,
@@ -341,7 +345,6 @@ def pyproject2conda(
     session: Session,
 ) -> None:
     """Alias to reqs"""
-
     session.notify("requirements")
 
 
@@ -356,7 +359,6 @@ def requirements(
 
     These will be placed in the directory "./requirements".
     """
-
     runner = Installer(
         session=session,
         pip_deps="pyproject2conda>=0.11.0",
@@ -386,7 +388,6 @@ def conda_lock(
     opts: SessionParams,
 ) -> None:
     """Create lock files using conda-lock."""
-
     (
         Installer(
             session=session,
@@ -463,8 +464,12 @@ def pip_compile(
     session: Session,
     opts: SessionParams,
 ) -> None:
-    """Run pip-compile."""
+    """
+    Run pip-compile.
 
+    Note that this session is also used to run pip-sync with correct python version for
+    tests/typing/etc.
+    """
     runner = Installer(
         session=session,
         pip_deps=["pip-tools"],
@@ -474,6 +479,10 @@ def pip_compile(
     if opts.pip_compile_run:
         # run commands and exit
         runner.run_commands(opts.pip_compile_run)
+        return
+
+    if opts.pip_compile_run_internal:
+        runner.run_commands(opts.pip_compile_run_internal, external=False)
         return
 
     options = opts.pip_compile_opts or []
@@ -500,7 +509,10 @@ def pip_compile(
         envs = envs_all
 
     for env in envs:
-        assert isinstance(session.python, str)
+        if not isinstance(session.python, str):
+            msg = "session.python must be a string"
+            raise TypeError(msg)
+
         reqspath = infer_requirement_path(env, ext=".txt", check_exists=False)
         if not reqspath.is_file():
             if env in envs_dev_optional:
@@ -596,6 +608,7 @@ nox.session(name="test-conda", **CONDA_ALL_KWS)(test)
 @nox.session(name="test-notebook", **DEFAULT_KWS)
 @add_opts
 def test_notebook(session: nox.Session, opts: SessionParams) -> None:
+    """Run pytest --nbval."""
     (
         Installer.from_envname(
             session=session,
@@ -636,6 +649,7 @@ def coverage(
     session: Session,
     opts: SessionParams,
 ) -> None:
+    """Run coverage."""
     runner = Installer(
         session=session,
         pip_deps="coverage[toml]",
@@ -670,7 +684,6 @@ def testdist(
     session: Session,
 ) -> None:
     """Test conda distribution."""
-
     opts = parse_posargs(*session.posargs)
 
     install_str = PACKAGE_NAME
@@ -713,7 +726,9 @@ def docs(
     opts: SessionParams,
 ) -> None:
     """
-    Runs make in docs directory. For example, 'nox -s docs -- +d html'
+    Run `make` in docs directory.
+
+    For example, 'nox -s docs -- +d html'
     calls 'make -C docs html'. With 'release' option, you can set the
     message with 'message=...' in posargs.
     """
@@ -800,7 +815,7 @@ def lint(
 
 # ** type checking
 @add_opts
-def typing(  # noqa: C901
+def typing(
     session: nox.Session,
     opts: SessionParams,
 ) -> None:
@@ -887,7 +902,7 @@ def build(session: nox.Session, opts: SessionParams) -> None:
 
     for cmd in opts.build or ["build"]:
         if cmd == "version":
-            session.run("python", "-m", "setuptools_scm")
+            session.run("python", "-m", "hatchling", "version")
 
         elif cmd == "build":
             if Path(outdir := opts.build_outdir).exists():
@@ -902,7 +917,9 @@ def build(session: nox.Session, opts: SessionParams) -> None:
 
             out = session.run(*args, silent=opts.build_silent)
             if opts.build_silent:
-                assert isinstance(out, str)
+                if not isinstance(out, str):
+                    msg = "session.run output not a string"
+                    raise ValueError(msg)
                 session.log(out.strip().split("\n")[-1])
 
 
@@ -922,7 +939,6 @@ def get_package_wheel(
     Should be straightforward to extend this to isolated builds
     that depend on python version (something like have session build-3.11 ....)
     """
-
     dist_location = Path(session.cache_dir) / "dist"
     if reuse and getattr(get_package_wheel, "_called", False):
         session.log("Reuse isolated build")
@@ -958,7 +974,6 @@ def get_package_wheel(
 @add_opts
 def publish(session: nox.Session, opts: SessionParams) -> None:
     """Publish the distribution"""
-
     (
         Installer(session=session, pip_deps="twine", update=opts.update)
         .install_all(log_session=opts.log_session)
@@ -1048,6 +1063,7 @@ def conda_recipe(
 @nox.session(name="conda-build", **CONDA_DEFAULT_KWS)
 @add_opts
 def conda_build(session: nox.Session, opts: SessionParams) -> None:
+    """Run `conda mambabuild`."""
     runner = Installer.from_envname(
         session=session,
         update=opts.update,
@@ -1090,7 +1106,6 @@ def conda_build(session: nox.Session, opts: SessionParams) -> None:
 @add_opts
 def cog(session: nox.Session, opts: SessionParams) -> None:
     """Run cog."""
-
     Installer.from_envname(
         session=session,
         update=opts.update,
@@ -1100,9 +1115,8 @@ def cog(session: nox.Session, opts: SessionParams) -> None:
 
 
 # * Utilities -------------------------------------------------------------------------
-def _create_doc_examples_symlinks(session: nox.Session, clean: bool = True) -> None:  # noqa: C901
+def _create_doc_examples_symlinks(session: nox.Session, clean: bool = True) -> None:
     """Create symlinks from docs/examples/*.md files to /examples/usage/..."""
-
     import os
 
     def usage_paths(path: Path) -> Iterator[Path]:
@@ -1118,7 +1132,9 @@ def _create_doc_examples_symlinks(session: nox.Session, clean: bool = True) -> N
     ) -> Path:
         path = Path(prefix_dir) / Path(usage_path)
 
-        assert all(ext.startswith(".") for ext in exts)
+        if not all(ext.startswith(".") for ext in exts):
+            msg = "Bad extensions.  Should start with '.'"
+            raise ValueError(msg)
 
         if path.exists():
             return path

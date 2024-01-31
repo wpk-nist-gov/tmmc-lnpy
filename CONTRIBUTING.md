@@ -503,7 +503,6 @@ like to install them in the development environment instead, use the
 
 Additional tools are:
 
-- [pip-tools]
 - [pre-commit]
 - [scriv]
 - [nbqa]
@@ -515,7 +514,6 @@ Additional tools are:
 These are setup using the following:
 
 ```console
-condax/pipx install pip-tools
 condax/pipx install pre-commit
 pipx install scriv
 condax/pipx install nbqa
@@ -529,11 +527,11 @@ condax/pipx install cogapp
 
 ## Package version
 
-[setuptools_scm]: https://github.com/pypa/setuptools_scm
+[hatch-vcs]: https://github.com/ofek/hatch-vcs
 
-Versioning is handled with [setuptools_scm]. The package version is set by the
-git tag. For convenience, you can override the version with nox setting
-`--version ...`. This is useful for updating the docs, etc.
+Versioning is handled with [hatch-vcs]. The package version is set by the git
+tag. For convenience, you can override the version with nox setting
+`++version ...`. This is useful for updating the docs, etc.
 
 Note that the version in a given environment/session can become stale. The
 easiest way to update the installed package version version is to reinstall the

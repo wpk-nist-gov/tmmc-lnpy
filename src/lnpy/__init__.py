@@ -37,15 +37,15 @@ __email__ = "wpk@nist.gov"
 
 
 __all__ = [
+    "OPTIONS",
+    "PhaseCreator",
     "__author__",
     "__email__",
     "__version__",
-    "lnPiMasked",
-    "lnPiCollection",
-    "segment",
     "ensembles",
+    "lnPiCollection",
+    "lnPiMasked",
     "lnpienergy",
-    "PhaseCreator",
+    "segment",
     "set_options",
-    "OPTIONS",
 ]
