@@ -12,6 +12,7 @@ import numpy as np
 import xarray as xr
 from module_utilities import cached
 
+from ._compat import xr_dot
 from .lnpidata import lnPiMasked
 from .lnpiseries import lnPiCollection
 from .utils import dim_to_suffix_dataset
@@ -202,11 +203,6 @@ def xr_name(
         return wrapper
 
     return decorator
-
-
-# def xge_accessor(parent: HasCache) -> xGrandCanonical:
-#     """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
-#     return xGrandCanonical(parent)
 
 
 class xGrandCanonical:  # noqa: PLR0904,N801
@@ -417,7 +413,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         return x
 
     def _mean_pi(self, x: xr.DataArray, **kwargs: Any) -> xr.DataArray:  # noqa: ARG002
-        return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
+        return xr_dot(self.pi_norm, x, dim=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
 
     @xr_name()
     def mean_pi(
@@ -526,7 +522,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
             y = self._array_or_callable_to_xarray(x, **kwargs)
             yy = y - self._mean_pi(y)
 
-        return xr.dot(self.pi_norm, xx, yy, dims=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
+        return xr_dot(self.pi_norm, xx, yy, dim=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
 
     def pipe(self, func: Callable[..., R], *args: Any, **kwargs: Any) -> R:
         """Apply function to `self`"""
@@ -906,8 +902,8 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         r"""Scaled Gibbs free energy :math:`\beta G = \sum_i \beta \mu_i \overline{N}_i`."""
         # return self.betamu.pipe(lambda betamu: (betamu * self.nvec).sum(betamu.dims_comp))
         # return (self.betamu * self.nvec).sum(self.dims_comp)
-        return xr.dot(  # type: ignore[no-any-return]
-            self.betamu, self.nvec, dims=self.dims_comp, **self._xarray_dot_kws
+        return xr_dot(  # type: ignore[no-any-return]
+            self.betamu, self.nvec, dim=self.dims_comp, **self._xarray_dot_kws
         )
 
     @property

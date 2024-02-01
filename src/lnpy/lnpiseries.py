@@ -6,7 +6,7 @@ Collection of lnPi objects (:mod:`~lnpy.lnpiseries`)
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Generic, overload
+from typing import TYPE_CHECKING, overload
 from warnings import warn
 
 import numpy as np
@@ -14,10 +14,8 @@ import pandas as pd
 import xarray as xr
 from module_utilities import cached
 
-from ._typing import T_Element
 from .docstrings import docfiller
 from .extensions import AccessorMixin
-from .lnpidata import lnPiMasked
 
 # lazy loads
 from .utils import get_tqdm_build as get_tqdm
@@ -39,488 +37,34 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, DTypeLike
     from pandas.core.groupby.generic import SeriesGroupBy
-    from typing_extensions import Self
 
     from . import ensembles, lnpienergy, stability
     from ._typing import IndexingInt, MyNDArray, Scalar
-
-
-# class _SeriesWrapper(AccessorMixin, Generic[T_Element]):
-#     """wrap object in series"""
-
-#     def _init_series(
-#         self,
-#         data: Sequence[T_Element],
-#         index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
-#         dtype: DTypeLike | None = None,
-#         name: Hashable | None = None,
-#         base_class: str | type = "first",
-#     ) -> None:
-#         if isinstance(data, self.__class__):
-#             x = data
-#             data = x.s
-
-#         self._base_class = base_class
-#         self._verify = self._base_class is not None
-
-#         series = pd.Series(data=data, index=index, dtype=dtype, name=name)  # type: ignore[misc,arg-type]
-#         self._verify_series(series)
-#         self._series = series
-#         self._cache: dict[str, Any] = {}
-
-#     def _verify_series(self, series: pd.Series[Any]) -> None:
-#         if self._verify:
-#             base_class = self._base_class
-#             if isinstance(base_class, str) and base_class.lower() == "first":
-#                 base_class = type(series.iloc[0])
-#             if isinstance(base_class, str):
-#                 raise TypeError
-
-#             for d in series:
-#                 if not issubclass(type(d), base_class):
-#                     msg = f"all elements must be of type {base_class}"
-#                     raise TypeError(msg)
-
-#     @property
-#     def series(self) -> pd.Series[Any]:
-#         """View of the underlying :class:`pandas.Series`"""
-#         return self._series
-
-#     @series.setter
-#     def series(self, series: pd.Series[Any]) -> None:
-#         self._cache = {}
-#         self._verify_series(series)
-#         self._series = series
-
-#     @property
-#     def s(self) -> pd.Series[Any]:
-#         """Alias to :meth:`series`"""
-#         return self.series
-
-#     def __iter__(self) -> Iterator[T_Element]:
-#         return iter(self._series)
-
-#     @property
-#     def values(self) -> MyNDArray:
-#         """Series values"""
-#         return self._series.values  # type: ignore[return-value]
-
-#     @property
-#     def items(self) -> MyNDArray:
-#         """Alias to :attr:`values`"""
-#         return self.values
-
-#     @property
-#     def index(self) -> pd.Index[Any]:
-#         """Series index"""
-#         return self._series.index
-
-#     @property
-#     def name(self) -> Hashable:
-#         """Series name"""
-#         return self._series.name
-
-#     def copy(self) -> Self:
-#         return type(self)(data=self.s, base_class=self._base_class)
-
-#     def new_like(
-#         self,
-#         data: Sequence[T_Element] | pd.Series[Any] | None = None,
-#         index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
-#         **kwargs: Any,
-#     ) -> Self:
-#         """Create new object with optional new data/index"""
-#         if data is None:
-#             data = self.s
-
-#         return type(self)(
-#             data=data,
-#             index=index,
-#             dtype=self.s.dtype,  # type: ignore[arg-type]
-#             name=self.s.name,
-#             base_class=self._base_class,
-#             **kwargs,
-#         )
-
-#     def _wrapped_pandas_method(
-#         self, mtd: str, wrap: bool = False, *args: Any, **kwargs: Any
-#     ) -> T_Element | pd.Series[Any] | Self:
-#         """Wrap a generic pandas method to ensure it returns a GeoSeries"""
-#         val = getattr(self._series, mtd)(*args, **kwargs)
-#         if wrap and type(val) == pd.Series:
-#             val = self.new_like(val)
-#         return val  # type: ignore[no-any-return]
-
-#     def __getitem__(self, key: Any) -> Self | T_Element:
-#         """Interface to :meth:`pandas.Series.__getitem__`"""
-#         return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)  # type: ignore[return-value]
-
-#     def xs(
-#         self,
-#         key: Hashable | Sequence[Hashable],
-#         axis: int = 0,
-#         level: Hashable | Sequence[Hashable] | None = None,
-#         drop_level: bool = False,
-#         wrap: bool = True,
-#     ) -> Self | pd.Series[Any] | T_Element:
-#         """Interface to :meth:`pandas.Series.xs`"""
-#         return self._wrapped_pandas_method(
-#             "xs", wrap=wrap, key=key, axis=axis, level=level, drop_level=drop_level
-#         )
-
-#     def __setitem__(
-#         self, idx: Any, values: T_Element | Sequence[T_Element] | pd.Series[Any]
-#     ) -> None:
-#         """Interface to :meth:`pandas.Series.__setitem__`"""
-#         self._series[idx] = values
-
-#     def __repr__(self) -> str:
-#         return f"<class {self.__class__.__name__}>\n{self.s!r}"
-
-#     def __str__(self) -> str:
-#         return str(self.s)
-
-#     def __len__(self) -> int:
-#         return len(self.s)
-
-#     def append(
-#         self,
-#         to_append: pd.Series[Any] | Self,
-#         ignore_index: bool = False,
-#         verify_integrity: bool = True,
-#         concat_kws: Mapping[str, Any] | None = None,
-#         inplace: bool = False,
-#     ) -> Self:
-#         """
-#         Interface to :func:`pandas.concat`
-
-
-#         Parameters
-#         ----------
-#         to_append : object
-#             Object to append
-#         ignore_index : bool, default=False
-#         verify_integrity : bool, default=True
-#         concat_kws : mapping, optional
-#             Extra arguments to
-#         inplace : bool, default=False
-
-#         See Also
-#         --------
-#         pandas.concat
-#         """
-#         if hasattr(to_append, "series") and isinstance(to_append.series, pd.Series):
-#             series = to_append.series
-#         elif isinstance(to_append, pd.Series):
-#             series = to_append
-#         else:
-#             msg = f"Unknown to append type={type(to_append)}"
-#             raise ValueError(msg)
-
-#         if concat_kws is None:
-#             concat_kws = {}
-
-#         s = pd.concat(
-#             (self.series, series),
-#             ignore_index=ignore_index,
-#             verify_integrity=verify_integrity,
-#             **concat_kws,
-#         )
-
-#         if inplace:
-#             self.series = s
-#             return self
-
-#         return self.new_like(s)
-
-#     def droplevel(self, level: int | Hashable | Sequence[int | Hashable]) -> Self:
-#         """
-#         New object with dropped level
-
-#         See Also
-#         --------
-#         pandas.Series.droplevel
-#         """
-#         return self.new_like(self._series.droplevel(level=level, axis=0))  # type: ignore[arg-type,unused-ignore]
-
-#     def apply(
-#         self,
-#         func: Callable[..., Any],
-#         convert_dtype: bool = True,
-#         args: tuple[Any, ...] = (),
-#         wrap: bool = False,
-#         **kwds: Any,
-#     ) -> Self | pd.Series[Any]:
-#         """Interface to :meth:`pandas.Series.apply`"""
-
-#         return self._wrapped_pandas_method(  # type: ignore[return-value]
-#             "apply",
-#             wrap=wrap,
-#             func=func,
-#             convert_dtype=convert_dtype,
-#             args=args,
-#             **kwds,
-#         )
-
-#     def sort_index(self, *args: Any, **kwargs: Any) -> Self:
-#         """Interface to :meth:`pandas.Series.sort_index`"""
-#         return self._wrapped_pandas_method("sort_index", *args, wrap=True, **kwargs)  # type: ignore[misc,return-value]
-
-#     @overload
-#     def groupby(
-#         self,
-#         by: Hashable | Sequence[Hashable] = ...,
-#         *,
-#         level: int | Hashable | Sequence[int | Hashable] | None = ...,
-#         as_index: bool = ...,
-#         sort: bool = ...,
-#         group_keys: bool = ...,
-#         observed: bool = ...,
-#         dropna: bool = ...,
-#         wrap: Literal[False] = ...,
-#     ) -> SeriesGroupBy[Any, Any]:
-#         ...
-
-#     @overload
-#     def groupby(
-#         self,
-#         by: Hashable | Sequence[Hashable] = ...,
-#         *,
-#         level: int | Hashable | Sequence[int | Hashable] | None = ...,
-#         as_index: bool = ...,
-#         sort: bool = ...,
-#         group_keys: bool = ...,
-#         observed: bool = ...,
-#         dropna: bool = ...,
-#         wrap: Literal[True],
-#     ) -> _Groupby[T_Element]:
-#         ...
-
-#     @overload
-#     def groupby(
-#         self,
-#         by: Hashable | Sequence[Hashable] = ...,
-#         *,
-#         level: int | Hashable | Sequence[int | Hashable] | None = ...,
-#         as_index: bool = ...,
-#         sort: bool = ...,
-#         group_keys: bool = ...,
-#         observed: bool = ...,
-#         dropna: bool = ...,
-#         wrap: bool,
-#     ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
-#         ...
-
-#     def groupby(
-#         self,
-#         by: Hashable | Sequence[Hashable] | None = None,
-#         *,
-#         level: int | Hashable | Sequence[int | Hashable] | None = None,
-#         as_index: bool = True,
-#         sort: bool = True,
-#         group_keys: bool = True,
-#         # squeeze=False,
-#         observed: bool = False,
-#         dropna: bool = True,
-#         wrap: bool = False,
-#     ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
-#         """
-#         Wrapper around :meth:`pandas.Series.groupby`.
-
-#         Parameters
-#         ----------
-#         wrap : bool, default=False
-#             if True, try to wrap output in class of self
-
-#         See Also
-#         --------
-#         pandas.Series.groupby
-#         """
-#         group = self.s.groupby(  # type: ignore[call-overload]
-#             by=by,
-#             axis=0,
-#             level=level,
-#             as_index=as_index,
-#             sort=sort,
-#             group_keys=group_keys,
-#             # squeeze=squeeze,
-#             observed=observed,
-#             dropna=dropna,
-#         )
-
-#         if wrap:
-#             return _Groupby(self, group)
-#         return group  # type: ignore[no-any-return]
-
-#     @overload
-#     def groupby_allbut(
-#         self,
-#         drop: Hashable | list[Hashable] | tuple[Hashable],
-#         *,
-#         wrap: Literal[False] = ...,
-#         **kwargs: Any,
-#     ) -> SeriesGroupBy[Any, Any]:
-#         ...
-
-#     @overload
-#     def groupby_allbut(
-#         self,
-#         drop: Hashable | list[Hashable] | tuple[Hashable],
-#         *,
-#         wrap: Literal[True],
-#         **kwargs: Any,
-#     ) -> _Groupby[T_Element]:
-#         ...
-
-#     @overload
-#     def groupby_allbut(
-#         self,
-#         drop: Hashable | list[Hashable] | tuple[Hashable],
-#         *,
-#         wrap: bool,
-#         **kwargs: Any,
-#     ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
-#         ...
-
-#     def groupby_allbut(
-#         self,
-#         drop: Hashable | list[Hashable] | tuple[Hashable],
-#         *,
-#         wrap: bool = False,
-#         **kwargs: Any,
-#     ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
-#         """Groupby all but columns in drop"""
-#         from .utils import allbut
-
-#         if isinstance(drop, list):
-#             drop = tuple(drop)
-#         elif not isinstance(drop, tuple):
-#             drop = (drop,)
-
-#         by = allbut(self.index.names, *drop)
-
-#         # To suppress annoying errors.
-#         if len(by) == 1:
-#             return self.groupby(by=by[0], wrap=wrap, **kwargs)
-#         return self.groupby(by=by, wrap=wrap, **kwargs)
-
-#     @classmethod
-#     def _concat_to_series(
-#         cls,
-#         objs: Sequence[Self]
-#         | Sequence[pd.Series[Any]]
-#         | Mapping[Hashable, Self]
-#         | Mapping[Hashable, pd.Series[Any]],
-#         **concat_kws: Any,
-#     ) -> pd.Series[Any]:
-#         from collections.abc import Mapping, Sequence
-
-#         if isinstance(objs, Sequence):
-#             first = objs[0]
-#             if isinstance(first, cls):
-#                 objs = tuple(x._series for x in objs)
-#         elif isinstance(objs, Mapping):
-#             out = {}
-#             remap = None
-#             for k in objs:
-#                 v = objs[k]
-#                 if remap is None:
-#                     remap = bool(isinstance(v, cls))
-#                 if remap:
-#                     out[k] = v._series
-#                 else:
-#                     out[k] = v
-#             objs = out
-#         else:
-#             msg = f"bad input type {type(objs[0])}"
-#             raise TypeError(msg)
-#         return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]
-
-#     def concat_like(
-#         self,
-#         objs: Sequence[Self]
-#         | Sequence[pd.Series[Any]]
-#         | Mapping[Hashable, Self]
-#         | Mapping[Hashable, pd.Series[Any]],
-#         **concat_kws: Any,
-#     ) -> Self:
-#         """Concat a sequence of objects like `self`"""
-#         s = self._concat_to_series(objs, **concat_kws)
-#         return self.new_like(s)
-
-#     @classmethod
-#     def concat(
-#         cls,
-#         objs: Sequence[Self]
-#         | Sequence[pd.Series[Any]]
-#         | Mapping[Hashable, Self]
-#         | Mapping[Hashable, pd.Series[Any]],
-#         concat_kws: Mapping[str, Any] | None = None,
-#         *args: Any,
-#         **kwargs: Any,
-#     ) -> Self:
-#         """Create collection from sequence of objects"""
-#         if concat_kws is None:
-#             concat_kws = {}
-#         s = cls._concat_to_series(objs, **concat_kws)
-#         return cls(s, *args, **kwargs)
-
-#     # Note: use property(cached.meth(func)) here
-#     # normal cache.prop has some logic issues
-#     # with this pattern.
-#     @property
-#     @cached.meth
-#     def loc(self) -> _LocIndexer[Self, T_Element]:
-#         return _LocIndexer(self)
-
-#     @property
-#     @cached.meth
-#     def iloc(self) -> _iLocIndexer[Self, T_Element]:
-#         return _iLocIndexer(self)
-
-#     @property
-#     @cached.meth
-#     def query(self) -> _Query[Self, T_Element]:
-#         return _Query(self)
-
-#     @property
-#     @cached.meth
-#     def zloc(self) -> _LocIndexer_unstack_zloc[Self, T_Element]:
-#         return _LocIndexer_unstack_zloc(self)
-
-#     @property
-#     @cached.meth
-#     def mloc(self) -> _LocIndexer_unstack_mloc[Self, T_Element]:
-#         return _LocIndexer_unstack_mloc(self)
+    from ._typing_compat import Self
+    from .lnpidata import lnPiMasked
 
 
 # Accessors
-class _CallableResult(Generic[T_Element]):
-    def __init__(
-        self, parent: GenericlnPiCollection[T_Element], func: Callable[..., Any]
-    ) -> None:
+class _CallableResult:
+    def __init__(self, parent: lnPiCollection, func: Callable[..., Any]) -> None:
         functools.update_wrapper(self, func)
 
         self._parent = parent
         self._func = func
 
-    def __call__(self, *args: Any, **kwargs: Any) -> GenericlnPiCollection[T_Element]:
+    def __call__(self, *args: Any, **kwargs: Any) -> lnPiCollection:
         return self._parent.new_like(self._func(*args, **kwargs))
 
 
-class _Groupby(Generic[T_Element]):
-    def __init__(
-        self, parent: GenericlnPiCollection[T_Element], group: SeriesGroupBy[Any, Any]
-    ) -> None:
+class _Groupby:
+    def __init__(self, parent: lnPiCollection, group: SeriesGroupBy[Any, Any]) -> None:
         self._parent = parent
         self._group = group
 
-    def __iter__(self) -> Iterator[tuple[Any, GenericlnPiCollection[T_Element]]]:
+    def __iter__(self) -> Iterator[tuple[Any, lnPiCollection]]:
         return ((meta, self._parent.new_like(x)) for meta, x in self._group)
 
-    def __getattr__(
-        self, attr: str
-    ) -> _CallableResult[T_Element] | GenericlnPiCollection[T_Element]:
+    def __getattr__(self, attr: str) -> _CallableResult | lnPiCollection:
         if hasattr(self._group, attr):
             out = getattr(self._group, attr)
             if callable(out):
@@ -532,113 +76,111 @@ class _Groupby(Generic[T_Element]):
 
 
 # @SeriesWrapper.decorate_accessor("loc")
-class _LocIndexer(Generic[T_Element]):
+class _LocIndexer:
     """
     Indexer by value.
 
     See :attr:`pandas.Series.loc`
     """
 
-    def __init__(self, parent: GenericlnPiCollection[T_Element]) -> None:
+    def __init__(self, parent: lnPiCollection) -> None:
         self._parent = parent
         self._loc = self._parent._series.loc
 
     @overload
-    def __getitem__(self, idx: Scalar | tuple[Scalar, ...]) -> T_Element:
+    def __getitem__(self, idx: Scalar | tuple[Scalar, ...]) -> lnPiMasked:
         ...
 
     @overload
     def __getitem__(
         self,
-        idx: Sequence[Scalar] | pd.Index[Any] | slice | Callable[[pd.Series[Any]], Any],
-    ) -> GenericlnPiCollection[T_Element]:
+        idx: list[Scalar] | pd.Index[Any] | slice | Callable[[pd.Series[Any]], Any],
+    ) -> lnPiCollection:
         ...
 
     @overload
-    def __getitem__(self, idx: Any) -> T_Element | GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         ...
 
-    def __getitem__(self, idx: Any) -> T_Element | GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         out = self._loc[idx]
         if isinstance(out, pd.Series):
             out = self._parent.new_like(out)
         return out  # type: ignore[no-any-return]
 
     def __setitem__(
-        self, idx: Any, values: T_Element | pd.Series[Any] | Sequence[T_Element]
+        self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
         self._parent._series.loc[idx] = values
 
 
 # @SeriesWrapper.decorate_accessor("iloc")
-class _iLocIndexer(Generic[T_Element]):  # noqa: N801
+class _iLocIndexer:  # noqa: N801
     """
     Indexer by position.
 
     See :attr:`pandas.Series.iloc`
     """
 
-    def __init__(self, parent: GenericlnPiCollection[T_Element]) -> None:
+    def __init__(self, parent: lnPiCollection) -> None:
         self._parent = parent
         self._iloc = self._parent._series.iloc
 
     @overload
-    def __getitem__(self, idx: IndexingInt) -> T_Element:
+    def __getitem__(self, idx: IndexingInt) -> lnPiMasked:
         ...
 
     @overload
-    def __getitem__(
-        self, idx: Sequence[int] | pd.Index[Any] | slice
-    ) -> GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Sequence[int] | pd.Index[Any] | slice) -> lnPiCollection:
         ...
 
     @overload
-    def __getitem__(self, idx: Any) -> T_Element | GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         ...
 
-    def __getitem__(self, idx: Any) -> T_Element | GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         out = self._iloc[idx]
         if isinstance(out, pd.Series):
             out = self._parent.new_like(out)
         return out  # type: ignore[no-any-return]
 
     def __setitem__(
-        self, idx: Any, values: T_Element | pd.Series[Any] | Sequence[T_Element]
+        self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
         self._parent._series.iloc[idx] = values
 
 
 # @SeriesWrapper.decorate_accessor("query")
-class _Query(Generic[T_Element]):
+class _Query:
     """
     Select values by string query.
 
     See :meth:`pandas.DataFrame.query`
     """
 
-    def __init__(self, parent: GenericlnPiCollection[T_Element]) -> None:
+    def __init__(self, parent: lnPiCollection) -> None:
         self._parent = parent
         self._frame: pd.DataFrame = self._parent.index.to_frame().reset_index(drop=True)
 
-    def __call__(self, expr: str, **kwargs: Any) -> GenericlnPiCollection[T_Element]:
+    def __call__(self, expr: str, **kwargs: Any) -> lnPiCollection:
         idx = self._frame.query(expr, **kwargs).index
         return self._parent.iloc[idx]  # type: ignore[no-any-return]
 
 
 # @SeriesWrapper.decorate_accessor("zloc")
-class _LocIndexer_unstack_zloc(Generic[T_Element]):  # noqa: N801
+class _LocIndexer_unstack_zloc:  # noqa: N801
     """positional indexer for everything but phase"""
 
     def __init__(
         self,
-        parent: GenericlnPiCollection[T_Element],
+        parent: lnPiCollection,
         level: Hashable | Sequence[Hashable] = ("phase",),
     ) -> None:
         self._parent = parent
         self._level = level
         self._loc = self._parent._series.unstack(self._level).iloc
 
-    def __getitem__(self, idx: Any) -> GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: Any) -> lnPiCollection:
         out = self._loc[idx]
         out = out.stack(self._level) if isinstance(out, pd.DataFrame) else out.dropna()
 
@@ -651,12 +193,12 @@ class _LocIndexer_unstack_zloc(Generic[T_Element]):  # noqa: N801
 
 
 # @SeriesWrapper.decorate_accessor("mloc")
-class _LocIndexer_unstack_mloc(Generic[T_Element]):  # noqa: N801
+class _LocIndexer_unstack_mloc:  # noqa: N801
     """indexer with pandas index"""
 
     def __init__(
         self,
-        parent: GenericlnPiCollection[T_Element],
+        parent: lnPiCollection,
         level: Hashable | Sequence[Hashable] = ("phase",),
     ) -> None:
         self._parent = parent
@@ -679,9 +221,7 @@ class _LocIndexer_unstack_mloc(Generic[T_Element]):  # noqa: N801
             index = index.droplevel(drop)
         return index.get_indexer_for(idx)  # type: ignore[no-untyped-call]
 
-    def __getitem__(
-        self, idx: pd.MultiIndex | pd.Index[Any]
-    ) -> GenericlnPiCollection[T_Element]:
+    def __getitem__(self, idx: pd.MultiIndex | pd.Index[Any]) -> lnPiCollection:
         indexer = self._get_loc_idx(idx)
         out = self._loc[indexer]
 
@@ -693,7 +233,7 @@ class _LocIndexer_unstack_mloc(Generic[T_Element]):  # noqa: N801
         return out  # type: ignore[no-any-return]
 
 
-class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
+class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     r"""
     Wrapper around :class:`pandas.Series` for collection of :class:`~lnpy.lnpidata.lnPiMasked` objects.
 
@@ -731,7 +271,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
 
     def __init__(
         self,
-        data: Sequence[T_Element] | pd.Series[Any],
+        data: Sequence[lnPiMasked] | pd.Series[Any],
         index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         xarray_output: bool = True,
         concat_dim: str | None = None,
@@ -794,7 +334,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
 
     def new_like(
         self,
-        data: Sequence[T_Element] | pd.Series[Any] | None = None,
+        data: Sequence[lnPiMasked] | pd.Series[Any] | None = None,
         index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -829,7 +369,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         """Alias to :meth:`series`"""
         return self.series
 
-    def __iter__(self) -> Iterator[T_Element]:
+    def __iter__(self) -> Iterator[lnPiMasked]:
         return iter(self._series)
 
     @property
@@ -857,7 +397,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
 
     def _wrapped_pandas_method(
         self, mtd: str, wrap: bool = False, *args: Any, **kwargs: Any
-    ) -> T_Element | pd.Series[Any] | Self:
+    ) -> lnPiMasked | pd.Series[Any] | Self:
         """Wrap a generic pandas method to ensure it returns a GeoSeries"""
         val = getattr(self._series, mtd)(*args, **kwargs)
         if wrap and type(val) == pd.Series:
@@ -871,18 +411,18 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         level: Hashable | Sequence[Hashable] | None = None,
         drop_level: bool = False,
         wrap: bool = True,
-    ) -> Self | pd.Series[Any] | T_Element:
+    ) -> Self | pd.Series[Any] | lnPiMasked:
         """Interface to :meth:`pandas.Series.xs`"""
         return self._wrapped_pandas_method(
             "xs", wrap=wrap, key=key, axis=axis, level=level, drop_level=drop_level
         )
 
-    def __getitem__(self, key: Any) -> Self | T_Element:
+    def __getitem__(self, key: Any) -> Self | lnPiMasked:
         """Interface to :meth:`pandas.Series.__getitem__`"""
         return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)  # type: ignore[return-value]
 
     def __setitem__(
-        self, idx: Any, values: T_Element | Sequence[T_Element] | pd.Series[Any]
+        self, idx: Any, values: lnPiMasked | Sequence[lnPiMasked] | pd.Series[Any]
     ) -> None:
         """Interface to :meth:`pandas.Series.__setitem__`"""
         self._series[idx] = values
@@ -1000,7 +540,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         observed: bool = ...,
         dropna: bool = ...,
         wrap: Literal[True],
-    ) -> _Groupby[T_Element]:
+    ) -> _Groupby:
         ...
 
     @overload
@@ -1015,7 +555,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         observed: bool = ...,
         dropna: bool = ...,
         wrap: bool,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby:
         ...
 
     def groupby(
@@ -1030,7 +570,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         observed: bool = False,
         dropna: bool = True,
         wrap: bool = False,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby:
         """
         Wrapper around :meth:`pandas.Series.groupby`.
 
@@ -1044,7 +584,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         pandas.Series.groupby
         """
         group = self.s.groupby(  # type: ignore[call-overload]
-            by=by,
+            by=by,  # pyright: ignore[reportArgumentType]
             axis=0,
             level=level,
             as_index=as_index,
@@ -1076,7 +616,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         *,
         wrap: Literal[True],
         **kwargs: Any,
-    ) -> _Groupby[T_Element]:
+    ) -> _Groupby:
         ...
 
     @overload
@@ -1086,7 +626,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         *,
         wrap: bool,
         **kwargs: Any,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby:
         ...
 
     def groupby_allbut(
@@ -1095,7 +635,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         *,
         wrap: bool = False,
         **kwargs: Any,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby[T_Element]:
+    ) -> SeriesGroupBy[Any, Any] | _Groupby:
         """Groupby all but columns in drop"""
         from .utils import allbut
 
@@ -1104,7 +644,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         elif not isinstance(drop, tuple):
             drop = (drop,)
 
-        by = allbut(self.index.names, *drop)
+        by = allbut(self.index.names, *drop)  # pyright: ignore[reportArgumentType]
 
         # To suppress annoying errors.
         if len(by) == 1:
@@ -1177,27 +717,27 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
     # with this pattern.
     @property
     @cached.meth
-    def loc(self) -> _LocIndexer[T_Element]:
+    def loc(self) -> _LocIndexer:
         return _LocIndexer(self)
 
     @property
     @cached.meth
-    def iloc(self) -> _iLocIndexer[T_Element]:
+    def iloc(self) -> _iLocIndexer:
         return _iLocIndexer(self)
 
     @property
     @cached.meth
-    def query(self) -> _Query[T_Element]:
+    def query(self) -> _Query:
         return _Query(self)
 
     @property
     @cached.meth
-    def zloc(self) -> _LocIndexer_unstack_zloc[T_Element]:
+    def zloc(self) -> _LocIndexer_unstack_zloc:
         return _LocIndexer_unstack_zloc(self)
 
     @property
     @cached.meth
-    def mloc(self) -> _LocIndexer_unstack_mloc[T_Element]:
+    def mloc(self) -> _LocIndexer_unstack_mloc:
         return _LocIndexer_unstack_mloc(self)
 
     # ** lnPi Specific
@@ -1292,7 +832,7 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         # new method
         # this is no faster than the original
         # but makes clear where the time is being spent
-        first: lnPiMasked = self.iloc[0]
+        first = self.iloc[0]
         n = len(self)
         out = np.empty((n, *first.shape), dtype=first.dtype)
         seq = get_tqdm((x.filled(fill_value) for x in self), total=n)
@@ -1570,8 +1110,6 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
         See Also
         --------
         from_labels
-
-
         """
 
         labels = []
@@ -1682,10 +1220,6 @@ class GenericlnPiCollection(AccessorMixin, Generic[T_Element]):  # noqa: PLR0904
             # new.spinodal = spin
             # new.binodal = bino
         return new
-
-
-class lnPiCollection(GenericlnPiCollection[lnPiMasked]):  # noqa: N801, D101
-    pass
 
 
 ################################################################################

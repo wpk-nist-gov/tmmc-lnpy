@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import itertools
 import warnings
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -20,9 +20,8 @@ from .utils import labels_to_masks, masks_change_convention, parallel_map_func_s
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Sequence, Union
 
-    from typing_extensions import Self
-
     from ._typing import MaskConvention, MyNDArray
+    from ._typing_compat import Self
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
@@ -519,7 +518,9 @@ class wFreeEnergy:  # noqa: N801
         out_arg: dict[tuple[int, int], _ExtremaArg] = {}
         out_max = np.full((self.nfeature,) * 2, dtype=float, fill_value=fill_value)
         if method == "approx":
-            for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
+            for (i, j), arg, val in zip(
+                cast("Iterable[tuple[int, int]]", overlap), argmax, valmax
+            ):
                 out_max[i, j] = out_max[j, i] = val
                 out_arg[i, j] = arg
 
@@ -530,7 +531,9 @@ class wFreeEnergy:  # noqa: N801
             valmax_dict = dict(zip(overlap_keys, valmax))
 
             # loop over unique keys
-            for i, j in {(i, j) for i, j, _ in overlap}:  # type: ignore[misc]
+            for i, j in {
+                (i, j) for i, j, _ in cast("Iterable[tuple[int, int, int]]", overlap)
+            }:
                 vals = [valmax_dict[i, j, index] for index in range(2)]
                 # take min value of maxes
                 if np.all(np.isnan(vals)):
@@ -630,7 +633,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
             columns=index.get_level_values("phase").rename("phase_nebr"),
         )
         .stack()
-        .rename("w_tran")
+        .rename("w_tran")  # pyright: ignore[reportArgumentType]
     )
 
     # get argtrans values for each index

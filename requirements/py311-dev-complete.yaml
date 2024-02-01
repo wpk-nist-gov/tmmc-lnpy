@@ -26,7 +26,6 @@ dependencies:
   - nox
   - numpy
   - pandas-stubs
-  - pip-tools
   - pre-commit
   - pyright
   - pytest

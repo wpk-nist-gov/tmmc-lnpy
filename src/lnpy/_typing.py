@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
 
-from typing_extensions import Concatenate, ParamSpec, TypeAlias
+import xarray as xr
+from numpy.typing import ArrayLike, NDArray
+
+from ._typing_compat import Concatenate, ParamSpec, TypeAlias
 
 if TYPE_CHECKING:
     import numpy as np
-    import xarray as xr
-    from numpy.typing import ArrayLike, NDArray
 
     # Note: use fully qualified names
     import lnpy.lnpidata
@@ -33,9 +34,7 @@ __all__ = [
     "PhasesFactorySignature",
     "R",
     "T",
-    "T_Element",
     "T_Ensemble",
-    # "T_SeriesWrapper",
     "TagPhasesSignature",
     "xArrayLike",
 ]
@@ -54,7 +53,7 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-MyNDArray: TypeAlias = "NDArray[Any]"
+MyNDArray: TypeAlias = NDArray[Any]
 """Alias for simple :class:`numpy.typing.NDArray`"""
 
 
@@ -68,19 +67,10 @@ IndexingInt: TypeAlias = Union[
 ]
 
 
-xArrayLike: TypeAlias = "ArrayLike | xr.DataArray"  # noqa: N816, PYI042
+xArrayLike: TypeAlias = Union[ArrayLike, xr.DataArray]  # noqa: N816
 
 IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
 Scalar: TypeAlias = IndexIterScalar
-
-# Series stuff
-T_Element = TypeVar("T_Element", bound="lnpy.lnpidata.lnPiMasked")
-"""TypeVar for element of lnpy.lnpiseries.SeriesWrapper."""
-
-# T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper[T_Element]")
-# T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper")  # type: ignore[type-arg]
-# T_SeriesWrapper = TypeVar("T_SeriesWrapper", bound="lnpy.lnpiseries.SeriesWrapper[T_Element]")
-# """TypeVar for lnpy.lnpiseries.SeriesWrapper"""
 
 # Segmentation stuff
 PeakStyle = Literal["indices", "mask", "marker"]

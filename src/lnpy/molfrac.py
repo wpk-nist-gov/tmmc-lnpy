@@ -6,16 +6,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .utils import RootResultDict, rootresults_to_rootresultdict
+from .lnpiseries import lnPiCollection
+from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from typing import Any, Mapping
 
     import xarray as xr
 
-    from ._typing import MyNDArray
     from .lnpidata import lnPiMasked
-    from .lnpiseries import lnPiCollection
     from .segment import BuildPhasesBase
 
 
@@ -166,9 +165,9 @@ def _solve_lnz_molfrac(
     if component is None:
         component = build_phases.index
 
-    if not isinstance(left, float):
+    if isinstance(left, lnPiCollection):
         left = left._get_lnz(build_phases.index)
-    if not isinstance(right, float):
+    if isinstance(right, lnPiCollection):
         right = right._get_lnz(build_phases.index)
 
     a, b = sorted((left, right))
@@ -189,22 +188,15 @@ def _solve_lnz_molfrac(
         def getter(x: lnPiCollection) -> xr.DataArray:
             return x.xge.molfrac.sel(component=component, phase=phase_id)
 
-    def f(x: float) -> float | MyNDArray:
+    def f(x: float) -> float:
         p = build_phases(x, ref=ref, **build_kws)
         f.lnpi = p  # type: ignore[attr-defined]
 
         # by not using the ListAccessor,
         # can parallelize
-        mf: MyNDArray | float
+        mf: float
         if skip_phase_id or phase_id in p._get_level("phase"):
-            mf = getter(p).values
-            # mf = (
-            #     p.s.xs(phase_id, level='phase').iloc[0]
-            #     .xge
-            #     .molfrac
-            #     .sel(component=component)
-            #     .values
-            # )
+            mf = array_to_scalar(getter(p).values)
         else:
             mf = np.inf
 
