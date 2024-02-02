@@ -111,7 +111,7 @@ class _LocIndexer:
     def __setitem__(
         self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
-        self._parent._series.loc[idx] = values
+        self._parent._series.loc[idx] = values  # pyright: ignore[reportCallIssue,reportArgumentType]
 
 
 # @SeriesWrapper.decorate_accessor("iloc")
@@ -147,7 +147,7 @@ class _iLocIndexer:  # noqa: N801
     def __setitem__(
         self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
-        self._parent._series.iloc[idx] = values
+        self._parent._series.iloc[idx] = values  # pyright: ignore[reportCallIssue,reportArgumentType]
 
 
 # @SeriesWrapper.decorate_accessor("query")
@@ -299,7 +299,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         self._base_class = base_class
         self._verify = self._base_class is not None
 
-        series = pd.Series(data=data, index=index, dtype=dtype, name=name)  # type: ignore[misc,arg-type]
+        series: pd.Series[Any] = pd.Series(
+            data=data, index=index, dtype=dtype, name=name
+        )  # type: ignore[misc,arg-type]
         self._verify_series(series)
         self._series = series
         self._cache: dict[str, Any] = {}
@@ -370,7 +372,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return self.series
 
     def __iter__(self) -> Iterator[lnPiMasked]:
-        return iter(self._series)
+        return iter(self._series)  # pyright: ignore[reportCallIssue,reportArgumentType]
 
     @property
     def values(self) -> MyNDArray:
@@ -802,11 +804,13 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         Helper function to.
         returns self.iloc[idx].lnz[component]
         """
-        s = self.zloc[zloc]._series if zloc is not None else self._series
-        lnz = s.iloc[iloc].lnz
+        v: lnPiMasked = (  # pyright: ignore[reportAssignmentType]
+            (self.zloc[zloc]._series if zloc is not None else self._series).iloc[iloc]
+        )
+        lnz = v.lnz
         if component is not None:
             lnz = lnz[component]
-        return lnz  # type: ignore[no-any-return]
+        return lnz
 
     def _get_level(self, level: str = "phase") -> pd.Index[Any]:
         """Return level values from index"""

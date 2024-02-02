@@ -35,4 +35,5 @@ scipy
 scriv
 tqdm
 types-tqdm
+typing-extensions;python_version<"3.11"
 xarray

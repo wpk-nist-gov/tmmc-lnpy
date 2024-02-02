@@ -24,5 +24,6 @@ dependencies:
   - scikit-image>=0.21
   - scipy
   - tqdm
+  - typing-extensions
   - xarray
   - pip

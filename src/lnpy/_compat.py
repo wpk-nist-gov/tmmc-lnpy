@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, Hashable, Iterable
 
-    from scipy.optimize import RootResults
+    from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
     from ._typing import MyNDArray
 
@@ -44,7 +44,7 @@ def rootresults(
     There are differences in `RootResults` for different
     versions of scipy, so have this as an interface
     """
-    from scipy.optimize import RootResults
+    from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
     try:
         return RootResults(

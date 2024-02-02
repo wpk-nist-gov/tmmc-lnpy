@@ -44,6 +44,7 @@ dependencies = [
     "scikit-image >= 0.21",
     "scipy",
     "tqdm",
+    "typing-extensions;python_version<'3.11'",
     "xarray",
 ]
 [project.optional-dependencies]
@@ -290,6 +291,7 @@ exclude = ["**/__pycache__", ".tox/**", ".nox/**", ".venv/**", "**/.mypy_cache"]
 # strict = ["src/lnpy", "noxfile.py", "tools/*.py"]  # TODO(wpk): enable strict mode for src
 strict = ["noxfile.py", "tools/*.py"]
 pythonVersion = "3.11"
+# useLibraryCodeForTypes = true
 # typeCheckingMode = "strict"
 typeCheckingMode = "basic"
 # enable subset of "strict"

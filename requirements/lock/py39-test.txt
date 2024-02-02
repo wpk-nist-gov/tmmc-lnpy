@@ -88,8 +88,10 @@ tomli==2.0.1
     #   pytest
 tqdm==4.66.1
     # via -r requirements/test.txt
-typing-extensions==4.9.0
-    # via module-utilities
+typing-extensions==4.9.0 ; python_version < "3.11"
+    # via
+    #   -r requirements/test.txt
+    #   module-utilities
 tzdata==2023.4
     # via pandas
 xarray==2024.1.1

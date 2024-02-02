@@ -18,7 +18,7 @@ from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdic
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Mapping
 
-    from scipy.optimize import RootResults
+    from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
     from ._typing import MyNDArray
     from ._typing_compat import Self

@@ -25,4 +25,5 @@ dependencies:
   - scipy
   - tqdm
   - types-tqdm
+  - typing-extensions
   - xarray
