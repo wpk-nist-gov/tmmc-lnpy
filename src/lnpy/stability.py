@@ -555,7 +555,7 @@ class _SolveBinodal:
             .reindex(phase=self.ids)
             .diff("phase")
             .squeeze()
-            .values
+            .to_numpy()
         )
 
         return array_to_scalar(out)

@@ -234,7 +234,7 @@ def dim_to_suffix_dataarray(
 ) -> xr.Dataset:
     if dim in da.dims:
         return da.assign_coords(  # type: ignore[misc]
-            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}  # type: ignore[arg-type]
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]
         ).to_dataset(dim=dim)
     return da.to_dataset()
 
@@ -618,7 +618,7 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
 
 def distance_matrix(
     mask: ArrayLike, convention: MaskConvention = "image"
-) -> NDArray[np.float_]:
+) -> NDArray[np.float64]:
     """
     Create matrix of distances from elements of mask
     to nearest background point
@@ -709,7 +709,7 @@ def dataset_to_lnpimasked(
         extra_kws = {}
 
     if pe_name in ds:
-        extra_kws[pe_name] = ds[pe_name].values  # type: ignore[index]
+        extra_kws[pe_name] = ds[pe_name].to_numpy()  # type: ignore[index]
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
 

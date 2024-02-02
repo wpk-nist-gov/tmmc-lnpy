@@ -497,7 +497,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         return self.ma == self.local_max(*args, **kwargs)  # type: ignore[no-any-return]
 
     @cached.prop
-    def edge_distance_matrix(self) -> NDArray[np.float_]:
+    def edge_distance_matrix(self) -> NDArray[np.float64]:
         """
         Matrix of distance from each element to a background (i.e., masked) point.
 
@@ -655,7 +655,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         )
         return cls.from_data(
             data=da.values,
-            mask=da.isnull().values,
+            mask=da.isnull().to_numpy(),  # noqa: PD003
             lnz=lnz,
             lnz_data=lnz,
             state_kws=state_kws,
@@ -690,11 +690,11 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         """
 
         kws: dict[str, Any] = {}
-        kws["data"] = da.values
+        kws["data"] = da.to_numpy()
         if "mask" in da.coords:
-            kws["mask"] = da.mask.values
+            kws["mask"] = da.mask.to_numpy()
         else:
-            kws["mask"] = da.isnull().values
+            kws["mask"] = da.isnull().to_numpy()  # noqa: PD003
 
         # where are state variables
         if state_as_attrs is None:

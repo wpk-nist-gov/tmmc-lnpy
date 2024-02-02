@@ -627,7 +627,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
     w_tran = (
-        pd.DataFrame(  # type: ignore[call-overload]
+        pd.DataFrame(  # type: ignore[call-overload]  # noqa: PD013
             w.w_tran,
             index=index,
             columns=index.get_level_values("phase").rename("phase_nebr"),
@@ -690,7 +690,7 @@ class wFreeEnergyCollection:  # noqa: N801
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
-            masks = [x.mask for x in phases.values]
+            masks = [x.mask for x in phases.to_numpy()]
 
             ws.append(
                 wFreeEnergy(data=phases.iloc[0].data, masks=masks, convention=False)
@@ -838,7 +838,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
         if len(nebrs) == 0:
             return np.inf
-        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
+        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").to_numpy()
 
 
 # @lnPiCollection.decorate_accessor("wfe")

@@ -178,11 +178,11 @@ class _LocIndexer_unstack_zloc:  # noqa: N801
     ) -> None:
         self._parent = parent
         self._level = level
-        self._loc = self._parent._series.unstack(self._level).iloc
+        self._loc = self._parent._series.unstack(self._level).iloc  # noqa: PD010
 
     def __getitem__(self, idx: Any) -> lnPiCollection:
         out = self._loc[idx]
-        out = out.stack(self._level) if isinstance(out, pd.DataFrame) else out.dropna()
+        out = out.stack(self._level) if isinstance(out, pd.DataFrame) else out.dropna()  # noqa: PD013
 
         if isinstance(out, pd.Series):
             out = self._parent.new_like(out)
@@ -299,9 +299,12 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         self._base_class = base_class
         self._verify = self._base_class is not None
 
-        series: pd.Series[Any] = pd.Series(
-            data=data, index=index, dtype=dtype, name=name
-        )  # type: ignore[misc,arg-type]
+        series: pd.Series[Any] = pd.Series(  # type: ignore[misc]
+            data=data,
+            index=index,
+            dtype=dtype,
+            name=name,  # type: ignore[arg-type]
+        )
         self._verify_series(series)
         self._series = series
         self._cache: dict[str, Any] = {}
@@ -377,7 +380,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @property
     def values(self) -> MyNDArray:
         """Series values"""
-        return self._series.values  # type: ignore[return-value]
+        return self._series.to_numpy()
 
     @property
     def items(self) -> MyNDArray:
@@ -912,10 +915,10 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         lnPiCollection
         """
 
-        df = pd.DataFrame(
+        table = pd.DataFrame(
             [lnpi._index_dict(phase) for lnpi, phase in zip(items, index)]
         )
-        new_index = pd.MultiIndex.from_frame(df)
+        new_index = pd.MultiIndex.from_frame(table)
         return cls(data=items, index=new_index, **kwargs)
 
     @classmethod

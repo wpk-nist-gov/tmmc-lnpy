@@ -72,7 +72,7 @@ def _initial_bracket_molfrac(
             p = build_phases(new_lnz, ref=ref, **build_kws)
             if (skip_phase_id or phase_id in p._get_level("phase")) and getter(
                 p
-            ).values < target:
+            ).to_numpy() < target:
                 left = p
                 break
         ntry_left = i
@@ -102,7 +102,7 @@ def _initial_bracket_molfrac(
                 new_lnz -= dlnz_
                 # reset to half dlnz
                 dlnz_ = dlnz_ * 0.5
-            elif getter(p).values > target:
+            elif getter(p).to_numpy() > target:
                 right = p
                 break
             else:

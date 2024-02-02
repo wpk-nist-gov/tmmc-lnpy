@@ -147,7 +147,7 @@ def get_lnz_min(
         for _i in range(ntry):
             new_lnz -= dlnz_left
             p = build_phases(new_lnz, ref=ref, **build_kws)
-            if phase_id in p._get_level("phase") and getter(p).values < target:
+            if phase_id in p._get_level("phase") and getter(p).to_numpy() < target:
                 left = p
                 break
             dlnz_left *= dfac
@@ -174,7 +174,7 @@ def get_lnz_min(
                 new_lnz -= dlnz_right
                 # reset to half dlnz
                 dlnz_right = dlnz_right * 0.5
-            elif getter(p).values > target:
+            elif getter(p).to_numpy() > target:
                 right = p
                 break
             else:
@@ -234,7 +234,7 @@ def get_lnz_max(
     def getter(p: lnPiCollection) -> xr.DataArray:
         v = p.xge.edge_distance(ref)
         if not p._xarray_unstack:
-            v = v.unstack(p._concat_dim)
+            v = v.unstack(p._concat_dim)  # noqa: PD010
         return v.min("phase")
 
     # if have collection, try to use it
@@ -265,7 +265,7 @@ def get_lnz_max(
         for i in range(ntry):
             lnz_left -= dlnz_loc
             p = build_phases(lnz_left, ref=ref, **build_kws)
-            if getter(p).values >= edge_distance_min:
+            if getter(p).to_numpy() >= edge_distance_min:
                 left = p
                 n_left = i
                 break
@@ -286,7 +286,7 @@ def get_lnz_max(
             lnz_right += dlnz_loc
             p = build_phases(lnz_right, ref=ref, **build_kws)
 
-            if getter(p).values < edge_distance_min:
+            if getter(p).to_numpy() < edge_distance_min:
                 right = p
                 n_right = i
                 break
@@ -299,7 +299,7 @@ def get_lnz_max(
 
     # not do bisection
     bracket = [left, right]
-    values = [getter(x).values for x in bracket]
+    values = [getter(x).to_numpy() for x in bracket]
 
     for i in range(ntry):  # noqa: B007
         lnz = [x._get_lnz(lnz_idx) for x in bracket]
@@ -308,7 +308,7 @@ def get_lnz_max(
             break
         lnz_mid = 0.5 * (lnz[0] + lnz[1])
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
-        y_mid = getter(mid).values
+        y_mid = getter(mid).to_numpy()
 
         index = 0 if y_mid >= edge_distance_min else 1
 

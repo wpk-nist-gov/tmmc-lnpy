@@ -196,7 +196,7 @@ def xr_name(
                 attrs["long_name"] = long_name
             out = out.assign_attrs(**attrs)
             if unstack and self._xarray_unstack:
-                out = out.unstack()
+                out = out.unstack()  # noqa: PD010
 
             return out
 
@@ -594,7 +594,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
 
     @cached_meth
     def _argmax_indexer(self) -> tuple[MyNDArray, ...]:
-        x: MyNDArray = self.pi_norm.values  # pyright: ignore[reportUnknownMemberType]
+        x: MyNDArray = self.pi_norm.to_numpy()
         xx = x.reshape(x.shape[0], -1)  # pyright: ignore[reportUnknownVariableType]
         idx_flat = xx.argmax(-1)
         return np.unravel_index(idx_flat, x.shape[1:])  # pyright: ignore[reportUnknownVariableType]
@@ -783,7 +783,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
             pv = self.betapV()
             sample = self._parent._concat_dim
             return (  # type: ignore[no-any-return] # pyright: ignore[reportUnknownVariableType]
-                pv.unstack(sample)  # pyright: ignore[reportUnknownMemberType]
+                pv.unstack(sample)  # pyright: ignore[reportUnknownMemberType]  # noqa: PD010, PD013
                 .pipe(lambda x: x.max("phase") == x)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType]
                 .stack(sample=pv.indexes[sample].names)  # pyright: ignore[reportUnknownMemberType]
                 .loc[pv.indexes["sample"]]  # pyright: ignore[reportUnknownMemberType]
@@ -979,7 +979,7 @@ class xCanonical:  # noqa: N801
         return (
             self._xge.ncoords
             # NOTE: if don't use '.values', then get extra coords don't want
-            .where(~self._xge.lnpi(np.nan).isnull().values)  # pyright: ignore[reportUnknownMemberType]
+            .where(~self._xge.lnpi(np.nan).isnull().to_numpy())  # pyright: ignore[reportUnknownMemberType]  # noqa: PD003
         )
 
     @property
@@ -1013,7 +1013,7 @@ class xCanonical:  # noqa: N801
 
         return (
             (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
-              # pyright: ignore[reportUnknownMemberType]
+            # pyright: ignore[reportUnknownMemberType]
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)

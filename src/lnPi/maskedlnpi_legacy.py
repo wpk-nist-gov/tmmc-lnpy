@@ -286,7 +286,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         if zeromax:
             new.zeromax(inplace=True)
         if pad:
-            new.pad(inplace=True)
+            new = new.pad()
         return new
 
     def reweight(self, lnz, zeromax=False, pad=False):
@@ -468,7 +468,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         )
         return cls(
             data=da.values,
-            mask=da.isnull().values,
+            mask=da.isna().values,
             lnz=lnz,
             state_kws=state_kws,
             **kwargs,
@@ -479,11 +479,11 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """Create a lnPi object from xarray.DataArray"""
 
         kws = {}
-        kws["data"] = da.values
+        kws["data"] = da.to_numpy()
         if "mask" in da.coords:
-            kws["mask"] = da.mask.values
+            kws["mask"] = da.mask.to_numpy()
         else:
-            kws["mask"] = da.isnull().values
+            kws["mask"] = da.isna().to_numpy()
 
         # where are state variables
         if state_as_attrs is None:

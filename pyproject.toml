@@ -192,8 +192,8 @@ ignore = [
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Use extend-ignore for project specific ignores (avoid changing ignore directly)
 extend-ignore = [
-    "PD",        # - not using pandas?
-    "NPY",       # - not using numpy?
+    # "PD",        # - not using pandas?
+    # "NPY",       # - not using numpy?
     # * Annotations
     "SLF001",  # - flake8-self (private access sometimes OK)
     # "ANN",     # - Annotations (just use mypy/pyright)
@@ -228,7 +228,7 @@ max-public-methods = 30
 "**/*.py" = ["N999", "ANN101", "ANN102", "ANN401", "PLR2004", "PLC0415", "TD003", "FIX002"]
 "**/lnPi/*.py" = ["PGH", "ANN", "PL", "B", "N", "SIM", "S101"]
 "**/ensembles.py" = ["N802", "N803", "N806"]
-"**/*.ipynb" = ["ANN", "T201", "PLR2004", "S110"]
+"**/*.ipynb" = ["ANN", "T201", "PLR2004", "S110", "PD010", "PD013"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["lnpy", "lnPi"]
