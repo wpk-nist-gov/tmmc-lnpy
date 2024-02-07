@@ -301,9 +301,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
         series: pd.Series[Any] = pd.Series(  # type: ignore[misc]
             data=data,
-            index=index,
-            dtype=dtype,
-            name=name,  # type: ignore[arg-type]
+            index=index,  # type: ignore[arg-type]
+            dtype=dtype,  # type: ignore[arg-type]
+            name=name,
         )
         self._verify_series(series)
         self._series = series

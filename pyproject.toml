@@ -239,15 +239,34 @@ docstring-code-format = true
 [tool.nbqa.exclude]
 codespell = "^examples/archived"
 
+[tool.check-wheel-contents]
+toplevel = ["lnpy"]
+src_dir = ["src"]
 
 # * Testing --------------------------------------------------------------------
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
-testpaths = ["lnpy", "lnPi", "tests", "README.md"]
+addopts = [
+    "--doctest-modules",
+    "--doctest-glob=*.md",
+    "--pyargs",
+    "--cov-config=pyproject.toml",
+    "-n",
+    "2",
+]
+testpaths = [
+    "README.md",
+    "lnPi",
+    "lnpy",
+    "tests",
+]
+
+[tool.coverage.run]
+branch = true
 
 [tool.coverage.report]
-exclude_also = ["if TYPE_CHECKING:", "@overload"]
+# show_missing = true
+xclude_also = ["if TYPE_CHECKING:", "@overload"]
 omit = ["*/vendored/*", "*/_typing.py"]
 include = ["src/*"]
 
