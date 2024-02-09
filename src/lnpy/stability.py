@@ -95,7 +95,7 @@ def _initial_bracket_spinodal_right(
     ref : lnPiMasked, optional
     build_phases : callable
         scalar function to build phases
-    collection : lnPiColletion
+    collection : lnPiCollection
         initial estimates to work from
     idx, idx_nebr : int
         id's of from/to phases.
