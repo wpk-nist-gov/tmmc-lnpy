@@ -210,6 +210,9 @@ extend-ignore = [
     "PLR091",
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
 [tool.ruff.lint.pylint]
 max-args = 15
 max-positional-args = 15
