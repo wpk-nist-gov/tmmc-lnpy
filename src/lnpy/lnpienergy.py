@@ -162,7 +162,7 @@ def find_boundaries_overlap(
 
     # assert n == len(boundaries)
     if n != len(boundaries):
-        msg = "{boundaries=} must have length {n}."
+        msg = f"{boundaries=} must have length {n}."
         raise ValueError(msg)
 
     def _get_approx() -> dict[tuple[int, int], MyNDArray | None]:
