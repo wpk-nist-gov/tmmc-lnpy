@@ -28,7 +28,7 @@ lazy-loader==0.3
     #   scikit-image
 libcst==1.1.0
     # via pytype
-markupsafe==2.1.4
+markupsafe==2.1.5
     # via jinja2
 module-utilities==0.9.0
     # via -r requirements/typing.txt
@@ -45,7 +45,7 @@ networkx==3.1
     #   scikit-image
 ninja==1.11.1.1
     # via pytype
-numpy==1.26.3
+numpy==1.26.4
     # via
     #   -r requirements/typing.txt
     #   bottleneck
@@ -83,7 +83,7 @@ python-dateutil==2.8.2
     # via pandas
 pytype==2024.1.24 ; python_version < "3.11"
     # via -r requirements/typing.txt
-pytz==2023.4
+pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via libcst
@@ -107,7 +107,7 @@ tomli==2.0.1
     #   pytest
 tqdm==4.66.1
     # via -r requirements/typing.txt
-types-pytz==2023.4.0.20240130
+types-pytz==2024.1.0.20240203
     # via pandas-stubs
 types-tqdm==4.66.0.20240106
     # via -r requirements/typing.txt
