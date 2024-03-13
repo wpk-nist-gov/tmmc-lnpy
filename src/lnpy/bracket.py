@@ -66,8 +66,8 @@
 
 #         def condition_left(p, new_lnz, dlnz_):
 #             done = (
-#                 idx in p._get_leve("phase")
-#                 and p.wfe_signle.get_dw(idx, idx_nebr) > efac
+#                 idx in p._get_level("phase")
+#                 and p.wfe_single.get_dw(idx, idx_nebr) > efac
 #             )
 #             return done, new_lnz, dlnz_
 
@@ -93,7 +93,7 @@
 
 #         def condition_right(p, new_llnz, dlnz_):
 #             done = (
-#                 idx not in p._get_leve("phase")
+#                 idx not in p._get_level("phase")
 #                 or t.wfe_phases.get_dw(idx, idx_nebr) < efac
 #             )
 #             return new, new_lnz, dlnz_

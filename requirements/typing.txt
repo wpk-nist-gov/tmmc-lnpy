@@ -21,4 +21,5 @@ scikit-image>=0.21
 scipy
 tqdm
 types-tqdm
+typing-extensions;python_version<"3.11"
 xarray

@@ -4,9 +4,9 @@
 #
 #    pip-compile --allow-unsafe --output-file=requirements/lock/py311-dev-complete.txt --strip-extras requirements/dev-complete.txt
 #
-appnope==0.1.3
+appnope==0.1.4
     # via ipykernel
-argcomplete==3.2.1
+argcomplete==3.2.2
     # via nox
 asttokens==2.4.1
     # via stack-data
@@ -19,9 +19,7 @@ autopep8==2.0.4
     # via nbqa
 bottleneck==1.3.7
     # via -r requirements/dev-complete.txt
-build==1.0.3
-    # via pip-tools
-certifi==2023.11.17
+certifi==2024.2.2
     # via requests
 cfgv==3.4.0
     # via pre-commit
@@ -30,11 +28,10 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via
     #   click-log
-    #   pip-tools
     #   scriv
 click-log==0.4.0
     # via scriv
-colorlog==6.8.0
+colorlog==6.8.2
     # via nox
 comm==0.2.1
     # via
@@ -42,13 +39,13 @@ comm==0.2.1
     #   ipywidgets
 contourpy==1.2.0
     # via matplotlib
-coverage==7.4.0
+coverage==7.4.1
     # via
     #   nbval
     #   pytest-cov
 cycler==0.12.1
     # via matplotlib
-debugpy==1.8.0
+debugpy==1.8.1
     # via ipykernel
 decorator==5.1.1
     # via ipython
@@ -62,7 +59,7 @@ fastjsonschema==2.19.1
     # via nbformat
 filelock==3.13.1
     # via virtualenv
-fonttools==4.47.0
+fonttools==4.48.1
     # via matplotlib
 identify==2.5.33
     # via pre-commit
@@ -74,25 +71,25 @@ importlib-resources==6.1.1
     # via -r requirements/dev-complete.txt
 iniconfig==2.0.0
     # via pytest
-ipykernel==6.28.0
+ipykernel==6.29.2
     # via
     #   -r requirements/dev-complete.txt
     #   nbval
-ipython==8.20.0
+ipython==8.21.0
     # via
     #   -r requirements/dev-complete.txt
     #   ipykernel
     #   ipywidgets
     #   nbqa
-ipywidgets==8.1.1
+ipywidgets==8.1.2
     # via -r requirements/dev-complete.txt
 jedi==0.19.1
     # via ipython
-jinja2==3.1.2
+jinja2==3.1.3
     # via scriv
 joblib==1.3.2
     # via -r requirements/dev-complete.txt
-jsonschema==4.20.0
+jsonschema==4.21.1
     # via nbformat
 jsonschema-specifications==2023.12.1
     # via jsonschema
@@ -105,7 +102,7 @@ jupyter-core==5.7.1
     #   ipykernel
     #   jupyter-client
     #   nbformat
-jupyterlab-widgets==3.0.9
+jupyterlab-widgets==3.0.10
     # via ipywidgets
 kiwisolver==1.4.5
     # via matplotlib
@@ -115,7 +112,7 @@ lazy-loader==0.3
     #   scikit-image
 markdown-it-py==3.0.0
     # via scriv
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via jinja2
 matplotlib==3.8.2
     # via -r requirements/dev-complete.txt
@@ -137,7 +134,7 @@ nbqa==1.7.1
     # via -r requirements/dev-complete.txt
 nbval==0.10.0
     # via -r requirements/dev-complete.txt
-nest-asyncio==1.5.8
+nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.2.1
     # via scikit-image
@@ -147,7 +144,7 @@ nodeenv==1.8.0
     #   pyright
 nox==2023.4.22
     # via -r requirements/dev-complete.txt
-numpy==1.26.3
+numpy==1.26.4
     # via
     #   -r requirements/dev-complete.txt
     #   bottleneck
@@ -162,7 +159,6 @@ numpy==1.26.3
     #   xarray
 packaging==23.2
     # via
-    #   build
     #   ipykernel
     #   matplotlib
     #   nox
@@ -170,7 +166,7 @@ packaging==23.2
     #   pytest-sugar
     #   scikit-image
     #   xarray
-pandas==2.1.4
+pandas==2.2.0
     # via xarray
 pandas-stubs==2.1.4.231227
     # via -r requirements/dev-complete.txt
@@ -183,19 +179,17 @@ pillow==10.2.0
     #   imageio
     #   matplotlib
     #   scikit-image
-pip-tools==7.3.0
-    # via -r requirements/dev-complete.txt
-platformdirs==4.1.0
+platformdirs==4.2.0
     # via
     #   jupyter-core
     #   virtualenv
-pluggy==1.3.0
+pluggy==1.4.0
     # via pytest
 pre-commit==3.6.0
     # via -r requirements/dev-complete.txt
 prompt-toolkit==3.0.43
     # via ipython
-psutil==5.9.7
+psutil==5.9.8
     # via ipykernel
 ptyprocess==0.7.0
     # via pexpect
@@ -207,9 +201,7 @@ pygments==2.17.2
     # via ipython
 pyparsing==3.1.1
     # via matplotlib
-pyproject-hooks==1.0.0
-    # via build
-pyright==1.1.345
+pyright==1.1.350
     # via -r requirements/dev-complete.txt
 pytest==7.4.4
     # via
@@ -223,7 +215,7 @@ pytest-accept==0.1.9
     # via -r requirements/dev-complete.txt
 pytest-cov==4.1.0
     # via -r requirements/dev-complete.txt
-pytest-sugar==0.9.7
+pytest-sugar==1.0.0
     # via -r requirements/dev-complete.txt
 pytest-xdist==3.5.0
     # via -r requirements/dev-complete.txt
@@ -232,7 +224,7 @@ python-dateutil==2.8.2
     #   jupyter-client
     #   matplotlib
     #   pandas
-pytz==2023.3.post1
+pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via pre-commit
@@ -240,19 +232,19 @@ pyzmq==25.1.2
     # via
     #   ipykernel
     #   jupyter-client
-referencing==0.32.1
+referencing==0.33.0
     # via
     #   jsonschema
     #   jsonschema-specifications
 requests==2.31.0
     # via scriv
-rpds-py==0.16.2
+rpds-py==0.17.1
     # via
     #   jsonschema
     #   referencing
 scikit-image==0.22.0
     # via -r requirements/dev-complete.txt
-scipy==1.11.4
+scipy==1.12.0
     # via
     #   -r requirements/dev-complete.txt
     #   scikit-image
@@ -266,7 +258,7 @@ stack-data==0.6.3
     # via ipython
 termcolor==2.4.0
     # via pytest-sugar
-tifffile==2023.12.9
+tifffile==2024.1.30
     # via scikit-image
 tokenize-rt==5.2.0
     # via nbqa
@@ -288,7 +280,7 @@ traitlets==5.14.1
     #   jupyter-core
     #   matplotlib-inline
     #   nbformat
-types-pytz==2023.3.1.1
+types-pytz==2024.1.0.20240203
     # via pandas-stubs
 types-tqdm==4.66.0.20240106
     # via -r requirements/dev-complete.txt
@@ -298,7 +290,7 @@ typing-extensions==4.9.0
     #   mypy
 tzdata==2023.4
     # via pandas
-urllib3==2.1.0
+urllib3==2.2.0
     # via requests
 virtualenv==20.25.0
     # via
@@ -306,17 +298,11 @@ virtualenv==20.25.0
     #   pre-commit
 wcwidth==0.2.13
     # via prompt-toolkit
-wheel==0.42.0
-    # via pip-tools
-widgetsnbextension==4.0.9
+widgetsnbextension==4.0.10
     # via ipywidgets
-xarray==2023.12.0
+xarray==2024.1.1
     # via -r requirements/dev-complete.txt
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==23.3.2
-    # via pip-tools
 setuptools==69.0.3
-    # via
-    #   nodeenv
-    #   pip-tools
+    # via nodeenv

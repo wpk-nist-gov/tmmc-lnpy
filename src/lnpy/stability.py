@@ -12,15 +12,16 @@ from typing import TYPE_CHECKING, overload
 import numpy as np
 from module_utilities import cached
 
-from .utils import RootResultDict, rootresults_to_rootresultdict
+from ._compat import rootresults
+from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Mapping
 
-    from scipy.optimize import RootResults
-    from typing_extensions import Self
+    from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
     from ._typing import MyNDArray
+    from ._typing_compat import Self
     from .lnpidata import lnPiMasked
     from .lnpiseries import lnPiCollection
     from .segment import BuildPhasesBase
@@ -94,7 +95,7 @@ def _initial_bracket_spinodal_right(
     ref : lnPiMasked, optional
     build_phases : callable
         scalar function to build phases
-    collection : lnPiColletion
+    collection : lnPiCollection
         initial estimates to work from
     idx, idx_nebr : int
         id's of from/to phases.
@@ -231,8 +232,6 @@ def _refine_bracket_spinodal_right(
 
     r : :class:`scipy.optimize.zeros.RootResults` object
     """
-    from scipy.optimize import RootResults
-
     left_done = False
     right_done = False
     if build_kws is None:
@@ -256,7 +255,7 @@ def _refine_bracket_spinodal_right(
         # checks
         if left_done and right_done:
             # find bracket
-            r = RootResults(root=None, iterations=i, function_calls=i, flag=1)
+            r = rootresults(root=None, iterations=i, function_calls=i, flag=1)
             return left, right, _rootresults_to_rootresulttotal(r)
 
         ########
@@ -265,7 +264,7 @@ def _refine_bracket_spinodal_right(
             # we've reached a breaking point
             if left_done:
                 # can't find a lower bound to efac, just return where we're at
-                r = RootResults(
+                r = rootresults(
                     root=left._get_lnz(), iterations=i + 1, function_calls=i, flag=0
                 )
 
@@ -280,7 +279,7 @@ def _refine_bracket_spinodal_right(
                 return left, right, r
 
             # all close, and no good on either end -> no spinodal
-            r = RootResults(root=None, iterations=i + 1, function_calls=i, flag=1)
+            r = rootresults(root=None, iterations=i + 1, function_calls=i, flag=1)
 
             r = _rootresults_to_rootresulttotal(
                 r,
@@ -359,10 +358,11 @@ class _SolveSpinodal:
         self.ref = ref
         self.build_kws = build_kws or {}
 
-    def objective(self, x: float) -> float | MyNDArray:
+    def objective(self, x: float) -> float:
         self.collection = self.build_phases(x, ref=self.ref, **self.build_kws)
         dw = self.collection.wfe_phases.get_dw(self.idx, self.idx_nebr)
-        return dw - self.efac
+
+        return array_to_scalar(dw) - self.efac
 
     def solve(
         self, a: float, b: float, **kws: Any
@@ -373,7 +373,7 @@ class _SolveSpinodal:
 
         return (
             self.collection._get_lnz(self.build_phases.index),
-            _rootresults_to_rootresulttotal(r, residual=self.objective(xx)),  # type: ignore[arg-type]
+            _rootresults_to_rootresulttotal(r, residual=self.objective(xx)),
             self.collection,
         )
 
@@ -550,13 +550,15 @@ class _SolveBinodal:
 
     def objective(self, x: float) -> float | MyNDArray:
         self.collection = self.build_phases(x, ref=self.ref, **self.build_kws)
-        return (
+        out = (
             self.collection.xge.betaOmega()
             .reindex(phase=self.ids)
             .diff("phase")
             .squeeze()
-            .values
+            .to_numpy()
         )
+
+        return array_to_scalar(out)
 
     def solve(
         self, ids: tuple[int, int], lnz_min: float, lnz_max: float, **kws: Any

@@ -87,6 +87,10 @@ def get_tqdm(
     if isinstance(len_min, str):
         len_min = OPTIONS[len_min]  # type: ignore[literal-required]
 
+        if not isinstance(len_min, int):
+            msg = f"{type(len_min)=} must be an int or a string in options."
+            raise TypeError(msg)
+
     if n is None:
         seq = tuple(seq)
         n = len(seq)
@@ -230,7 +234,7 @@ def dim_to_suffix_dataarray(
 ) -> xr.Dataset:
     if dim in da.dims:
         return da.assign_coords(  # type: ignore[misc]
-            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}  # type: ignore[arg-type]
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]
         ).to_dataset(dim=dim)
     return da.to_dataset()
 
@@ -614,7 +618,7 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
 
 def distance_matrix(
     mask: ArrayLike, convention: MaskConvention = "image"
-) -> NDArray[np.float_]:
+) -> NDArray[np.float64]:
     """
     Create matrix of distances from elements of mask
     to nearest background point
@@ -705,7 +709,7 @@ def dataset_to_lnpimasked(
         extra_kws = {}
 
     if pe_name in ds:
-        extra_kws[pe_name] = ds[pe_name].values  # type: ignore[index]
+        extra_kws[pe_name] = ds[pe_name].to_numpy()  # type: ignore[index]
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
 
@@ -714,7 +718,7 @@ def dataset_to_lnpimasked(
 
 
 class _RootResultDictReq(TypedDict, total=True):
-    root: float
+    root: float | MyNDArray | None
     iterations: int
     function_calls: int
     converged: bool
@@ -737,9 +741,22 @@ def rootresults_to_rootresultdict(
         iterations=r.iterations,
         function_calls=r.function_calls,
         converged=r.converged,
-        flag=r.flag,
+        flag=r.flag,  # pyright: ignore[reportArgumentType]
     )
 
     if residual is not None:
         out["residual"] = residual
     return out
+
+
+def array_to_scalar(x: float | MyNDArray) -> float:
+    """
+    Convert array to scalar.
+
+    If `x` is an ndarray, convert to float of 0-d,
+    or extract first element (of flattened array )
+    if N-d.
+    """
+    if isinstance(x, np.ndarray):
+        return x.flat[0]  # type: ignore[no-any-return]
+    return x

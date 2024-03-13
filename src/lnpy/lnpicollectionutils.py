@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
 from .lnpiseries import lnPiCollection
-from .utils import RootResultDict, rootresults_to_rootresultdict
+from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from typing import Any, Mapping, Sequence
@@ -142,12 +142,12 @@ def get_lnz_min(
     else:
         # TODO(wpk): Need to make collection work better.  Might need to just have a single class for everything...
         # reveal_type(collection.mloc[s.index[[0]]])
-        new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
+        new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)
         dlnz_left = dlnz
         for _i in range(ntry):
             new_lnz -= dlnz_left
             p = build_phases(new_lnz, ref=ref, **build_kws)
-            if phase_id in p._get_level("phase") and getter(p).values < target:
+            if phase_id in p._get_level("phase") and getter(p).to_numpy() < target:
                 left = p
                 break
             dlnz_left *= dfac
@@ -162,7 +162,7 @@ def get_lnz_min(
     if len(ss) > 0:
         right = collection.mloc[ss.index[[0]]]
     else:
-        new_lnz = collection.mloc[s.index[[-1]]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
+        new_lnz = collection.mloc[s.index[[-1]]]._get_lnz(lnz_idx)
         dlnz_right = dlnz
 
         for _i in range(ntry):
@@ -174,7 +174,7 @@ def get_lnz_min(
                 new_lnz -= dlnz_right
                 # reset to half dlnz
                 dlnz_right = dlnz_right * 0.5
-            elif getter(p).values > target:
+            elif getter(p).to_numpy() > target:
                 right = p
                 break
             else:
@@ -184,13 +184,13 @@ def get_lnz_min(
         msg = "could not find right bounds"
         raise RuntimeError(msg)
 
-    def f(x: float) -> MyNDArray:
+    def f(x: float) -> float:
         lnz_new = x
         p = build_phases(lnz_new, ref=ref, **build_kws)
         f.lnpi = p  # type: ignore[attr-defined]
-        return getter(p).values - target
+        return array_to_scalar(getter(p).values) - target
 
-    a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])  # pyright: ignore[reportAttributeAccessIssue]
+    a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])
 
     xx, r = brentq(f, a, b, full_output=True, **(solve_kws or {}))
 
@@ -219,7 +219,7 @@ def get_lnz_max(
         raise ValueError(msg)
 
     lnz_idx = build_phases.index
-    lnz_start = lnz_start or ref.lnz[lnz_idx]
+    lnz_start = cast(float, lnz_start or ref.lnz[lnz_idx])
 
     # need left/right bounds
     # left is greatest lnz point with edge_distance > edge_distance_min
@@ -234,7 +234,7 @@ def get_lnz_max(
     def getter(p: lnPiCollection) -> xr.DataArray:
         v = p.xge.edge_distance(ref)
         if not p._xarray_unstack:
-            v = v.unstack(p._concat_dim)
+            v = v.unstack(p._concat_dim)  # noqa: PD010
         return v.min("phase")
 
     # if have collection, try to use it
@@ -248,14 +248,14 @@ def get_lnz_max(
         if len(ss) > 0:
             left = collection.mloc[ss.index[[-1]]]
         else:
-            lnz_left = collection.zloc[[0]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
+            lnz_left = collection.zloc[[0]]._get_lnz(lnz_idx)
 
         # right
         ss = s[s < edge_distance_min]
         if len(ss) > 0:
             right = collection.mloc[ss.index[[0]]]
         else:
-            lnz_right = collection.zloc[[-1]]._get_lnz(lnz_idx)  # pyright: ignore[reportAttributeAccessIssue]
+            lnz_right = collection.zloc[[-1]]._get_lnz(lnz_idx)
 
     # if left not set, try to find it
     if left is None:
@@ -265,7 +265,7 @@ def get_lnz_max(
         for i in range(ntry):
             lnz_left -= dlnz_loc
             p = build_phases(lnz_left, ref=ref, **build_kws)
-            if getter(p).values >= edge_distance_min:
+            if getter(p).to_numpy() >= edge_distance_min:
                 left = p
                 n_left = i
                 break
@@ -286,7 +286,7 @@ def get_lnz_max(
             lnz_right += dlnz_loc
             p = build_phases(lnz_right, ref=ref, **build_kws)
 
-            if getter(p).values < edge_distance_min:
+            if getter(p).to_numpy() < edge_distance_min:
                 right = p
                 n_right = i
                 break
@@ -299,7 +299,7 @@ def get_lnz_max(
 
     # not do bisection
     bracket = [left, right]
-    values = [getter(x).values for x in bracket]
+    values = [getter(x).to_numpy() for x in bracket]
 
     for i in range(ntry):  # noqa: B007
         lnz = [x._get_lnz(lnz_idx) for x in bracket]
@@ -308,7 +308,7 @@ def get_lnz_max(
             break
         lnz_mid = 0.5 * (lnz[0] + lnz[1])
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
-        y_mid = getter(mid).values
+        y_mid = getter(mid).to_numpy()
 
         index = 0 if y_mid >= edge_distance_min else 1
 
@@ -362,11 +362,18 @@ def build_grid(
     """
 
     if x is None:
-        if (dx is None) or (x_range is None and offsets is None):
-            msg = "must specify dx and one of x_range or offsets if not passing x"
+        if dx is None:
+            msg = "Must specify dx"
             raise ValueError(msg)
 
-        x_range = x0 + np.array(offsets) if x_range is None else np.asarray(x_range)
+        if x_range is not None:
+            x_range = np.asarray(x_range)
+        elif offsets is not None and x0 is not None:
+            x_range = x0 + np.asarray(offsets)
+        else:
+            msg = "must specify x_range or x0 and offsets"
+            raise ValueError(msg)
+
         if len(x_range) != 2:
             raise ValueError
 

@@ -246,7 +246,9 @@ class SessionParams(DataclassParser):
     build_silent: bool = False
 
     # publish
-    publish: list[Literal["release", "test"]] | None = add_option("-p", "--publish")
+    publish: list[Literal["release", "test", "check"]] | None = add_option(
+        "-p", "--publish"
+    )
     publish_run: RUN_ANNO = None
 
     # conda-recipe/grayskull
@@ -952,7 +954,7 @@ def get_package_wheel(
 
     paths = list(dist_location.glob("*.whl"))
     if len(paths) != 1:
-        msg = "something wonky with paths {paths}"
+        msg = f"something wonky with paths {paths}"
         raise ValueError(msg)
 
     path = str(paths[0])
@@ -986,6 +988,9 @@ def publish(session: nox.Session, opts: SessionParams) -> None:
 
         elif cmd == "release":
             session.run("twine", "upload", "dist/*")
+
+        elif cmd == "check":
+            session.run("twine", "check", "--strict", "dist/*")
 
 
 # # ** Dist conda

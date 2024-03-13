@@ -44,6 +44,7 @@ dependencies = [
     "scikit-image >= 0.21",
     "scipy",
     "tqdm",
+    "typing-extensions;python_version<'3.11'",
     "xarray",
 ]
 [project.optional-dependencies]
@@ -145,6 +146,7 @@ extend-include = ["*.ipynb"]
 extend-exclude = [
     ".venv",
     "dist-conda",
+    ".numba_cache",
     "examples/archived",
     # "tests/",
     # "src/lnpy/tests",
@@ -191,8 +193,8 @@ ignore = [
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Use extend-ignore for project specific ignores (avoid changing ignore directly)
 extend-ignore = [
-    "PD",        # - not using pandas?
-    "NPY",       # - not using numpy?
+    # "PD",        # - not using pandas?
+    # "NPY",       # - not using numpy?
     # * Annotations
     "SLF001",  # - flake8-self (private access sometimes OK)
     # "ANN",     # - Annotations (just use mypy/pyright)
@@ -208,6 +210,9 @@ extend-ignore = [
     "C901",
     "PLR091",
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.ruff.lint.pylint]
 max-args = 15
@@ -227,7 +232,7 @@ max-public-methods = 30
 "**/*.py" = ["N999", "ANN101", "ANN102", "ANN401", "PLR2004", "PLC0415", "TD003", "FIX002"]
 "**/lnPi/*.py" = ["PGH", "ANN", "PL", "B", "N", "SIM", "S101"]
 "**/ensembles.py" = ["N802", "N803", "N806"]
-"**/*.ipynb" = ["ANN", "T201", "PLR2004", "S110"]
+"**/*.ipynb" = ["ANN", "T201", "PLR2004", "S110", "PD010", "PD013"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["lnpy", "lnPi"]
@@ -238,15 +243,34 @@ docstring-code-format = true
 [tool.nbqa.exclude]
 codespell = "^examples/archived"
 
+[tool.check-wheel-contents]
+toplevel = ["lnpy"]
+src_dir = ["src"]
 
 # * Testing --------------------------------------------------------------------
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.md' --pyargs"
-testpaths = ["lnpy", "lnPi", "tests", "README.md"]
+addopts = [
+    "--doctest-modules",
+    "--doctest-glob=*.md",
+    "--pyargs",
+    "--cov-config=pyproject.toml",
+    "-n",
+    "2",
+]
+testpaths = [
+    "README.md",
+    "lnPi",
+    "lnpy",
+    "tests",
+]
+
+[tool.coverage.run]
+branch = true
 
 [tool.coverage.report]
-exclude_also = ["if TYPE_CHECKING:", "@overload"]
+# show_missing = true
+xclude_also = ["if TYPE_CHECKING:", "@overload"]
 omit = ["*/vendored/*", "*/_typing.py"]
 include = ["src/*"]
 
@@ -261,7 +285,7 @@ show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
-exclude = [".eggs", ".tox", ".nox", ".venv", "docs"]
+exclude = [".eggs", ".tox", ".nox", ".venv", ".numba_cache", "docs"]
 check_untyped_defs = true
 strict = true
 untyped_calls_exclude = ["skimage"]
@@ -286,10 +310,11 @@ module = []
 
 [tool.pyright]
 include = ["src", "tests"]
-exclude = ["**/__pycache__", ".tox/**", ".nox/**", ".venv/**", "**/.mypy_cache"]
+exclude = ["**/__pycache__", ".tox/**", ".nox/**", ".venv/**", "**/.mypy_cache", "**/.numba_cache"]
 # strict = ["src/lnpy", "noxfile.py", "tools/*.py"]  # TODO(wpk): enable strict mode for src
 strict = ["noxfile.py", "tools/*.py"]
 pythonVersion = "3.11"
+# useLibraryCodeForTypes = true
 # typeCheckingMode = "strict"
 typeCheckingMode = "basic"
 # enable subset of "strict"
@@ -368,3 +393,10 @@ new_fragment_template = "file: changelog.d/templates/new_fragment.md.j2"
 use_shortcuts = true
 
 [tool.cruft]
+
+[tool.typos.default.extend-words]
+datas = "datas"
+
+[tool.typos.default.extend-identifiers]
+MyNDArray = "MyNDArray"
+fileprefix_inh = "fileprefix_inh"

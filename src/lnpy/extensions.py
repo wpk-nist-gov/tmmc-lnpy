@@ -17,8 +17,9 @@ from module_utilities import cached
 from module_utilities.typing import C_prop, R, S
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from module_utilities.cached import CachedProperty
-    from typing_extensions import Literal
 
 
 class AccessorRegistrationWarning(Warning):

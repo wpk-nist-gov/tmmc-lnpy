@@ -36,7 +36,7 @@ def load_ref():
     data = pd.read_csv(path_data / "water_MOF_example.csv")
 
     # potential energy
-    pe = data["U"].values
+    pe = data["U"].to_numpy()
 
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified

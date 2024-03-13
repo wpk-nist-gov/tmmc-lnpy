@@ -138,10 +138,10 @@ def test_nice_grid(obj, path_data) -> None:
     other_fine = get_test_table(o, ref)
     test_fine = pd.read_csv(path_data / "data_0_fine.csv")
 
-    v0 = other_fine.lnz_0.values
-    v1 = test_fine.lnz_0.values
+    v0 = other_fine.lnz_0.to_numpy()
+    v1 = test_fine.lnz_0.to_numpy()
 
-    np.testing.assert_allclose(v0, v1)  # type: ignore[arg-type]
+    np.testing.assert_allclose(v0, v1)
 
     pd.testing.assert_frame_equal(other_course, test_course)
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import itertools
 import warnings
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -20,9 +20,8 @@ from .utils import labels_to_masks, masks_change_convention, parallel_map_func_s
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Sequence, Union
 
-    from typing_extensions import Self
-
     from ._typing import MaskConvention, MyNDArray
+    from ._typing_compat import Self
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
@@ -163,7 +162,7 @@ def find_boundaries_overlap(
 
     # assert n == len(boundaries)
     if n != len(boundaries):
-        msg = "{boundaries=} must have length {n}."
+        msg = f"{boundaries=} must have length {n}."
         raise ValueError(msg)
 
     def _get_approx() -> dict[tuple[int, int], MyNDArray | None]:
@@ -519,7 +518,9 @@ class wFreeEnergy:  # noqa: N801
         out_arg: dict[tuple[int, int], _ExtremaArg] = {}
         out_max = np.full((self.nfeature,) * 2, dtype=float, fill_value=fill_value)
         if method == "approx":
-            for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
+            for (i, j), arg, val in zip(
+                cast("Iterable[tuple[int, int]]", overlap), argmax, valmax
+            ):
                 out_max[i, j] = out_max[j, i] = val
                 out_arg[i, j] = arg
 
@@ -530,7 +531,9 @@ class wFreeEnergy:  # noqa: N801
             valmax_dict = dict(zip(overlap_keys, valmax))
 
             # loop over unique keys
-            for i, j in {(i, j) for i, j, _ in overlap}:  # type: ignore[misc]
+            for i, j in {
+                (i, j) for i, j, _ in cast("Iterable[tuple[int, int, int]]", overlap)
+            }:
                 vals = [valmax_dict[i, j, index] for index in range(2)]
                 # take min value of maxes
                 if np.all(np.isnan(vals)):
@@ -624,13 +627,13 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
     w_tran = (
-        pd.DataFrame(  # type: ignore[call-overload]
+        pd.DataFrame(  # type: ignore[call-overload]  # noqa: PD013
             w.w_tran,
             index=index,
             columns=index.get_level_values("phase").rename("phase_nebr"),
         )
         .stack()
-        .rename("w_tran")
+        .rename("w_tran")  # pyright: ignore[reportArgumentType]
     )
 
     # get argtrans values for each index
@@ -687,7 +690,7 @@ class wFreeEnergyCollection:  # noqa: N801
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
-            masks = [x.mask for x in phases.values]
+            masks = [x.mask for x in phases.to_numpy()]
 
             ws.append(
                 wFreeEnergy(data=phases.iloc[0].data, masks=masks, convention=False)
@@ -835,7 +838,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
         if len(nebrs) == 0:
             return np.inf
-        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
+        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").to_numpy()
 
 
 # @lnPiCollection.decorate_accessor("wfe")

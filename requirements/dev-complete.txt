@@ -22,7 +22,6 @@ nbval
 nox
 numpy
 pandas-stubs
-pip-tools
 pre-commit
 pyright
 pytest
@@ -36,4 +35,5 @@ scipy
 scriv
 tqdm
 types-tqdm
+typing-extensions;python_version<"3.11"
 xarray

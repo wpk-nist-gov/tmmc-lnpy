@@ -55,7 +55,7 @@ def get_ref(
         header=None,
         sep="\\s+",
         names=["n", "e"],
-    )["e"].values
+    )["e"].to_numpy()
 
     return (
         lnPiMasked.from_table(
@@ -93,7 +93,7 @@ def ref_lnPi(path_data_lnPi):  # noqa: N802,N803
         header=None,
         sep="\\s+",
         names=["n", "e"],
-    )["e"].values
+    )["e"].to_numpy()
 
     return (
         lnPi.MaskedlnPiDelayed.from_table(
