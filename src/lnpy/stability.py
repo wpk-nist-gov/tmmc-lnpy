@@ -4,6 +4,7 @@ Thermodynamic stability (:mod:`~lnpy.stability`)
 
 Calculation of spinodal and binodal
 """
+
 from __future__ import annotations
 
 import itertools
@@ -714,8 +715,7 @@ class Spinodals(StabilityBase):
         unstack: bool | None = ...,
         raise_unconverged: bool = ...,
         **kwargs: Any,
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
     @overload
     def __call__(
@@ -733,8 +733,7 @@ class Spinodals(StabilityBase):
         **kwargs: Any,
     ) -> tuple[
         dict[int, lnPiCollection | None] | lnPiCollection, dict[int, RootResultTotal]
-    ]:
-        ...
+    ]: ...
 
     @overload
     def __call__(
@@ -756,8 +755,7 @@ class Spinodals(StabilityBase):
             dict[int, lnPiCollection | None] | lnPiCollection,
             dict[int, RootResultTotal],
         ]
-    ):
-        ...
+    ): ...
 
     def __call__(
         self,
@@ -920,8 +918,7 @@ class Binodals(StabilityBase):
         unstack: bool | None = ...,
         raise_unconverged: bool = ...,
         **kwargs: Any,
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
     @overload
     def __call__(
@@ -938,8 +935,9 @@ class Binodals(StabilityBase):
         unstack: bool | None = ...,
         raise_unconverged: bool = ...,
         **kwargs: Any,
-    ) -> tuple[dict[int, lnPiCollection] | lnPiCollection, dict[int, RootResultTotal]]:
-        ...
+    ) -> tuple[
+        dict[int, lnPiCollection] | lnPiCollection, dict[int, RootResultTotal]
+    ]: ...
 
     @overload
     def __call__(
@@ -959,8 +957,7 @@ class Binodals(StabilityBase):
     ) -> (
         Self
         | tuple[dict[int, lnPiCollection] | lnPiCollection, dict[int, RootResultTotal]]
-    ):
-        ...
+    ): ...
 
     def __call__(
         self,

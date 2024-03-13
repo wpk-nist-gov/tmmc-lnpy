@@ -1,4 +1,5 @@
 """Handle typing compatibility issues."""
+
 import sys
 
 if sys.version_info < (3, 11):

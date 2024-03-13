@@ -102,17 +102,17 @@ dtype: object
 
 # Access xarray backend for Grand Canonical properties with `xge` accessor
 >>> collection.xge.betaOmega()
-<xarray.DataArray 'betaOmega' (lnz_0: 5, phase: 1)>
+<xarray.DataArray 'betaOmega' (lnz_0: 5, phase: 1)> Size: 40B
 array([[-2.3245e-02],
        [-6.0370e-01],
        [-1.8552e+02],
        [-1.5447e+03],
        [-2.9580e+03]])
 Coordinates:
-  * lnz_0    (lnz_0) float64 -10.0 -6.75 -3.5 -0.25 3.0
-  * phase    (phase) int64 0
-    beta     float64 1.372
-    volume   float64 512.0
+  * lnz_0    (lnz_0) float64 40B -10.0 -6.75 -3.5 -0.25 3.0
+  * phase    (phase) int64 8B 0
+    beta     float64 8B 1.372
+    volume   float64 8B 512.0
 Attributes:
     dims_n:         ['n_0']
     dims_lnz:       ['lnz_0']

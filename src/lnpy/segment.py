@@ -9,6 +9,7 @@ Routines to segment lnPi
     a. Merge based on low free energy difference
  4. combination of 1-3.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -108,8 +109,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> tuple[MyNDArray, ...]:
-    ...
+) -> tuple[MyNDArray, ...]: ...
 
 
 @overload
@@ -125,8 +125,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray:
-    ...
+) -> MyNDArray: ...
 
 
 @overload
@@ -142,8 +141,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray | tuple[MyNDArray, ...]:
-    ...
+) -> MyNDArray | tuple[MyNDArray, ...]: ...
 
 
 @docfiller_local
@@ -312,8 +310,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["marker"] = ...,
         **kwargs: Any,
-    ) -> MyNDArray:
-        ...
+    ) -> MyNDArray: ...
 
     @overload
     def peaks(
@@ -324,8 +321,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["mask"],
         **kwargs: Any,
-    ) -> MyNDArray:
-        ...
+    ) -> MyNDArray: ...
 
     @overload
     def peaks(
@@ -336,8 +332,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["indices"],
         **kwargs: Any,
-    ) -> tuple[MyNDArray, ...]:
-        ...
+    ) -> tuple[MyNDArray, ...]: ...
 
     @overload
     def peaks(
@@ -348,8 +343,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: str,
         **kwargs: Any,
-    ) -> MyNDArray | tuple[MyNDArray, ...]:
-        ...
+    ) -> MyNDArray | tuple[MyNDArray, ...]: ...
 
     @docfiller_local
     def peaks(
@@ -615,8 +609,7 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> lnPiCollection:
-        ...
+    ) -> lnPiCollection: ...
 
     @overload
     def build_phases(
@@ -637,8 +630,7 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray]:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
 
     @overload
     def build_phases(
@@ -659,8 +651,7 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
 
     @docfiller_local
     def build_phases(
@@ -948,8 +939,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | Literal[True] = ...,
         **kwargs: Any,
-    ) -> lnPiCollection:
-        ...
+    ) -> lnPiCollection: ...
 
     @overload
     def __call__(
@@ -958,8 +948,7 @@ class BuildPhasesBase:
         *,
         phases_factory: Literal[False],
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray]:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
 
     @overload
     def __call__(
@@ -968,8 +957,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | bool,
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
 
     def __call__(
         self,

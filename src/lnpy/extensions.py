@@ -39,12 +39,10 @@ class _CachedAccessorSingle(Generic[S, R]):
         self._accessor = accessor
 
     @overload
-    def __get__(self, obj: None, cls: type[S] | None = None) -> C_prop[S, R]:
-        ...
+    def __get__(self, obj: None, cls: type[S] | None = None) -> C_prop[S, R]: ...
 
     @overload
-    def __get__(self, obj: S, cls: type[S] | None = None) -> R:
-        ...
+    def __get__(self, obj: S, cls: type[S] | None = None) -> R: ...
 
     def __get__(self, obj: S | None, cls: type[S] | None = None) -> C_prop[S, R] | R:
         if obj is None:
@@ -90,22 +88,19 @@ def _cachedaccessorcleared(name: str, accessor: C_prop[S, R]) -> CachedProperty[
 @overload
 def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: Literal[True]
-) -> _CachedAccessorSingle[S, R]:
-    ...
+) -> _CachedAccessorSingle[S, R]: ...
 
 
 @overload
 def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: Literal[False] = ...
-) -> CachedProperty[S, R]:
-    ...
+) -> CachedProperty[S, R]: ...
 
 
 @overload
 def _cachedaccessorwrapper(
     name: str, accessor: C_prop[S, R], *, single_create: bool
-) -> _CachedAccessorSingle[S, R] | CachedProperty[S, R]:
-    ...
+) -> _CachedAccessorSingle[S, R] | CachedProperty[S, R]: ...
 
 
 def _cachedaccessorwrapper(
@@ -126,10 +121,8 @@ class AccessorMixin:  # (Generic[S, R]):
         """Most general accessor"""
         if hasattr(cls, name):
             warnings.warn(
-                "registration of accessor {!r} under name {!r} for type {!r} is "
-                "overriding a preexisting attribute with the same name.".format(
-                    accessor, name, cls
-                ),
+                f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+                "overriding a preexisting attribute with the same name.",
                 AccessorRegistrationWarning,
                 stacklevel=2,
             )

@@ -2,6 +2,7 @@
 Typing definitions for :mod:`lnpy`
 ==================================
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union

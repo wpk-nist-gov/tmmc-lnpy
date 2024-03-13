@@ -88,19 +88,16 @@ class _LocIndexer:
         self._loc = self._parent._series.loc
 
     @overload
-    def __getitem__(self, idx: Scalar | tuple[Scalar, ...]) -> lnPiMasked:
-        ...
+    def __getitem__(self, idx: Scalar | tuple[Scalar, ...]) -> lnPiMasked: ...
 
     @overload
     def __getitem__(
         self,
         idx: list[Scalar] | pd.Index[Any] | slice | Callable[[pd.Series[Any]], Any],
-    ) -> lnPiCollection:
-        ...
+    ) -> lnPiCollection: ...
 
     @overload
-    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
-        ...
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection: ...
 
     def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         out = self._loc[idx]
@@ -127,16 +124,15 @@ class _iLocIndexer:  # noqa: N801
         self._iloc = self._parent._series.iloc
 
     @overload
-    def __getitem__(self, idx: IndexingInt) -> lnPiMasked:
-        ...
+    def __getitem__(self, idx: IndexingInt) -> lnPiMasked: ...
 
     @overload
-    def __getitem__(self, idx: Sequence[int] | pd.Index[Any] | slice) -> lnPiCollection:
-        ...
+    def __getitem__(
+        self, idx: Sequence[int] | pd.Index[Any] | slice
+    ) -> lnPiCollection: ...
 
     @overload
-    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
-        ...
+    def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection: ...
 
     def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection:
         out = self._iloc[idx]
@@ -530,8 +526,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         observed: bool = ...,
         dropna: bool = ...,
         wrap: Literal[False] = ...,
-    ) -> SeriesGroupBy[Any, Any]:
-        ...
+    ) -> SeriesGroupBy[Any, Any]: ...
 
     @overload
     def groupby(
@@ -545,8 +540,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         observed: bool = ...,
         dropna: bool = ...,
         wrap: Literal[True],
-    ) -> _Groupby:
-        ...
+    ) -> _Groupby: ...
 
     @overload
     def groupby(
@@ -560,8 +554,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         observed: bool = ...,
         dropna: bool = ...,
         wrap: bool,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby:
-        ...
+    ) -> SeriesGroupBy[Any, Any] | _Groupby: ...
 
     def groupby(
         self,
@@ -611,8 +604,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         *,
         wrap: Literal[False] = ...,
         **kwargs: Any,
-    ) -> SeriesGroupBy[Any, Any]:
-        ...
+    ) -> SeriesGroupBy[Any, Any]: ...
 
     @overload
     def groupby_allbut(
@@ -621,8 +613,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         *,
         wrap: Literal[True],
         **kwargs: Any,
-    ) -> _Groupby:
-        ...
+    ) -> _Groupby: ...
 
     @overload
     def groupby_allbut(
@@ -631,8 +622,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         *,
         wrap: bool,
         **kwargs: Any,
-    ) -> SeriesGroupBy[Any, Any] | _Groupby:
-        ...
+    ) -> SeriesGroupBy[Any, Any] | _Groupby: ...
 
     def groupby_allbut(
         self,
@@ -791,14 +781,12 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @overload
     def _get_lnz(
         self, component: int, *, iloc: int = ..., zloc: int | None = ...
-    ) -> float:
-        ...
+    ) -> float: ...
 
     @overload
     def _get_lnz(
         self, component: None = ..., *, iloc: int = ..., zloc: int | None = ...
-    ) -> MyNDArray:
-        ...
+    ) -> MyNDArray: ...
 
     def _get_lnz(
         self, component: int | None = None, *, iloc: int = 0, zloc: int | None = None

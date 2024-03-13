@@ -2,6 +2,7 @@
 Local free energy of lnPi (:mod:`~lnpy.lnpienergy`)
 ===================================================
 """
+
 from __future__ import annotations
 
 import itertools
@@ -81,8 +82,7 @@ def find_boundaries_overlap(
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["exact"] = ...,
-) -> dict[tuple[int, int, int], MyNDArray | None]:
-    ...
+) -> dict[tuple[int, int, int], MyNDArray | None]: ...
 
 
 @overload
@@ -94,8 +94,7 @@ def find_boundaries_overlap(
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["approx"],
-) -> dict[tuple[int, int], MyNDArray | None]:
-    ...
+) -> dict[tuple[int, int], MyNDArray | None]: ...
 
 
 # @overload

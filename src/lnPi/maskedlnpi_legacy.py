@@ -3,6 +3,7 @@
 Legacy lnPi array routines (:mod:`~lnPi.maskedlnpi_legacy`)
 ===========================================================
 """
+
 from __future__ import annotations
 
 from warnings import warn

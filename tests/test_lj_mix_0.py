@@ -65,7 +65,7 @@ def test_collection(obj) -> None:
 
     test = pd.read_csv(path_data / "data_0.csv")
 
-    lnz_values = test[["lnz_0", "lnz_1"]].to_numpy()
+    lnz_values = test[["lnz_0", "lnz_1"]].drop_duplicates().to_numpy()
 
     with lnpy.set_options(
         tqdm_leave=True,

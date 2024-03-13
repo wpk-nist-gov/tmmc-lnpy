@@ -254,13 +254,13 @@ def dim_to_suffix_dataset(
 @overload
 def dim_to_suffix(
     ds: xr.DataArray, dim: Hashable = ..., join: str = ...
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
-def dim_to_suffix(ds: xr.Dataset, dim: Hashable = ..., join: str = ...) -> xr.Dataset:
-    ...
+def dim_to_suffix(
+    ds: xr.Dataset, dim: Hashable = ..., join: str = ...
+) -> xr.Dataset: ...
 
 
 def dim_to_suffix(
@@ -292,8 +292,7 @@ def mask_change_convention(
     mask: None,
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
@@ -301,8 +300,7 @@ def mask_change_convention(
     mask: MyNDArray,
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> MyNDArray:
-    ...
+) -> MyNDArray: ...
 
 
 @docfiller.decorate
@@ -358,8 +356,7 @@ def masks_change_convention(
     masks: Sequence[MyNDArray],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[MyNDArray]:
-    ...
+) -> Sequence[MyNDArray]: ...
 
 
 @overload
@@ -367,8 +364,7 @@ def masks_change_convention(
     masks: Sequence[None],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[None]:
-    ...
+) -> Sequence[None]: ...
 
 
 @overload
@@ -376,8 +372,7 @@ def masks_change_convention(
     masks: Sequence[MyNDArray | None],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[MyNDArray | None]:
-    ...
+) -> Sequence[MyNDArray | None]: ...
 
 
 def masks_change_convention(

@@ -2,6 +2,7 @@
 lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
 ======================================================
 """
+
 ################################################################################
 # Delayed
 from __future__ import annotations

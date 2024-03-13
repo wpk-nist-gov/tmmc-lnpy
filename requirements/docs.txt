@@ -9,9 +9,7 @@
 #
 autodocsumm
 bottleneck
-ghp-import
 importlib_resources
-ipython
 ipywidgets
 joblib
 lazy_loader
