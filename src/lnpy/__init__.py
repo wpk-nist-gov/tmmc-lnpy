@@ -16,6 +16,7 @@ else:
         __name__,
         submodules=["ensembles", "lnpienergy", "segment"],
         submod_attrs={
+            "combine": ["combine_lnpi"],
             "lnpidata": ["lnPiMasked"],
             "lnpiseries": ["lnPiCollection"],
             "options": ["OPTIONS", "set_options"],
