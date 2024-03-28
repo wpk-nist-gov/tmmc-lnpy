@@ -305,6 +305,7 @@ module = [
     "scipy.ndimage.*",
     "scipy.spatial.*",
     "scipy.optimize.*",
+    "scipy.sparse.*",
     "lnPi.*",
     "IPython.*",
     "matplotlib.*",

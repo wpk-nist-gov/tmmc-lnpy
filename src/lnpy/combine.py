@@ -92,7 +92,7 @@ def check_windows_overlap(
 
     x: pd.DataFrame = (
         overlap_table.merge(
-            overlap_table, on=state_names, how="outer", suffixes=["", "_nebr"]
+            overlap_table, on=state_names, how="outer", suffixes=("", "_nebr")
         )
         .drop(state_names, axis=1)
         .query(f"{window_name} < {window_name}_nebr")

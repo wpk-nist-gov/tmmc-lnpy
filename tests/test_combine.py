@@ -25,15 +25,12 @@ def test_check_windows_overlap() -> None:
 
     overlap = pd.DataFrame({"n": [0, 0, 1, 1, 2, 2], "window": [0, 1, 1, 2, 2, 3]})
 
-    assert (
-        check_windows_overlap(
-            overlap,
-            windows=range(4),
-            state_names="n",
-            window_name="window",
-            verbose=True,
-        )
-        is None
+    check_windows_overlap(
+        overlap,
+        windows=range(4),
+        state_names="n",
+        window_name="window",
+        verbose=True,
     )
 
     # missing node

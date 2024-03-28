@@ -21,14 +21,14 @@ decorator==5.1.1          # via ipython
 docutils==0.20.1          # via myst-parser, pydata-sphinx-theme, sphinx
 executing==2.0.1          # via stack-data
 fastjsonschema==2.19.1    # via nbformat
-fonttools==4.49.0         # via matplotlib
+fonttools==4.50.0         # via matplotlib
 greenlet==3.0.3           # via sqlalchemy
 idna==3.6                 # via requests
 imageio==2.34.0           # via scikit-image
 imagesize==1.4.1          # via sphinx
-importlib-metadata==7.0.2  # via jupyter-cache, myst-nb
-importlib-resources==6.3.0
-ipykernel==6.29.3         # via myst-nb
+importlib-metadata==7.1.0  # via jupyter-cache, myst-nb
+importlib-resources==6.4.0
+ipykernel==6.29.4         # via myst-nb
 ipython==8.22.2           # via ipykernel, ipywidgets, myst-nb
 ipywidgets==8.1.2
 jedi==0.19.1              # via ipython
@@ -53,7 +53,7 @@ module-utilities==0.9.0
 myst-nb==1.0.0
 myst-parser==2.0.0        # via myst-nb
 nbclient==0.10.0          # via jupyter-cache, myst-nb
-nbformat==5.10.2          # via jupyter-cache, myst-nb, nbclient
+nbformat==5.10.3          # via jupyter-cache, myst-nb, nbclient
 nest-asyncio==1.6.0       # via ipykernel
 networkx==3.2.1           # via scikit-image
 numpy==1.26.4             # via bottleneck, contourpy, imageio, matplotlib, pandas, scikit-image, scipy, tifffile, xarray
@@ -75,7 +75,7 @@ python-dateutil==2.9.0.post0  # via jupyter-client, matplotlib, pandas
 pytz==2024.1              # via pandas
 pyyaml==6.0.1             # via jupyter-cache, myst-nb, myst-parser
 pyzmq==25.1.2             # via ipykernel, jupyter-client
-referencing==0.33.0       # via jsonschema, jsonschema-specifications
+referencing==0.34.0       # via jsonschema, jsonschema-specifications
 requests==2.31.0          # via sphinx
 rpds-py==0.18.0           # via jsonschema, referencing
 scikit-image==0.22.0
@@ -94,7 +94,7 @@ sphinxcontrib-jsmath==1.0.1  # via sphinx
 sphinxcontrib-qthelp==1.0.7  # via sphinx
 sphinxcontrib-serializinghtml==1.1.10  # via sphinx
 sphinxcontrib-spelling==8.0.0
-sqlalchemy==2.0.28        # via jupyter-cache
+sqlalchemy==2.0.29        # via jupyter-cache
 stack-data==0.6.3         # via ipython
 tabulate==0.9.0           # via jupyter-cache
 tifffile==2024.2.12       # via scikit-image
@@ -107,4 +107,4 @@ urllib3==2.2.1            # via requests
 wcwidth==0.2.13           # via prompt-toolkit
 widgetsnbextension==4.0.10  # via ipywidgets
 xarray==2024.2.0
-zipp==3.18.0              # via importlib-metadata
+zipp==3.18.1              # via importlib-metadata
