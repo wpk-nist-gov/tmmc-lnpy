@@ -20,8 +20,6 @@ def pytest_ignore_collect(collection_path, path, config) -> None:  # noqa: ARG00
     import sys
 
     if sys.version_info < (3, 9):
-        if "tests/test_" in str(collection_path):
-            return False
-        return True
+        return "tests/test_" not in str(collection_path)
 
     return False

@@ -24,6 +24,18 @@ These are made available from the {mod}`~lnpy.lnpidata` module.
     lnPiMasked
 ```
 
+## Combining $\ln\Pi$ from multiple simulations
+
+These methods are made available from the {mod}`~lnpy.combine` module.
+
+```{eval-rst}
+.. currentmodule:: lnpy.combine
+
+.. autosummary::
+
+    combine_lnpi
+```
+
 ## Collection of $\ln\Pi$ objects
 
 Made available from {mod}`~lnpy.lnpiseries`

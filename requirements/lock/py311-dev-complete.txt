@@ -13,7 +13,7 @@ click-log==0.4.0          # via scriv
 colorlog==6.8.2           # via nox
 comm==0.2.2               # via ipykernel, ipywidgets
 contourpy==1.2.0          # via matplotlib
-coverage==7.4.3           # via nbval, pytest-cov
+coverage==7.4.4           # via nbval, pytest-cov
 cycler==0.12.1            # via matplotlib
 debugpy==1.8.1            # via ipykernel
 decorator==5.1.1          # via ipython
@@ -21,14 +21,14 @@ distlib==0.3.8            # via virtualenv
 execnet==2.0.2            # via pytest-xdist
 executing==2.0.1          # via stack-data
 fastjsonschema==2.19.1    # via nbformat
-filelock==3.13.1          # via virtualenv
-fonttools==4.49.0         # via matplotlib
+filelock==3.13.3          # via virtualenv
+fonttools==4.50.0         # via matplotlib
 identify==2.5.35          # via pre-commit
 idna==3.6                 # via requests
 imageio==2.34.0           # via scikit-image
-importlib-resources==6.3.0
+importlib-resources==6.4.0
 iniconfig==2.0.0          # via pytest
-ipykernel==6.29.3         # via nbval
+ipykernel==6.29.4         # via nbval
 ipython==8.22.2           # via ipykernel, ipywidgets
 ipywidgets==8.1.2
 jedi==0.19.1              # via ipython
@@ -50,7 +50,7 @@ module-utilities==0.9.0
 mypy==1.9.0
 mypy-extensions==1.0.0    # via mypy
 nbclient==0.10.0
-nbformat==5.10.2          # via nbclient, nbval
+nbformat==5.10.3          # via nbclient, nbval
 nbval==0.11.0
 nest-asyncio==1.6.0       # via ipykernel
 networkx==3.2.1           # via scikit-image
@@ -59,14 +59,14 @@ nox==2024.3.2
 numpy==1.26.4             # via bottleneck, contourpy, imageio, matplotlib, pandas, pandas-stubs, scikit-image, scipy, tifffile, xarray
 packaging==24.0           # via ipykernel, matplotlib, nox, pipx, pytest, pytest-sugar, scikit-image, xarray
 pandas==2.2.1             # via xarray
-pandas-stubs==2.2.0.240218
+pandas-stubs==2.2.1.240316
 parso==0.8.3              # via jedi
 pexpect==4.9.0            # via ipython
 pillow==10.2.0            # via imageio, matplotlib, scikit-image
 pipx==1.4.3
 platformdirs==4.2.0       # via jupyter-core, pipx, virtualenv
 pluggy==1.4.0             # via pytest
-pre-commit==3.6.2
+pre-commit==3.7.0
 prompt-toolkit==3.0.43    # via ipython
 psutil==5.9.8             # via ipykernel
 ptyprocess==0.7.0         # via pexpect
@@ -75,14 +75,14 @@ pygments==2.17.2          # via ipython
 pyparsing==3.1.2          # via matplotlib
 pytest==8.1.1             # via nbval, pytest-accept, pytest-cov, pytest-sugar, pytest-xdist
 pytest-accept==0.1.10
-pytest-cov==4.1.0
+pytest-cov==5.0.0
 pytest-sugar==1.0.0
 pytest-xdist==3.5.0
 python-dateutil==2.9.0.post0  # via jupyter-client, matplotlib, pandas
 pytz==2024.1              # via pandas
 pyyaml==6.0.1             # via pre-commit
 pyzmq==25.1.2             # via ipykernel, jupyter-client
-referencing==0.33.0       # via jsonschema, jsonschema-specifications
+referencing==0.34.0       # via jsonschema, jsonschema-specifications
 requests==2.31.0          # via scriv
 rpds-py==0.18.0           # via jsonschema, referencing
 scikit-image==0.22.0

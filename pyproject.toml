@@ -87,7 +87,7 @@ pipxrun-tools = [
     "conda-lock >= 2.5.5",
     "grayskull >= 2.5.3",
     "nbqa >= 1.8.4",
-    "pyright >= 1.1.353",
+    "pyright >= 1.1.356",
     "tmmc-lnpy[mypy]",
     "twine >= 5.0.0",
 ]
@@ -162,7 +162,7 @@ unsafe-fixes = true
 preview = true
 select = ["ALL"]
 # fixable = ["ALL"]
-# unfixable = []
+unfixable = ["T"]
 ignore = [
     "CPY",       # - Don't require copyright
     "ERA",       # - eradicate (want to keep some stuff)
@@ -261,8 +261,8 @@ addopts = [
     "--doctest-glob=*.md",
     "--cov-config=pyproject.toml",
     "--pyargs",
-    # "-n",
-    # "2",
+    "-n",
+    "4",
 ]
 testpaths = [
     # "README.md",  # py38 issues.
@@ -305,6 +305,7 @@ module = [
     "scipy.ndimage.*",
     "scipy.spatial.*",
     "scipy.optimize.*",
+    "scipy.sparse.*",
     "lnPi.*",
     "IPython.*",
     "matplotlib.*",

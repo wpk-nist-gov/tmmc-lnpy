@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from . import ensembles, lnpienergy, segment  # noqa: TCH004
+    from .combine import combine_lnpi  # noqa: TCH004
     from .lnpidata import lnPiMasked  # noqa: TCH004
     from .lnpiseries import lnPiCollection  # noqa: TCH004
     from .options import OPTIONS, set_options  # noqa: TCH004
@@ -42,6 +43,7 @@ __all__ = [
     "__author__",
     "__email__",
     "__version__",
+    "combine_lnpi",
     "ensembles",
     "lnPiCollection",
     "lnPiMasked",
