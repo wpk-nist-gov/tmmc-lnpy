@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lnpy.splice import OverlapError, check_windows_overlap, splice
+from lnpy.combine import OverlapError, check_windows_overlap, combine_lnpi
 
 
 def test_check_windows_overlap() -> None:
@@ -80,7 +80,7 @@ def test_simple(check_connected: bool, use_sparse: bool) -> None:
     # no overlap:
     dfs = [table.iloc[:mid], table.iloc[mid:]]
     with pytest.raises(OverlapError):
-        splice(
+        combine_lnpi(
             dfs,
             state_names="x",
             lnpi_name="y",
@@ -91,7 +91,7 @@ def test_simple(check_connected: bool, use_sparse: bool) -> None:
     # single table
     dfs = [table]
     new = (
-        splice(
+        combine_lnpi(
             dfs,
             state_names="x",
             lnpi_name="y",
@@ -106,7 +106,7 @@ def test_simple(check_connected: bool, use_sparse: bool) -> None:
 
     dfs = [table.iloc[: mid + 1], table.iloc[mid:].assign(y=lambda x: x["y"] + 10)]
     new = (
-        splice(
+        combine_lnpi(
             dfs,
             state_names="x",
             lnpi_name="y",
@@ -123,7 +123,7 @@ def test_simple(check_connected: bool, use_sparse: bool) -> None:
     # with window name already there
     dfs = [x.assign(window="hello", other=1) for x in dfs]
     new = (
-        splice(
+        combine_lnpi(
             dfs,
             state_names="x",
             lnpi_name="y",
@@ -152,7 +152,7 @@ def test_simple(check_connected: bool, use_sparse: bool) -> None:
             break
 
     new = (
-        splice(
+        combine_lnpi(
             dfs,
             state_names="x",
             lnpi_name="y",

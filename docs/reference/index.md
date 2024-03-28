@@ -18,6 +18,7 @@ api-legacy
 .. autosummary::
 
     lnpy
+    lnpy.combine
     lnpy.lnpidata
     lnpy.lnpienergy
     lnpy.lnpiseries

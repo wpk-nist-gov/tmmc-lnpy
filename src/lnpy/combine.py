@@ -1,7 +1,7 @@
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false
 r"""
-Routines to splice :math:`\ln \Pi` data (:mod:`~lnpy.splice`)
-=============================================================
+Routines to combine :math:`\ln \Pi` data (:mod:`~lnpy.combine`)
+===============================================================
 
 """
 
@@ -74,11 +74,11 @@ def check_windows_overlap(
     verbose: bool = True,
 ) -> None:
     """
-    Check that windows overlap_table into a connected graph.
+    Check that window overlaps form a connected graph.
 
     Parameters
     ----------
-    overlap_table: pd.DataFrame
+    overlap_table: DataFrame
         Frame should contain columns ``state_names`` and ``window_name``
         and rows corresponding to overlaps.
 
@@ -215,8 +215,12 @@ def _create_lhs_matrix_numpy(
     )
     return a
 
+    # .. math::
 
-def splice(
+    #     \min_{C_0, C_1, ..., C_{W-1}} \sum_{\rm{overlap}_m} \in \rm{overlaps}}\, \sum_{N_m, k \in \rm{overlap}_m} [\ln \bar{\Pi}(N_m) - (\ln \Pi_k (N_m) + C_k)]^2
+
+
+def combine_lnpi(
     tables: Iterable[pd.DataFrame],
     state_names: str | Iterable[str] = "state",
     lnpi_name: str = "ln_prob",
@@ -225,33 +229,39 @@ def splice(
     check_connected: bool = False,
 ) -> pd.DataFrame:
     r"""
-    Splice multiple tmmc scans together in one pass using least squares.
+    Merge multiple :math:`\ln \Pi` scans together in one pass using least squares.
 
     This performs least squares on the problem:
 
     .. math::
 
-        \sum_{overlaps} \sum_{N_m, k \in \rm{overlap}} [\ln \bar{\Pi}(N_m) - (\ln \Pi_k (N_m) + C_k)]^2
+        \min_{C_0, C_1, ..., C_{W-1}} \sum_{\rm{overlap}_m \in \rm{overlaps}} \, \sum_{N_m, k \in \rm{overlap}_m}
+        [\ln \bar{\Pi}(N_m) - (\ln \Pi_k (N_m) + C_k)]^2
 
-    where :math:`\Pi_k` is the kth sample, :math:`C_k` is the to be determined shift for each sample, and :math:`\ln \bar{Pi}`
-    is the to be determined average value.
+    where,
+
+    - :math:`C_j` : shift for sample :math:`j`.
+    - :math:`W` : number of overlapping samples
+    - :math:`\Pi_k(N)` : transition matrix at particle number :math:`N` for the kth sample
+    - :math:`\rm{overlap}_m` : a particular overlap at particle number :math:`N_m` and over samples :math:`k`,
+    - :math:`\ln \bar{\Pi}` is the to be determined average value.
 
     This can be reduced to a matrix problem of the form:
 
     .. math::
 
-        S C_j - \sum_{k \in \rm{overlap}_m} C_k = - (S \ln \Pi_j(N_m)  - \sum_{k \in \rm{overlap}_m} \ln Pi_k(N_m))
+        S C_j - \sum_{k \in \rm{overlap}_m} C_k = - (S \ln \Pi_j(N_m)  - \sum_{k \in \rm{overlap}_m} \ln \Pi_k(N_m))
 
     the sum runs over all samples with overlap at state :math:`N_m`, :math:`S` is the number of such overlaps
-    (i.e., :math:`S = \sum_{k \in \rm{overlap}_m 1`).  There are such equations for all `j \in \rm{overlap}_m`.
+    (i.e., :math:`S = \sum_{k \in \rm{overlap}_m} 1`).  There are such equations for all :math:`j \in \rm{overlap}_m`.
 
 
 
     Parameters
     ----------
-    tables : iterable of pd.DataFrame
+    tables : iterable of DataFrame
         Individual sample windows.
-    state_names : str | Iterable[str]
+    state_names : str or iterable of str
         Column name corresponding to a single state.  For example,
         for single component, this would be something like ``'n'``.  For binary system,
         this would be something like ``['n_0', 'n_1']``.
@@ -260,13 +270,14 @@ def splice(
     window_name : str, default="window"
         Name of column with will keep track of the window index.
     use_sparse : bool, default=True
-        Use sparse matrix in matrix equation.  This is often faster than using a :class:`numpy.ndarray`.
+        Use :class:`~scipy.sparse.coo_array` array in matrix equation. This is
+        often faster than using a :class:`numpy.ndarray`.
     check_connected : bool, default=False
         If ``True``, check that all windows form a connected graph.
 
     Returns
     -------
-    pd.DataFrame
+    DataFrame
         DataFrame of all data.  The frame is not yet averaged over ``state_names``.
     """
     table: pd.DataFrame = pd.concat(dict(enumerate(tables)), names=[window_name, None])
