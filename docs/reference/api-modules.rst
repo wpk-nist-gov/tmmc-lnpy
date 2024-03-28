@@ -8,6 +8,7 @@
    lnpienergy
    segment
    ensembles
+   combine
 
 
 

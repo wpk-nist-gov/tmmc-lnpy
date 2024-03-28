@@ -9,6 +9,7 @@ Routines to segment lnPi
     a. Merge based on low free energy difference
  4. combination of 1-3.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -16,9 +17,9 @@ from collections.abc import Iterable
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast, overload  # , TypedDict
 
+import numpy as np
 from module_utilities.docfiller import DocFiller
 
-from ._lazy_imports import np
 from .docstrings import docfiller
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
@@ -108,8 +109,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> tuple[MyNDArray, ...]:
-    ...
+) -> tuple[MyNDArray, ...]: ...
 
 
 @overload
@@ -125,8 +125,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray:
-    ...
+) -> MyNDArray: ...
 
 
 @overload
@@ -142,8 +141,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray | tuple[MyNDArray, ...]:
-    ...
+) -> MyNDArray | tuple[MyNDArray, ...]: ...
 
 
 @docfiller_local
@@ -155,7 +153,7 @@ def peak_local_max_adaptive(
     style: PeakStyle | str = "indices",
     threshold_rel: float = 0.0,
     threshold_abs: float = 0.2,
-    num_peaks_max: int | float | None = None,
+    num_peaks_max: float | None = None,
     connectivity: int | None = None,
     errors: PeakError = "warn",
     **kwargs: Any,
@@ -201,7 +199,10 @@ def peak_local_max_adaptive(
     from skimage.feature import peak_local_max
     from skimage.morphology import label as morphology_label
 
-    assert style in ["indices", "mask", "marker"]
+    possible_styles = {"indices", "mask", "marker"}
+    if style not in possible_styles:
+        msg = f"{style=} not in {possible_styles}"
+        raise ValueError(msg)
 
     if min_distance is None:
         min_distance = [5, 10, 15, 20, 25]
@@ -213,7 +214,7 @@ def peak_local_max_adaptive(
         min_distance = [min_distance]
 
     data = data - bottleneck.nanmin(data)
-    kwargs = dict(dict(exclude_border=False), **kwargs)
+    kwargs = dict({"exclude_border": False}, **kwargs)
 
     n = idx = None
     for md in min_distance:
@@ -232,33 +233,31 @@ def peak_local_max_adaptive(
             break
 
     if n is None or idx is None:
-        raise ValueError("failed to find peaks")
+        msg = "failed to find peaks"
+        raise ValueError(msg)
 
     if n > num_peaks_max:
         if errors == "ignore":
             pass
-        elif errors in ("raise", "ignore"):
+        elif errors in {"raise", "ignore"}:
             message = f"{n} maxima found greater than {num_peaks_max}"
             if errors == "raise":
                 raise RuntimeError(message)
-            else:
-                warnings.warn(message)
+            warnings.warn(message, stacklevel=1)
 
     idx = tuple(idx.T)
     if style == "indices":
         return cast("tuple[MyNDArray, ...]", idx)
 
-    else:
-        out = np.zeros_like(data, dtype=bool)
-        out[idx] = True
+    out = np.zeros_like(data, dtype=bool)
+    out[idx] = True
 
-        if style == "marker":
-            out = morphology_label(out, connectivity=connectivity)
-
-        return cast("MyNDArray", out)
+    if style == "marker":
+        out = morphology_label(out, connectivity=connectivity)
+    return cast("MyNDArray", out)
 
 
-# TODO: create these for below
+# TODO(wpk): create these for below
 # class Peak_Kws(TypedDict, total=False):
 #     min_distance: Sequence[int]
 #     style: PeakStyle
@@ -311,8 +310,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["marker"] = ...,
         **kwargs: Any,
-    ) -> MyNDArray:
-        ...
+    ) -> MyNDArray: ...
 
     @overload
     def peaks(
@@ -323,8 +321,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["mask"],
         **kwargs: Any,
-    ) -> MyNDArray:
-        ...
+    ) -> MyNDArray: ...
 
     @overload
     def peaks(
@@ -335,8 +332,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: Literal["indices"],
         **kwargs: Any,
-    ) -> tuple[MyNDArray, ...]:
-        ...
+    ) -> tuple[MyNDArray, ...]: ...
 
     @overload
     def peaks(
@@ -347,8 +343,7 @@ class Segmenter:
         num_peaks_max: int | None = ...,
         style: str,
         **kwargs: Any,
-    ) -> MyNDArray | tuple[MyNDArray, ...]:
-        ...
+    ) -> MyNDArray | tuple[MyNDArray, ...]: ...
 
     @docfiller_local
     def peaks(
@@ -396,9 +391,7 @@ class Segmenter:
             kwargs["num_peaks_max"] = num_peaks_max
         kwargs["style"] = style
         kwargs = dict(self.peak_kws, **kwargs)
-        out = peak_local_max_adaptive(data, **kwargs)
-
-        return out  # type: ignore
+        return peak_local_max_adaptive(data, **kwargs)  # type: ignore[no-any-return]
 
     @docfiller_local
     def watershed(
@@ -434,8 +427,8 @@ class Segmenter:
         if connectivity is None:
             connectivity = data.ndim
 
-        kwargs = dict(self.watershed_kws, connectivity=connectivity, *kwargs)
-        return watershed(data, markers=markers, mask=mask, **kwargs)  # type: ignore
+        kwargs = dict(self.watershed_kws, connectivity=connectivity, **kwargs)
+        return watershed(data, markers=markers, mask=mask, **kwargs)  # type: ignore[no-any-return]
 
     @docfiller_local
     def segment_lnpi(
@@ -495,14 +488,15 @@ class Segmenter:
             else:
                 markers = num_peaks_max
 
-        assert isinstance(markers, (int, np.ndarray))
+        if not isinstance(markers, (int, np.ndarray)):
+            msg = f"{type(markers)=} must be int or np.ndarray"
+            raise TypeError(msg)
 
         if watershed_kws is None:
             watershed_kws = {}
-        labels = self.watershed(
+        return self.watershed(
             -lnpi.data, markers=markers, mask=~lnpi.mask, connectivity=connectivity
         )
-        return labels
 
 
 class PhaseCreator:
@@ -528,7 +522,7 @@ class PhaseCreator:
     phases_factory : callable, optional
         Factory function for returning Collection from a list of :class:`~lnpy.lnpidata.lnPiMasked` object.
         Defaults to :meth:`.lnPiCollection.from_list`.
-    lnPiFreeEnergy_kws : mapping, optional
+    free_energy_kws : mapping, optional
         Optional arguments to ...
     merge_kws : mapping, optional
         Optional arguments to :func:`.merge_regions`
@@ -544,7 +538,7 @@ class PhaseCreator:
         segment_kws: Mapping[str, Any] | None = None,
         tag_phases: TagPhasesSignature | None = None,
         phases_factory: PhasesFactorySignature | None = None,
-        lnPiFreeEnergy_kws: Mapping[str, Any] | None = None,
+        free_energy_kws: Mapping[str, Any] | None = None,
         merge_kws: Mapping[str, Any] | None = None,
     ) -> None:
         self.nmax = nmax
@@ -557,16 +551,16 @@ class PhaseCreator:
         self.segment_kws = {} if segment_kws is None else dict(segment_kws)
         self.segment_kws["num_peaks_max"] = nmax_peak or nmax * 2
 
-        self.lnPiFreeEnergy_kws = lnPiFreeEnergy_kws or {}
+        self.free_energy_kws = free_energy_kws or {}
         self.merge_kws = (
             {}
             if merge_kws is None
             else dict(merge_kws, convention=False, nfeature_max=self.nmax)
         )
 
-    # TODO: make this work with integer or string phase_ids
+    # TODO(wpk): make this work with integer or string phase_ids
+    @staticmethod
     def _merge_phase_ids(
-        self,
         ref: lnPiMasked,
         phase_ids: Sequence[int] | MyNDArray,
         lnpis: list[lnPiMasked],
@@ -612,11 +606,10 @@ class PhaseCreator:
         phases_factory: PhasesFactorySignature | Literal[True] = ...,
         phase_kws: Mapping[str, Any] | None = ...,
         segment_kws: Mapping[str, Any] | None = ...,
-        lnPiFreeEnergy_kws: Mapping[str, Any] | None = ...,
+        free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> lnPiCollection:
-        ...
+    ) -> lnPiCollection: ...
 
     @overload
     def build_phases(
@@ -634,11 +627,10 @@ class PhaseCreator:
         phases_factory: Literal[False],
         phase_kws: Mapping[str, Any] | None = ...,
         segment_kws: Mapping[str, Any] | None = ...,
-        lnPiFreeEnergy_kws: Mapping[str, Any] | None = ...,
+        free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray]:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
 
     @overload
     def build_phases(
@@ -656,11 +648,10 @@ class PhaseCreator:
         phases_factory: PhasesFactorySignature | bool,
         phase_kws: Mapping[str, Any] | None = ...,
         segment_kws: Mapping[str, Any] | None = ...,
-        lnPiFreeEnergy_kws: Mapping[str, Any] | None = ...,
+        free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
 
     @docfiller_local
     def build_phases(
@@ -678,7 +669,7 @@ class PhaseCreator:
         phases_factory: PhasesFactorySignature | bool = True,
         phase_kws: Mapping[str, Any] | None = None,
         segment_kws: Mapping[str, Any] | None = None,
-        lnPiFreeEnergy_kws: Mapping[str, Any] | None = None,
+        free_energy_kws: Mapping[str, Any] | None = None,
         merge_kws: Mapping[str, Any] | None = None,
         tag_phases: TagPhasesSignature | None = None,
     ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
@@ -716,7 +707,7 @@ class PhaseCreator:
             Extra arguments to `phases_factory`
         segment_kws : mapping, optional
             Extra arguments to `self.segmenter.segment_lnpi`
-        lnPiFreeEnergy_kws : mapping, optional
+        free_energy_kws : mapping, optional
             Extra arguments to free energy calculation
         merge_kws : mapping, optional
             Extra arguments to merge
@@ -739,7 +730,8 @@ class PhaseCreator:
 
         if ref is None:
             if self.ref is None:
-                raise ValueError("must specify ref or self.ref")
+                msg = "must specify ref or self.ref"
+                raise ValueError(msg)
             ref = self.ref
 
         # reweight
@@ -769,11 +761,11 @@ class PhaseCreator:
             labels = self.segmenter.segment_lnpi(lnpi=ref, **segment_kws)
 
             # analyze w = - lnPi
-            lnPiFreeEnergy_kws = _combine_kws(
-                self.lnPiFreeEnergy_kws, lnPiFreeEnergy_kws, **connectivity_kws
+            free_energy_kws = _combine_kws(
+                self.free_energy_kws, free_energy_kws, **connectivity_kws
             )
             wlnpi = wFreeEnergy.from_labels(
-                data=ref.data, labels=labels, **lnPiFreeEnergy_kws
+                data=ref.data, labels=labels, **free_energy_kws
             )
 
             if merge_phases:
@@ -910,20 +902,23 @@ class BuildPhasesBase:
     def x(self) -> list[float | None]:
         return self._x
 
+    @x.setter
+    def x(self, x: list[float | None]) -> None:
+        self._set_x(x)
+
     @property
     def phase_creator(self) -> PhaseCreator:
         return self._phase_creator
 
     def _set_x(self, x: list[float | None]) -> None:
-        assert sum([x is None for x in x]) == 1
+        # assert sum([x is None for x in x]) == 1
+        if sum([x is None for x in x]) != 1:
+            msg = f"{x=} must have a single element which is None.  This will be the dimension varied."
+            raise ValueError(msg)
         self._x = x
         self._ncomp = len(self._x)
         self._index = self._x.index(None)
         self._set_params()
-
-    @x.setter  # type: ignore
-    def x(self, x: list[float | None]) -> None:
-        self._set_x(x)
 
     @property
     def index(self) -> int:
@@ -933,7 +928,7 @@ class BuildPhasesBase:
     def _set_params(self) -> None:
         pass
 
-    def _get_lnz(self, lnz_index: float) -> MyNDArray:  # pyright: ignore
+    def _get_lnz(self, lnz_index: float) -> MyNDArray:
         # to be implemented in child class
         raise NotImplementedError
 
@@ -944,8 +939,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | Literal[True] = ...,
         **kwargs: Any,
-    ) -> lnPiCollection:
-        ...
+    ) -> lnPiCollection: ...
 
     @overload
     def __call__(
@@ -954,8 +948,7 @@ class BuildPhasesBase:
         *,
         phases_factory: Literal[False],
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray]:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
 
     @overload
     def __call__(
@@ -964,8 +957,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | bool,
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
-        ...
+    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
 
     def __call__(
         self,
@@ -1003,7 +995,7 @@ class BuildPhasesBase:
 
 # from .utils import get_lnz_iter
 @docfiller_local
-class BuildPhases_mu(BuildPhasesBase):
+class BuildPhases_mu(BuildPhasesBase):  # noqa: N801
     """
     create phases from scalar value of mu for fixed value of mu for other species
 
@@ -1023,7 +1015,7 @@ class BuildPhases_mu(BuildPhasesBase):
 
 
 @docfiller_local
-class BuildPhases_dmu(BuildPhasesBase):
+class BuildPhases_dmu(BuildPhasesBase):  # noqa: N801
     """
     Create phases from scalar value of mu at fixed value of dmu for other species
 
@@ -1044,5 +1036,5 @@ class BuildPhases_dmu(BuildPhasesBase):
 
 
 @lru_cache(maxsize=10)
-def get_default_PhaseCreator(nmax: int) -> PhaseCreator:
+def get_default_phasecreator(nmax: int) -> PhaseCreator:
     return PhaseCreator(nmax=nmax)

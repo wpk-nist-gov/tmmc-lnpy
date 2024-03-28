@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._lazy_imports import np
-from .utils import RootResultDict, rootresults_to_rootresultdict
+import numpy as np
+
+from .lnpiseries import lnPiCollection
+from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from typing import Any, Mapping
 
     import xarray as xr
 
-    from ._typing import MyNDArray
     from .lnpidata import lnPiMasked
-    from .lnpiseries import lnPiCollection
     from .segment import BuildPhasesBase
 
 
 def _initial_bracket_molfrac(
     target: float,
-    C: lnPiCollection,
+    collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     phase_id: int | str | None = 0,
     component: int | None = None,
@@ -46,8 +46,7 @@ def _initial_bracket_molfrac(
             v = x.xge.molfrac.sel(component=component)
             if len(x) == 1:
                 return v.isel(phase=0)
-            else:
-                return v.where(x.xge.mask_stable).max("phase")
+            return v.where(x.xge.mask_stable).max("phase")
 
     else:
         skip_phase_id = False
@@ -55,50 +54,47 @@ def _initial_bracket_molfrac(
         def getter(x: lnPiCollection) -> xr.DataArray:
             return x.xge.molfrac.sel(component=component, phase=phase_id)
 
-    s = getter(C).to_series().dropna()
+    s = getter(collection).to_series().dropna()
 
     # get left bound
     left = None
     ntry_left = 0
     ss = s[s < target]
     if len(ss) > 0:
-        left = C.mloc[ss.index[[-1]]]
+        left = collection.mloc[ss.index[[-1]]]
     else:
-        if len(s) > 0:
-            index = s.index[[0]]
-        else:
-            index = C.index[[0]].droplevel("phase")
-        new_lnz = C.mloc[index]._get_lnz(lnz_idx)
+        index = s.index[[0]] if len(s) > 0 else collection.index[[0]].droplevel("phase")
+        new_lnz = collection.mloc[index]._get_lnz(lnz_idx)
         dlnz_ = dlnz
-        for i in range(ntry):
+        for i in range(ntry):  # noqa: B007
             new_lnz -= dlnz_
             dlnz_ *= dfac
             p = build_phases(new_lnz, ref=ref, **build_kws)
             if (skip_phase_id or phase_id in p._get_level("phase")) and getter(
                 p
-            ).values < target:
+            ).to_numpy() < target:
                 left = p
                 break
         ntry_left = i
 
     if left is None:
-        raise RuntimeError("could not find left bounds")
+        msg = "could not find left bounds"
+        raise RuntimeError(msg)
 
     # right bracket
     right = None
     ntry_right = 0
     ss = s[s > target]
     if len(ss) > 0:
-        right = C.mloc[ss.index[[0]]]
+        right = collection.mloc[ss.index[[0]]]
     else:
-        if len(s) > 0:
-            index = s.index[[-1]]
-        else:
-            index = C.index[[-1]].droplevel("phase")
-        new_lnz = C.mloc[index]._get_lnz(lnz_idx)
+        index = (
+            s.index[[-1]] if len(s) > 0 else collection.index[[-1]].droplevel("phase")
+        )
+        new_lnz = collection.mloc[index]._get_lnz(lnz_idx)
         dlnz_ = dlnz
 
-        for i in range(ntry):
+        for i in range(ntry):  # noqa: B007
             new_lnz += dlnz_
             p = build_phases(new_lnz, ref=ref, **build_kws)
             if (not skip_phase_id) and (phase_id not in p._get_level("phase")):
@@ -106,7 +102,7 @@ def _initial_bracket_molfrac(
                 new_lnz -= dlnz_
                 # reset to half dlnz
                 dlnz_ = dlnz_ * 0.5
-            elif getter(p).values > target:
+            elif getter(p).to_numpy() > target:
                 right = p
                 break
             else:
@@ -114,9 +110,10 @@ def _initial_bracket_molfrac(
         ntry_right = i
 
     if right is None:
-        raise RuntimeError("could not find right bounds")
+        msg = "could not find right bounds"
+        raise RuntimeError(msg)
 
-    info = dict(ntry_left=ntry_left, ntry_right=ntry_right)
+    info = {"ntry_left": ntry_left, "ntry_right": ntry_right}
     return left, right, info
 
 
@@ -168,12 +165,12 @@ def _solve_lnz_molfrac(
     if component is None:
         component = build_phases.index
 
-    if not isinstance(left, float):
+    if isinstance(left, lnPiCollection):
         left = left._get_lnz(build_phases.index)
-    if not isinstance(right, float):
+    if isinstance(right, lnPiCollection):
         right = right._get_lnz(build_phases.index)
 
-    a, b = sorted([x for x in (left, right)])
+    a, b = sorted((left, right))
 
     if isinstance(phase_id, str) and phase_id.lower() == "none":
         # select stable phase
@@ -183,8 +180,7 @@ def _solve_lnz_molfrac(
             v = x.xge.molfrac.sel(component=component)
             if len(x) == 1:
                 return v.isel(phase=0)
-            else:
-                return v.where(x.xge.mask_stable).max("phase")
+            return v.where(x.xge.mask_stable).max("phase")
 
     else:
         skip_phase_id = False
@@ -192,22 +188,15 @@ def _solve_lnz_molfrac(
         def getter(x: lnPiCollection) -> xr.DataArray:
             return x.xge.molfrac.sel(component=component, phase=phase_id)
 
-    def f(x: float) -> float | MyNDArray:
+    def f(x: float) -> float:
         p = build_phases(x, ref=ref, **build_kws)
-        f.lnpi = p  # type: ignore
+        f.lnpi = p  # type: ignore[attr-defined]
 
         # by not using the ListAccessor,
-        # can parralelize
-        mf: MyNDArray | float
+        # can parallelize
+        mf: float
         if skip_phase_id or phase_id in p._get_level("phase"):
-            mf = getter(p).values
-            # mf = (
-            #     p.s.xs(phase_id, level='phase').iloc[0]
-            #     .xge
-            #     .molfrac
-            #     .sel(component=component)
-            #     .values
-            # )
+            mf = array_to_scalar(getter(p).values)
         else:
             mf = np.inf
 
@@ -217,14 +206,15 @@ def _solve_lnz_molfrac(
 
     residual = f(xx)
     if np.abs(residual) > tol:
-        raise RuntimeError("something went wrong with solve")
+        msg = "something went wrong with solve"
+        raise RuntimeError(msg)
 
-    return f.lnpi, rootresults_to_rootresultdict(r, residual=residual)  # type: ignore
+    return f.lnpi, rootresults_to_rootresultdict(r, residual=residual)  # type: ignore[attr-defined]
 
 
 def find_lnz_molfrac(
     target: float,
-    C: lnPiCollection,
+    collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     phase_id: int | str | None = 0,
     component: int | None = None,
@@ -236,9 +226,9 @@ def find_lnz_molfrac(
     tol: float = 1e-4,
     **kwargs: Any,
 ) -> tuple[lnPiCollection, RootResultDict]:
-    left, right, info = _initial_bracket_molfrac(
+    left, right, _info = _initial_bracket_molfrac(
         target=target,
-        C=C,
+        collection=collection,
         build_phases=build_phases,
         phase_id=phase_id,
         component=component,

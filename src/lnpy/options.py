@@ -2,9 +2,13 @@
 Options (:mod:`~lnpy.options`)
 ==============================
 """
+
 from __future__ import annotations
 
-from typing import Any, Callable, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Callable, TypedDict, cast
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 ValidatorFunc = Callable[[Any], bool]
 
@@ -91,7 +95,7 @@ def _isdict(x: Any) -> bool:
     return isinstance(x, dict)
 
 
-def _isstr_or_None(x: Any) -> bool:
+def _isstr_or_none(x: Any) -> bool:
     return x is None or _isstr(x)
 
 
@@ -100,10 +104,10 @@ _VALIDATORS: Validators = {
     "tqdm_len_calc": _isint,
     "tqdm_len_build": _isint,
     "tqdm_leave": _isbool,
-    "tqdm_bar": lambda x: x in ["default", "text", "notebook"],
+    "tqdm_bar": lambda x: x in {"default", "text", "notebook"},
     "joblib_use": _isbool,
     "joblib_n_jobs": _isint,
-    "joblib_backend": _isstr_or_None,
+    "joblib_backend": _isstr_or_none,
     "joblib_kws": _isdict,
     "joblib_len_calc": _isint,
     "joblib_len_build": _isint,
@@ -112,7 +116,14 @@ _VALIDATORS: Validators = {
 _SETTERS: dict[str, Any] = {}
 
 
-class set_options:
+def _apply_update(options_dict: Options) -> None:
+    for k, v in options_dict.items():
+        if k in _SETTERS:
+            _SETTERS[k](v)
+    OPTIONS.update(options_dict)
+
+
+class set_options:  # noqa: N801
     """
     Set options for xarray in a controlled context.
     Currently supported options:
@@ -133,9 +144,8 @@ class set_options:
     You can use ``set_options`` either as a context manager:
 
     >>> import lnpy
-    >>> with lnpy.set_options(use_tqdm=True, tqdm_min_len_calc=50): # doctest: +SKIP
+    >>> with lnpy.set_options(use_tqdm=True, tqdm_min_len_calc=50):  # doctest: +SKIP
     ...     c.xge.betaOmega()
-    ...
 
 
     Or to set global options:
@@ -147,22 +157,21 @@ class set_options:
         self.old: Options = {}
         for k, v in cast(Options, kwargs).items():
             if k not in OPTIONS:
-                raise ValueError(
-                    f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
-                )
-            if k in _VALIDATORS and not _VALIDATORS[k](v):  # type: ignore
-                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
-            self.old[k] = OPTIONS[k]  # type: ignore
-        self._apply_update(cast(Options, kwargs))
-
-    def _apply_update(self, options_dict: Options) -> None:
-        for k, v in options_dict.items():
-            if k in _SETTERS:
-                _SETTERS[k](v)
-        OPTIONS.update(options_dict)
+                msg = f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
+                raise ValueError(msg)
+            if k in _VALIDATORS and not _VALIDATORS[k](v):  # type: ignore[literal-required]
+                msg = f"option {k!r} given an invalid value: {v!r}"
+                raise ValueError(msg)
+            self.old[k] = OPTIONS[k]  # type: ignore[literal-required]
+        _apply_update(cast(Options, kwargs))
 
     def __enter__(self) -> None:
         return
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
-        self._apply_update(self.old)
+    def __exit__(
+        self,
+        type: type[BaseException] | None,  # noqa: A002
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        _apply_update(self.old)

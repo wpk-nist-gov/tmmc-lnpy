@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from . import ensembles, lnpienergy, segment  # noqa: TCH004
+    from .combine import combine_lnpi  # noqa: TCH004
     from .lnpidata import lnPiMasked  # noqa: TCH004
     from .lnpiseries import lnPiCollection  # noqa: TCH004
     from .options import OPTIONS, set_options  # noqa: TCH004
@@ -24,9 +25,12 @@ else:
 
 
 # updated versioning scheme
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
+
 try:
-    from ._version import __version__
-except Exception:
+    __version__ = _version("tmmc-lnpy")
+except PackageNotFoundError:  # pragma: no cover
     __version__ = "999"
 
 __author__ = """William P. Krekelberg"""
@@ -34,15 +38,16 @@ __email__ = "wpk@nist.gov"
 
 
 __all__ = [
+    "OPTIONS",
+    "PhaseCreator",
     "__author__",
     "__email__",
     "__version__",
-    "lnPiMasked",
-    "lnPiCollection",
-    "segment",
+    "combine_lnpi",
     "ensembles",
+    "lnPiCollection",
+    "lnPiMasked",
     "lnpienergy",
-    "PhaseCreator",
+    "segment",
     "set_options",
-    "OPTIONS",
 ]

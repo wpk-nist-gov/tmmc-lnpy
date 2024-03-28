@@ -2,6 +2,7 @@
 lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
 ======================================================
 """
+
 ################################################################################
 # Delayed
 from __future__ import annotations
@@ -9,9 +10,10 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING, Iterable
 
+import numpy as np
+import pandas as pd
 from module_utilities import cached
 
-from ._lazy_imports import np, pd
 from .docstrings import docfiller
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
@@ -22,10 +24,10 @@ if TYPE_CHECKING:
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray
-    from typing_extensions import Self
 
     from . import ensembles
     from ._typing import MaskConvention, MyNDArray
+    from ._typing_compat import Self
 
 
 @lru_cache(maxsize=20)
@@ -38,29 +40,26 @@ def _get_shift(
     shape: tuple[int, ...], dlnz: tuple[float, ...], dtype: DTypeLike
 ) -> MyNDArray:
     shift = np.zeros([], dtype=dtype)
-    for i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):  # type: ignore
-        shift = np.add.outer(shift, nr * m)  # pyright: ignore
+    for _i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):  # type: ignore[arg-type]
+        shift = np.add.outer(shift, nr * m)
     return shift
 
 
 @lru_cache(maxsize=20)
 def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> MyNDArray:
     if all(x == 0 for x in dlnz):
-        return base.data  # pyright: ignore
-    else:
-        return (
-            _get_shift(base.shape, dlnz, base.data.dtype) + base.data
-        )  # pyright: ignore
+        return base.data
+    return _get_shift(base.shape, dlnz, base.data.dtype) + base.data  # pyright: ignore[reportArgumentType]
 
 
 @lru_cache(maxsize=20)
 def _get_maskedarray(
     base: lnPiArray, self: lnPiMasked, dlnz: tuple[float, ...]
-) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
-    return np.ma.MaskedArray(  # type: ignore
+) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
+    return np.ma.MaskedArray(  # type: ignore[no-untyped-call]
         _get_data(base, dlnz),
         mask=self._mask,
-        fill_value=base.fill_value,  # pyright: ignore
+        fill_value=base.fill_value,
     )
 
 
@@ -70,11 +69,11 @@ def _get_filled(
     self: lnPiMasked,
     dlnz: tuple[float, ...],
     fill_value: float | None = None,
-) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
-    return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore
+) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
+    return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore[no-any-return, no-untyped-call]
 
 
-class lnPiArray:
+class lnPiArray:  # noqa: N801
     """
     Wrapper on lnPi lnPiArray
 
@@ -104,9 +103,12 @@ class lnPiArray:
         {copy}
         """
 
-        lnz = np.atleast_1d(lnz)
+        lnz = np.atleast_1d(lnz).astype(np.float64)
         data = np.array(data, copy=copy)
-        assert data.ndim == len(lnz)
+        # assert data.ndim == len(lnz)
+        if data.ndim != len(lnz):
+            msg = f"Length of {lnz=} must be {data.ndim}"
+            raise ValueError(msg)
 
         fill_value = fill_value or np.nan
 
@@ -122,7 +124,7 @@ class lnPiArray:
         self.state_kws = state_kws
         self.extra_kws = extra_kws
 
-        self.lnz = lnz
+        self.lnz: NDArray[np.float64] = lnz
         self.fill_value = fill_value
 
     @property
@@ -189,7 +191,7 @@ class lnPiArray:
             object with padded data
         """
 
-        import bottleneck  # pyright: ignore
+        import bottleneck
 
         from . import utils
 
@@ -209,8 +211,7 @@ class lnPiArray:
         if len(datas) > 0:
             data = bottleneck.nanmean(datas, axis=0)
 
-        new = self.new_like(data=data)
-        return new
+        return self.new_like(data=data)
 
     def zeromax(self, mask: MyNDArray | bool = False) -> Self:
         """
@@ -223,12 +224,12 @@ class lnPiArray:
             data is excluded from calculating maximum.
         """
 
-        data = self.data - np.ma.MaskedArray(self.data, mask).max()  # type: ignore
+        data = self.data - np.ma.MaskedArray(self.data, mask).max()  # type: ignore[no-untyped-call]
         return self.new_like(data=data)
 
 
-@docfiller.decorate
-class lnPiMasked(AccessorMixin):
+@docfiller.decorate  # noqa: PLR0904
+class lnPiMasked(AccessorMixin):  # noqa: N801
     """
     Masked array like wrapper for lnPi data.
 
@@ -272,21 +273,27 @@ class lnPiMasked(AccessorMixin):
         mask: MyNDArray | None = None,
         copy: bool = False,
     ) -> None:
-        lnz = np.atleast_1d(lnz)
-        assert lnz.shape == base.lnz.shape
+        lnz = np.atleast_1d(lnz).astype(np.float64)
+
+        # assert lnz.shape == base.lnz.shape
+        if lnz.shape != base.lnz.shape:
+            msg = f"{lnz.shape=} must be {base.lnz.shape}"
+            raise ValueError(msg)
 
         if mask is None:
             mask = np.full(base.data.shape, fill_value=False, dtype=bool)
         else:
             mask = np.array(mask, copy=copy, dtype=bool)
-        assert mask.shape == base.data.shape
-
+        # assert mask.shape == base.data.shape
+        if mask.shape != base.data.shape:
+            msg = f"{mask.shape=} must be {base.data.shape}."
+            raise ValueError(msg)
         self._mask = mask
         # make mask read-only
         self._mask.flags.writeable = False
 
         self._base = base
-        self._lnz = lnz
+        self._lnz: NDArray[np.float64] = lnz
         self._dlnz = tuple(self._lnz - self._base.lnz)
 
         self._cache: dict[str, Any] = {}
@@ -338,7 +345,7 @@ class lnPiMasked(AccessorMixin):
 
     @property
     def _data(self) -> MyNDArray:
-        return self._base.data  # pyright: ignore
+        return self._base.data
 
     @property
     def dtype(self) -> np.dtype[Any]:
@@ -359,7 +366,7 @@ class lnPiMasked(AccessorMixin):
         return self._base.extra_kws
 
     @property
-    def ma(self) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
+    def ma(self) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
         """Masked array view of data reweighted data"""
         return _get_maskedarray(self._base, self, self._dlnz)
 
@@ -390,24 +397,24 @@ class lnPiMasked(AccessorMixin):
         return self._data.ndim
 
     @property
-    def lnz(self) -> MyNDArray:
+    def lnz(self) -> NDArray[np.float64]:
         """Value of log(activity) evaluated at"""
         return self._lnz
 
     @property
-    def betamu(self) -> MyNDArray:
+    def betamu(self) -> NDArray[np.float64]:
         """Alias to `self.lnz`"""
         return self._lnz
 
     @property
     def volume(self) -> float | None:
         """Accessor to self.state_kws['volume']."""
-        return self.state_kws.get("volume", None)
+        return self.state_kws.get("volume", None)  # type: ignore[no-any-return]
 
     @property
     def beta(self) -> float | None:
         """Accessor to self.state_kws['beta']."""
-        return self.state_kws.get("beta", None)
+        return self.state_kws.get("beta", None)  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
         return f"<lnPi(lnz={self._lnz})>"
@@ -461,12 +468,12 @@ class lnPiMasked(AccessorMixin):
         numpy.ma.MaskedArray.argmax
         numpy.unravel_index
         """
-        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)  # type: ignore
+        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)  # type: ignore[return-value,no-untyped-call]
 
     # @cached.meth
     def local_max(
         self, *args: Any, **kwargs: Any
-    ) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
+    ) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
         """
         Calculate index of maximum of masked data.
 
@@ -481,17 +488,17 @@ class lnPiMasked(AccessorMixin):
         --------
         numpy.ma.MaskedArray.max
         """
-        return self.ma[self.local_argmax(*args, **kwargs)]  # type: ignore
+        return self.ma[self.local_argmax(*args, **kwargs)]  # type: ignore[no-any-return]
 
     # @cached.meth
     def local_maxmask(
         self, *args: Any, **kwargs: Any
-    ) -> np.ma.core.MaskedArray[Any, np.dtype[Any]]:
+    ) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
         """Calculate mask where ``self.ma == self.local_max()``"""
-        return self.ma == self.local_max(*args, **kwargs)  # type: ignore
+        return self.ma == self.local_max(*args, **kwargs)  # type: ignore[no-any-return]
 
     @cached.prop
-    def edge_distance_matrix(self) -> NDArray[np.float_]:
+    def edge_distance_matrix(self) -> NDArray[np.float64]:
         """
         Matrix of distance from each element to a background (i.e., masked) point.
 
@@ -517,7 +524,7 @@ class lnPiMasked(AccessorMixin):
         edge_distance_matrix
         lnpy.utils.distance_matrix
         """
-        return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]  # type: ignore
+        return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]  # type: ignore[no-any-return]
 
     @docfiller.decorate
     def new_like(
@@ -595,11 +602,11 @@ class lnPiMasked(AccessorMixin):
         """Create new object at specified value of `lnz`"""
         return self.new_like(lnz=lnz)
 
-    def or_mask(self, mask: MyNDArray, **kwargs: Any) -> Self:
+    def or_mask(self, mask: MyNDArray) -> Self:
         """New object with logical or of self.mask and mask"""
         return self.new_like(mask=(mask | self.mask))
 
-    def and_mask(self, mask: MyNDArray, **kwargs: Any) -> Self:
+    def and_mask(self, mask: MyNDArray) -> Self:
         """New object with logical and of self.mask and mask"""
         return self.new_like(mask=(mask & self.mask))
 
@@ -643,13 +650,13 @@ class lnPiMasked(AccessorMixin):
             csv_kws = {}
 
         da = (
-            pd.read_csv(path, sep=sep, names=names, **csv_kws)  # type: ignore
+            pd.read_csv(path, sep=sep, names=names, **csv_kws)  # type: ignore[call-overload]
             .set_index(names[:-1])["lnpi"]
             .to_xarray()
         )
         return cls.from_data(
             data=da.values,
-            mask=da.isnull().values,
+            mask=da.isnull().to_numpy(),  # noqa: PD003
             lnz=lnz,
             lnz_data=lnz,
             state_kws=state_kws,
@@ -684,20 +691,17 @@ class lnPiMasked(AccessorMixin):
         """
 
         kws: dict[str, Any] = {}
-        kws["data"] = da.values
+        kws["data"] = da.to_numpy()
         if "mask" in da.coords:
-            kws["mask"] = da.mask.values
+            kws["mask"] = da.mask.to_numpy()
         else:
-            kws["mask"] = da.isnull().values
+            kws["mask"] = da.isnull().to_numpy()  # noqa: PD003
 
         # where are state variables
         if state_as_attrs is None:
             state_as_attrs = bool(da.attrs.get("state_as_attrs", False))
-        if state_as_attrs:
-            # state variables from attrs
-            c = da.attrs
-        else:
-            c = da.coords  # type: ignore [assignment]
+
+        c = da.attrs if state_as_attrs else da.coords
 
         lnz = []
         state_kws = {}

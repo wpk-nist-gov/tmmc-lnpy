@@ -3,13 +3,15 @@
 Legacy lnPi array routines (:mod:`~lnPi.maskedlnpi_legacy`)
 ===========================================================
 """
+
 from __future__ import annotations
 
 from warnings import warn
 
+import numpy as np
+import pandas as pd
 from module_utilities import cached
 
-from lnpy._lazy_imports import np, pd
 from lnpy.ensembles import xCanonical, xGrandCanonical
 from lnpy.extensions import AccessorMixin
 from lnpy.utils import labels_to_masks, masks_change_convention
@@ -89,8 +91,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         super().__array_finalize__(obj)
         self._clear_cache()
 
-    def _clear_cache(self):
-        self._cache = {}
+    def _clear_cache(self) -> None:
+        self._cache = {}  # type: ignore[var-annotated]
 
     ##################################################
     # properties
@@ -135,10 +137,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def _lnz_tot(self):
         return self.lnz
 
-    # @property
-    # def _lnpi_0_tot(self):
-    #     return self.data.ravel()[0]
-
     @property
     def lnz(self):
         return self.optinfo.get("lnz", None)
@@ -147,9 +145,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def betamu(self):
         return self.lnz
 
-    # @property
-    # def mu(self):
-    #     return self._optinfo.get('mu', None)
     @property
     def volume(self):
         return self.state_kws.get("volume", None)
@@ -158,22 +153,23 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def beta(self):
         return self.state_kws.get("beta", None)
 
-    def __repr__(self):
-        L = []
-        L.append(f"lnz={repr(self.lnz)}")
-        L.append(f"state_kws={repr(self.state_kws)}")
-
-        L.append(f"data={super().__repr__()}")
+    def __repr__(self) -> str:
+        L: list[str] = []
+        L.extend(
+            (
+                f"lnz={self.lnz!r}",
+                f"state_kws={self.state_kws!r}",
+                f"data={super().__repr__()}",
+            )
+        )
         if len(self.extra_kws) > 0:
-            L.append(f"extra_kws={repr(self.extra_kws)}")
+            L.append(f"extra_kws={self.extra_kws!r}")
 
         indent = " " * 5
-        p = "MaskedlnPi(\n" + "\n".join([indent + x for x in L]) + "\n)"
+        return "MaskedlnPi(\n" + "\n".join([indent + x for x in L]) + "\n)"
 
-        return p
-
-    def __str__(self):
-        return f"MaskedlnPi(lnz={str(self.lnz)})"
+    def __str__(self) -> str:
+        return f"MaskedlnPi(lnz={self.lnz!s})"
 
     # @cached.meth
     def local_argmax(self, *args, **kwargs):
@@ -218,7 +214,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     #     zval = lnpi_zero - self.local_max()
     #     return  (zval - np.log(self.pi_sum))
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, index, value) -> None:
         self._clear_cache()
         super().__setitem__(index, value)
 
@@ -286,15 +282,12 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def adjust(self, zeromax=False, pad=False, inplace=False):
         """Do multiple adjustments in one go"""
 
-        if inplace:
-            new = self
-        else:
-            new = self.copy()
+        new = self if inplace else self.copy()
 
         if zeromax:
             new.zeromax(inplace=True)
         if pad:
-            new.pad(inplace=True)
+            new = new.pad()
         return new
 
     def reweight(self, lnz, zeromax=False, pad=False):
@@ -340,7 +333,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         # shift = (self.ncoords.values.T * dmu).sum(-1).T
 
         shift = np.zeros([], dtype=float)
-        for i, (s, m) in enumerate(zip(self.shape, dlnz)):
+        for _i, (s, m) in enumerate(zip(self.shape, dlnz)):
             shift = np.add.outer(shift, np.arange(s) * m)
 
         # scale by beta
@@ -476,7 +469,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         )
         return cls(
             data=da.values,
-            mask=da.isnull().values,
+            mask=da.isna().values,
             lnz=lnz,
             state_kws=state_kws,
             **kwargs,
@@ -487,11 +480,11 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """Create a lnPi object from xarray.DataArray"""
 
         kws = {}
-        kws["data"] = da.values
+        kws["data"] = da.to_numpy()
         if "mask" in da.coords:
-            kws["mask"] = da.mask.values
+            kws["mask"] = da.mask.to_numpy()
         else:
-            kws["mask"] = da.isnull().values
+            kws["mask"] = da.isna().to_numpy()
 
         # where are state variables
         if state_as_attrs is None:
@@ -535,7 +528,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """
 
         return [
-            self.or_mask(m) for m in masks_change_convention(masks, convention, False)
+            self.or_mask(m)
+            for m in masks_change_convention(masks, convention, False)  # pyright: ignore[reportCallIssue,reportArgumentType]
         ]
 
     def list_from_labels(
@@ -556,7 +550,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
             check_features=check_features,
             **kwargs,
         )
-        return self.list_from_masks(masks, convention=False)
+        return self.list_from_masks(masks, convention=False)  # pyright: ignore[reportArgumentType]
 
     @cached.prop
     def xge(self) -> xGrandCanonical:

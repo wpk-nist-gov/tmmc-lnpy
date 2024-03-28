@@ -6,9 +6,11 @@ Utility functions (:mod:`~lnpy.utils`)
 from __future__ import annotations
 
 from functools import lru_cache
+from itertools import starmap
 from typing import TYPE_CHECKING, TypedDict, cast, overload
 
-from ._lazy_imports import np
+import numpy as np
+
 from .docstrings import docfiller
 from .options import OPTIONS
 
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray
-    from scipy.optimize import RootResults  # pyright: ignore
+    from scipy.optimize import RootResults
 
     from lnpy.lnpidata import lnPiMasked
 
@@ -30,10 +32,10 @@ if TYPE_CHECKING:
 def _get_tqdm() -> ModuleType | None:
     try:
         import tqdm
-
-        return tqdm
     except ImportError:
         return None
+    else:
+        return tqdm
 
 
 @lru_cache
@@ -41,20 +43,21 @@ def _get_tqdm_default() -> Callable[..., Any]:
     _tqdm = _get_tqdm()
     if _tqdm:
         try:
-            from IPython.core.getipython import get_ipython  # pyright: ignore
+            from IPython.core.getipython import (  # pyright: ignore[reportMissingImports]
+                get_ipython,
+            )
 
             p = get_ipython()  # type: ignore[no-untyped-call, unused-ignore]
             if p is not None and p.has_trait("kernel"):
                 from tqdm.notebook import tqdm as tqdm_default
 
-                return tqdm_default  # pyright: ignore
-            else:
-                return cast("Callable[..., Any]", _tqdm.tqdm)
+                return tqdm_default
+            return cast("Callable[..., Any]", _tqdm.tqdm)
         except ImportError:
             return cast("Callable[..., Any]", _tqdm.tqdm)
     else:
 
-        def wrapper(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
+        def wrapper(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:  # noqa: ARG001
             return seq
 
         return wrapper
@@ -82,13 +85,17 @@ def get_tqdm(
     _tqdm = _get_tqdm()
 
     if isinstance(len_min, str):
-        len_min = OPTIONS[len_min]  # type: ignore
+        len_min = OPTIONS[len_min]  # type: ignore[literal-required]
+
+        if not isinstance(len_min, int):
+            msg = f"{type(len_min)=} must be an int or a string in options."
+            raise TypeError(msg)
 
     if n is None:
         seq = tuple(seq)
         n = len(seq)
 
-    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:  # pyright: ignore
+    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
         seq = tqdm(seq, leave=leave, **kwargs)
@@ -127,7 +134,7 @@ def get_tqdm_build(
 @lru_cache
 def _get_joblib() -> Any:
     try:
-        import joblib  # pyright: ignore
+        import joblib
     except ImportError:
         joblib = None
     return joblib
@@ -145,15 +152,14 @@ def _use_joblib(
         if total is None:
             total = len(items)
 
-        return total >= OPTIONS[len_key]  # type: ignore
-    else:
-        return False
+        return total >= OPTIONS[len_key]  # type: ignore[no-any-return,literal-required]
+    return False
 
 
 def _parallel(seq: Iterable[Any]) -> list[Any]:
     joblib = _get_joblib()
 
-    return joblib.Parallel(  # type: ignore
+    return joblib.Parallel(  # type: ignore[no-any-return]
         n_jobs=OPTIONS["joblib_n_jobs"],
         backend=OPTIONS["joblib_backend"],
         **OPTIONS["joblib_kws"],
@@ -169,8 +175,7 @@ def parallel_map_build(
 
     if _use_joblib(items, "joblib_len_build"):
         return _parallel(joblib.delayed(func)(x, *args, **kwargs) for x in items)
-    else:
-        return [func(x, *args, **kwargs) for x in items]
+    return [func(x, *args, **kwargs) for x in items]
 
 
 def _func_call(x: Callable[..., R], *args: Any, **kwargs: Any) -> R:
@@ -178,16 +183,18 @@ def _func_call(x: Callable[..., R], *args: Any, **kwargs: Any) -> R:
 
 
 def parallel_map_call(
-    items: Sequence[Callable[..., Any]], use_joblib: bool, *args: Any, **kwargs: Any
+    items: Sequence[Callable[..., Any]],
+    use_joblib: bool,  # noqa: ARG001
+    *args: Any,
+    **kwargs: Any,
 ) -> list[Any]:
     joblib = _get_joblib()
     if _use_joblib(items, "joblib_len_calc"):
         return _parallel(joblib.delayed(_func_call)(x, *args, **kwargs) for x in items)
-    else:
-        return [x(*args, **kwargs) for x in items]
+    return [x(*args, **kwargs) for x in items]
 
 
-def parallel_map_attr(attr: str, use_joblib: bool, items: Sequence[Any]) -> list[Any]:
+def parallel_map_attr(attr: str, use_joblib: bool, items: Sequence[Any]) -> list[Any]:  # noqa: ARG001
     from operator import attrgetter
 
     joblib = _get_joblib()
@@ -195,13 +202,12 @@ def parallel_map_attr(attr: str, use_joblib: bool, items: Sequence[Any]) -> list
 
     if _use_joblib(items, "joblib_len_calc"):
         return _parallel(joblib.delayed(func)(x) for x in items)
-    else:
-        return [func(x) for x in items]
+    return [func(x) for x in items]
 
 
 def parallel_map_func_starargs(
     func: Callable[..., R],
-    use_joblib: bool,
+    use_joblib: bool,  # noqa: ARG001
     items: Iterable[Any],
     total: int | None = None,
 ) -> list[R]:
@@ -210,9 +216,8 @@ def parallel_map_func_starargs(
     items = tuple(items)
 
     if _use_joblib(items, "joblib_len_calc", total=total):
-        return _parallel(joblib.delayed(func)(*x) for x in items)
-    else:
-        return [func(*x) for x in items]
+        return _parallel(starmap(joblib.delayed(func), items))
+    return list(starmap(func, items))
 
 
 # ----------------------------------------
@@ -228,11 +233,10 @@ def dim_to_suffix_dataarray(
     da: xr.DataArray, dim: Hashable, join: str = "_"
 ) -> xr.Dataset:
     if dim in da.dims:
-        return da.assign_coords(
-            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].values]}  # type: ignore
+        return da.assign_coords(  # type: ignore[misc]
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]
         ).to_dataset(dim=dim)
-    else:
-        return da.to_dataset()
+    return da.to_dataset()
 
 
 def dim_to_suffix_dataset(
@@ -241,22 +245,22 @@ def dim_to_suffix_dataset(
     out = table
     for k in out:
         if dim in out[k].dims:
-            out = out.drop_vars(k).update(
+            out = out.drop_vars(k).update(  # type: ignore[arg-type,unused-ignore]
                 table[k].pipe(dim_to_suffix_dataarray, dim, join)
-            )  # pyright: ignore
+            )
     return out
 
 
 @overload
 def dim_to_suffix(
     ds: xr.DataArray, dim: Hashable = ..., join: str = ...
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
-def dim_to_suffix(ds: xr.Dataset, dim: Hashable = ..., join: str = ...) -> xr.Dataset:
-    ...
+def dim_to_suffix(
+    ds: xr.Dataset, dim: Hashable = ..., join: str = ...
+) -> xr.Dataset: ...
 
 
 def dim_to_suffix(
@@ -266,10 +270,10 @@ def dim_to_suffix(
 
     if isinstance(ds, DataArray):
         return dim_to_suffix_dataarray(ds, dim=dim, join=join)
-    elif isinstance(ds, Dataset):  # pyright: ignore
+    if isinstance(ds, Dataset):
         return dim_to_suffix_dataset(ds, dim=dim, join=join)
-    else:
-        raise ValueError("`ds` must be `DataArray` or `Dataset`")
+    msg = "`ds` must be `DataArray` or `Dataset`"
+    raise ValueError(msg)
 
 
 def _convention_to_bool(convention: MaskConvention) -> bool:
@@ -277,8 +281,9 @@ def _convention_to_bool(convention: MaskConvention) -> bool:
         convention = True
     elif convention == "masked":
         convention = False
-    elif not isinstance(convention, bool):  # pyright: ignore
-        raise ValueError(f"Bad value {convention} sent to _convention_to_bool")
+    elif not isinstance(convention, bool):
+        msg = f"Bad value {convention} sent to _convention_to_bool"
+        raise ValueError(msg)
     return convention
 
 
@@ -287,8 +292,7 @@ def mask_change_convention(
     mask: None,
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
@@ -296,8 +300,7 @@ def mask_change_convention(
     mask: MyNDArray,
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> MyNDArray:
-    ...
+) -> MyNDArray: ...
 
 
 @docfiller.decorate
@@ -353,8 +356,7 @@ def masks_change_convention(
     masks: Sequence[MyNDArray],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[MyNDArray]:
-    ...
+) -> Sequence[MyNDArray]: ...
 
 
 @overload
@@ -362,8 +364,7 @@ def masks_change_convention(
     masks: Sequence[None],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[None]:
-    ...
+) -> Sequence[None]: ...
 
 
 @overload
@@ -371,8 +372,7 @@ def masks_change_convention(
     masks: Sequence[MyNDArray | None],
     convention_in: MaskConvention = ...,
     convention_out: MaskConvention = ...,
-) -> Sequence[MyNDArray | None]:
-    ...
+) -> Sequence[MyNDArray | None]: ...
 
 
 def masks_change_convention(
@@ -458,13 +458,14 @@ def labels_to_masks(
     from skimage import segmentation
 
     if include_boundary:
-        kwargs = dict(dict(mode="outer", connectivity=labels.ndim), **kwargs)
+        kwargs = dict({"mode": "outer", "connectivity": labels.ndim}, **kwargs)
     if features is None:
         features = [i for i in np.unique(labels) if i > 0]
 
     elif check_features:
         vals = np.unique(labels)
-        assert np.all([x in vals for x in features])
+        if not np.all([x in vals for x in features]):
+            raise ValueError
 
     convention = _convention_to_bool(convention)
 
@@ -472,15 +473,17 @@ def labels_to_masks(
     for i in features:
         m: NDArray[np.bool_] = labels == i
         if include_boundary:
+            # fmt: off
             b = cast(
                 "NDArray[np.bool_]",
-                segmentation.find_boundaries(m.astype(int), **kwargs),
-            )  # pyright: ignore[reportUnknownMemberType]
+                segmentation.find_boundaries(m.astype(int), **kwargs),  # pyright: ignore[reportUnknownMemberType]
+            )
+            # fmt: on
             m = m | b
         if not convention:
             m = ~m
         output.append(m)
-    return output, features  # type: ignore
+    return output, features  # type: ignore[return-value]
 
 
 @docfiller.decorate
@@ -489,7 +492,6 @@ def masks_to_labels(
     features: Sequence[int] | MyNDArray | None = None,
     convention: MaskConvention = "image",
     dtype: DTypeLike = np.int_,
-    **kwargs: Any,
 ) -> MyNDArray:
     """
     Convert list of masks to labels
@@ -514,8 +516,8 @@ def masks_to_labels(
 
     if features is None:
         features = range(1, len(masks) + 1)
-    else:
-        assert len(features) == len(masks)
+    elif len(features) != len(masks):
+        raise ValueError
 
     labels = np.full(masks[0].shape, fill_value=0, dtype=dtype)
 
@@ -527,24 +529,24 @@ def masks_to_labels(
 
 
 def ffill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
-    import bottleneck  # pyright: ignore
+    import bottleneck
 
     _limit = limit if limit is not None else arr.shape[axis]
-    return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore
+    return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore[no-any-return]
 
 
 def bfill(arr: MyNDArray, axis: int = -1, limit: int | None = None) -> MyNDArray:
     """Inverse of ffill"""
-    import bottleneck  # pyright: ignore
+    import bottleneck
 
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
     arr = np.flip(arr, axis=axis)
     # fill
-    arr = bottleneck.push(arr, axis=axis, n=_limit)  # pyright: ignore
+    arr = bottleneck.push(arr, axis=axis, n=_limit)
     # reverse back to original
-    return np.flip(arr, axis=axis)  # pyright: ignore
+    return np.flip(arr, axis=axis)
 
 
 ##################################################
@@ -575,14 +577,7 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
     x = np.asarray(x)
     z = np.zeros_like(x)
 
-    L: list[MyNDArray] = []
-    for m in lnz:
-        if m is None:
-            L.append(x)
-        else:
-            L.append(z + m)
-
-    return np.array(L).T
+    return np.array([x if m is None else z + m for m in lnz]).T
 
 
 ##################################################
@@ -607,7 +602,7 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
 #         Objects in sorted order.
 #     """
 
-#     molfrac_comp = np.array([x.molfrac[comp] for x in values]) # type: ignore
+#     molfrac_comp = np.array([x.molfrac[comp] for x in values])
 
 #     order = np.argsort(molfrac_comp)
 
@@ -618,7 +613,7 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
 
 def distance_matrix(
     mask: ArrayLike, convention: MaskConvention = "image"
-) -> NDArray[np.float_]:
+) -> NDArray[np.float64]:
     """
     Create matrix of distances from elements of mask
     to nearest background point
@@ -641,7 +636,7 @@ def distance_matrix(
     --------
     ~scipy.ndimage.distance_transform_edt
     """
-    from scipy.ndimage import distance_transform_edt  # pyright: ignore
+    from scipy.ndimage import distance_transform_edt
 
     mask = np.asarray(mask, dtype=bool)
     mask = mask_change_convention(mask, convention_in=convention, convention_out=True)
@@ -653,11 +648,11 @@ def distance_matrix(
     mask = np.pad(mask, pad_width=pad_width, mode="constant", constant_values=False)
 
     # distance filter
-    dist = distance_transform_edt(mask)  # pyright: ignore
+    dist = distance_transform_edt(mask)
 
     # remove padding
     s = (slice(None, -1),) * ndim
-    return dist[s]  # type: ignore
+    return dist[s]  # type: ignore[no-any-return]
 
 
 def lnpimasked_to_dataset(
@@ -709,7 +704,7 @@ def dataset_to_lnpimasked(
         extra_kws = {}
 
     if pe_name in ds:
-        extra_kws[pe_name] = ds[pe_name].values  # type: ignore
+        extra_kws[pe_name] = ds[pe_name].to_numpy()  # type: ignore[index]
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
 
@@ -718,7 +713,7 @@ def dataset_to_lnpimasked(
 
 
 class _RootResultDictReq(TypedDict, total=True):
-    root: float
+    root: float | MyNDArray | None
     iterations: int
     function_calls: int
     converged: bool
@@ -740,10 +735,23 @@ def rootresults_to_rootresultdict(
         root=r.root,
         iterations=r.iterations,
         function_calls=r.function_calls,
-        converged=r.converged,  # pyright: ignore
-        flag=r.flag,
+        converged=r.converged,
+        flag=r.flag,  # pyright: ignore[reportArgumentType]
     )
 
     if residual is not None:
         out["residual"] = residual
     return out
+
+
+def array_to_scalar(x: float | MyNDArray) -> float:
+    """
+    Convert array to scalar.
+
+    If `x` is an ndarray, convert to float of 0-d,
+    or extract first element (of flattened array )
+    if N-d.
+    """
+    if isinstance(x, np.ndarray):
+        return x.flat[0]  # type: ignore[no-any-return]
+    return x

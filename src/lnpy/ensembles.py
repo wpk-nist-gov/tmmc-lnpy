@@ -1,15 +1,19 @@
+# pyright: reportPrivateUsage=false
 """
 Ensemble averages (:mod:`~lnpy.ensembles`)
 ==========================================
 """
+
 from __future__ import annotations
 
 from functools import lru_cache, wraps
 from typing import TYPE_CHECKING
 
+import numpy as np
+import xarray as xr
 from module_utilities import cached
 
-from ._lazy_imports import np, xr
+from ._compat import xr_dot
 from .lnpidata import lnPiMasked
 from .lnpiseries import lnPiCollection
 from .utils import dim_to_suffix_dataset
@@ -17,9 +21,9 @@ from .utils import dim_to_suffix_dataset
 if TYPE_CHECKING:
     from typing import Any, Callable, Hashable, Mapping, Sequence
 
+    import pandas as pd
     from numpy.typing import ArrayLike
 
-    from ._lazy_imports import pd
     from ._typing import C_Ensemble, MyNDArray, P, R, T_Ensemble, xArrayLike
 
 # from lnpy.lnpidata import lnPiMasked
@@ -44,7 +48,7 @@ def _get_range(n: int) -> MyNDArray:
 
 
 @lru_cache(maxsize=10)
-def get_xrlnPiWrapper(
+def get_xrlnpiwrapper(
     shape: tuple[int, ...],
     rec_name: str | None = "sample",
     n_name: str = "n",
@@ -62,7 +66,7 @@ def get_xrlnPiWrapper(
     )
 
 
-class xlnPiWrapper:
+class xlnPiWrapper:  # noqa: N801
     """
     Wraps lnPi objects with xarray functionality
 
@@ -78,7 +82,7 @@ class xlnPiWrapper:
         n_name: str = "n",
         lnz_name: str = "lnz",
         comp_name: str = "component",
-        phase_name: str = "phase",
+        phase_name: str = "phase",  # noqa: ARG002
     ) -> None:
         self.shape = shape
         self.ndim = len(shape)
@@ -112,16 +116,13 @@ class xlnPiWrapper:
             "dims_state": self.dims_lnz + list(args),
         }
 
-        if self.dims_rec is not None:
+        if self.dims_rec:
             d["dims_rec"] = self.dims_rec
         return d
 
     @cached_meth
     def ncoords(self, coords_n: bool = False) -> xr.DataArray:
-        if coords_n:
-            coords = self.coords_n
-        else:
-            coords = None
+        coords = self.coords_n if coords_n else None
         return xr.DataArray(
             _get_indices(self.shape),
             dims=self.dims_comp + self.dims_n,
@@ -181,29 +182,22 @@ def xr_name(
     """Decorator to add name, longname to xarray output"""
 
     def decorator(
-        func: C_Ensemble[T_Ensemble, P, xr.DataArray]
+        func: C_Ensemble[T_Ensemble, P, xr.DataArray],
     ) -> C_Ensemble[T_Ensemble, P, xr.DataArray]:
-        if name is None:
-            _name = func.__name__.lstrip("_")
-        else:
-            _name = name
+        _name = func.__name__.lstrip("_") if name is None else name
 
         @wraps(func)
         def wrapper(
             self: T_Ensemble, /, *args: P.args, **kwargs: P.kwargs
         ) -> xr.DataArray:
             out = func(self, *args, **kwargs).rename(_name)
-            if hasattr(self, "_standard_attrs"):
-                attrs = self._standard_attrs
-            else:
-                attrs = {}
-            attrs = dict(attrs, **kws)
+            attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
 
             if long_name is not None:
                 attrs["long_name"] = long_name
             out = out.assign_attrs(**attrs)
             if unstack and self._xarray_unstack:
-                out = out.unstack()
+                out = out.unstack()  # noqa: PD010
 
             return out
 
@@ -212,12 +206,7 @@ def xr_name(
     return decorator
 
 
-# def xge_accessor(parent: HasCache) -> xGrandCanonical:
-#     """Accessor to :class:`~lnpy.ensembles.xGrandCanonical`."""
-#     return xGrandCanonical(parent)
-
-
-class xGrandCanonical:
+class xGrandCanonical:  # noqa: PLR0904,N801
     """
     :class:`~xarray.DataArray` accessor to Grand Canonical properties from lnPi
 
@@ -230,14 +219,15 @@ class xGrandCanonical:
         self._parent = parent
 
         self._rec_name: str | None
+        first: lnPiMasked
         if isinstance(parent, lnPiCollection):
             self._rec_name = parent._concat_dim
-            first = parent._series.iloc[0]
+            first = parent._series.iloc[0]  # pyright: ignore[reportAssignmentType]
         else:
             self._rec_name = None
             first = parent
 
-        self._wrapper = get_xrlnPiWrapper(shape=first.shape, rec_name=self._rec_name)
+        self._wrapper = get_xrlnpiwrapper(shape=first.shape, rec_name=self._rec_name)
         self._cache: dict[str, Any] = {}
 
     @property
@@ -256,19 +246,19 @@ class xGrandCanonical:
     def first(self) -> lnPiMasked:
         if isinstance(self._parent, lnPiCollection):
             return self._parent.iloc[0]
-        else:
-            return self._parent
+
+        return self._parent
 
     # @cached_prop to much memory
     @property
     def _rec_coords(self) -> dict[str, pd.Index[Any] | pd.MultiIndex | float | int]:
         if isinstance(self._parent, lnPiMasked):
             return dict(self._parent._index_dict(), **self._parent.state_kws)
-        else:
-            return {
-                self._parent._concat_dim: self._parent.index,
-                **self._parent.state_kws,
-            }
+
+        return {
+            self._parent._concat_dim: self._parent.index,
+            **self._parent.state_kws,
+        }
 
     @property
     def _xarray_dot_kws(self) -> dict[str, str]:
@@ -302,7 +292,7 @@ class xGrandCanonical:
     @property
     def dims_state(self) -> list[str]:
         """Dimensions corresponding to 'state variables'"""
-        return self.pi_norm.attrs["dims_state"]  # type: ignore
+        return self.pi_norm.attrs["dims_state"]  # type: ignore[no-any-return]
 
     @property
     def dims_rec(self) -> list[str]:
@@ -312,16 +302,16 @@ class xGrandCanonical:
     @property
     def beta(self) -> float:
         r"""Inverse temperature :math:`\beta = 1 / (k_{\rm B} T)`"""
-        return self._parent.state_kws["beta"]  # type: ignore
+        return self._parent.state_kws["beta"]  # type: ignore[no-any-return]
 
     @property
     def volume(self) -> float:
         """System volume :math:`V`."""
-        return self._parent.state_kws["volume"]  # type: ignore
+        return self._parent.state_kws["volume"]  # type: ignore[no-any-return]
 
     @cached_prop
     def coords_state(self) -> dict[str, xr.DataArray]:
-        return {k: self.pi_norm.coords[k] for k in self.dims_state}
+        return {k: self.pi_norm.coords[k] for k in self.dims_state}  # pyright: ignore[reportUnknownMemberType]
 
     @cached_prop
     @xr_name(r"$\beta {\bf \mu}$")
@@ -383,7 +373,7 @@ class xGrandCanonical:
     def lnpi_norm(self) -> xr.DataArray:
         r""":math:`\ln \Pi_{\rm norm}(N)`."""
         pi = self.pi_norm
-        return np.log(xr.where(pi > 0, pi, np.nan))  # type: ignore
+        return np.log(xr.where(pi > 0, pi, np.nan))  # type: ignore[no-untyped-call,no-any-return]
 
     def _get_prop_from_extra_kws(
         self, prop: str | ArrayLike | xr.DataArray
@@ -392,9 +382,10 @@ class xGrandCanonical:
             p = self.first
 
             if prop not in p.extra_kws:
-                raise ValueError(f"{prop} not found in extra_kws")
-            else:
-                prop = p.extra_kws[prop]
+                msg = f"{prop} not found in extra_kws"
+                raise ValueError(msg)
+
+            prop = p.extra_kws[prop]
 
         # if not isinstance(prop, (np.ndarray, xr.DataArray)):
         #     raise ValueError(
@@ -414,15 +405,17 @@ class xGrandCanonical:
         elif allow_extra_kws:
             x = self._get_prop_from_extra_kws(func_or_array)
         else:
-            assert not isinstance(func_or_array, str)
+            # assert not isinstance(func_or_array, str)
+            if isinstance(func_or_array, str):
+                raise TypeError
             x = func_or_array
 
         if not isinstance(x, xr.DataArray):
             x = xr.DataArray(x, dims=self.dims_n)
         return x
 
-    def _mean_pi(self, x: xr.DataArray, **kwargs: Any) -> xr.DataArray:
-        return xr.dot(self.pi_norm, x, dims=self.dims_n, **self._xarray_dot_kws)  # type: ignore
+    def _mean_pi(self, x: xr.DataArray, **kwargs: Any) -> xr.DataArray:  # noqa: ARG002
+        return xr_dot(self.pi_norm, x, dim=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
 
     @xr_name()
     def mean_pi(
@@ -458,7 +451,7 @@ class xGrandCanonical:
         )
         return self._mean_pi(x, **kwargs)
 
-    # TODO: finish this
+    # TODO(wpk): finish this
     # def _central_moment_bar(
     #     self,
     #     x,
@@ -531,7 +524,7 @@ class xGrandCanonical:
             y = self._array_or_callable_to_xarray(x, **kwargs)
             yy = y - self._mean_pi(y)
 
-        return xr.dot(self.pi_norm, xx, yy, dims=self.dims_n, **self._xarray_dot_kws)  # type: ignore
+        return xr_dot(self.pi_norm, xx, yy, dim=self.dims_n, **self._xarray_dot_kws)  # type: ignore[no-any-return]
 
     def pipe(self, func: Callable[..., R], *args: Any, **kwargs: Any) -> R:
         """Apply function to `self`"""
@@ -602,27 +595,27 @@ class xGrandCanonical:
 
     @cached_meth
     def _argmax_indexer(self) -> tuple[MyNDArray, ...]:
-        x = self.pi_norm.values
-        xx = x.reshape(x.shape[0], -1)
+        x: MyNDArray = self.pi_norm.to_numpy()
+        xx = x.reshape(x.shape[0], -1)  # pyright: ignore[reportUnknownVariableType]
         idx_flat = xx.argmax(-1)
-        indexer = np.unravel_index(idx_flat, x.shape[1:])
-        return indexer
+        return np.unravel_index(idx_flat, x.shape[1:])  # pyright: ignore[reportUnknownVariableType]
 
     @cached_prop
     def _argmax_indexer_dict(self) -> dict[str, xr.DataArray]:
         if not isinstance(self._parent, lnPiCollection):
-            raise ValueError("only implemented for lnPiCollection")
+            msg = "only implemented for lnPiCollection"
+            raise TypeError(msg)
 
-        else:
-            return {
-                k: xr.DataArray(v, dims=self._parent._concat_dim)
-                for k, v in zip(self.dims_n, self._argmax_indexer())
-            }
+        return {
+            k: xr.DataArray(v, dims=self._parent._concat_dim)
+            for k, v in zip(self.dims_n, self._argmax_indexer())
+        }
 
     @cached_prop
     def _sample_indexer_dict(self) -> dict[str, xr.DataArray]:
         if not isinstance(self._parent, lnPiCollection):
-            raise ValueError("only implemented for lnPiCollection")
+            msg = "only implemented for lnPiCollection"
+            raise TypeError(msg)
 
         return {
             self._parent._concat_dim: xr.DataArray(
@@ -645,7 +638,7 @@ class xGrandCanonical:
         # coords = {k : out[k].isel(**{k : v}) for k, v in self._argmax_index_dict.items()}
 
         if add_n_coords:
-            out = out.assign_coords(self._argmax_indexer_dict)
+            out = out.assign_coords(self._argmax_indexer_dict)  # pyright: ignore[reportUnknownMemberType]
 
         return out
 
@@ -653,7 +646,7 @@ class xGrandCanonical:
         r"""Maximum value :math:`\max_N \Pi_{\rm norm}(N, meta)`"""
         out = self.pi_norm.isel(self._sample_argmax_indexer_dict)
         if add_n_coords:
-            out = out.assign_coords(self._argmax_indexer_dict)
+            out = out.assign_coords(self._argmax_indexer_dict)  # pyright: ignore[reportUnknownMemberType]
         return out
 
     @cached_meth
@@ -687,10 +680,13 @@ class xGrandCanonical:
         """
 
         if max_frac is not None:
-            assert max_frac < 1.0
+            if not (0.0 < max_frac < 1.0):
+                msg = f"{max_frac=} outside range (0.0, 1.0)."
+                raise ValueError(msg)
             val = self.pi_norm_max(add_n_coords=False) * max_frac
-        else:
-            assert val is not None
+        elif val is None:
+            msg = "If not passing max_frac, must set `val`"
+            raise TypeError(msg)
 
         e = xr.DataArray(ref.edge_distance_matrix, dims=self.dims_n)
         mask = self.pi_norm > val
@@ -701,7 +697,7 @@ class xGrandCanonical:
     def _betaOmega(self, lnpi_zero: xArrayLike | None = None) -> xr.DataArray:
         if lnpi_zero is None:
             lnpi_zero = self._lnpi_zero
-        return lnpi_zero - np.log(self.pi_sum)  # type: ignore
+        return lnpi_zero - np.log(self.pi_sum)  # type: ignore[return-value]
 
     def betaOmega(self, lnpi_zero: xArrayLike | None = None) -> xr.DataArray:
         r"""
@@ -780,22 +776,21 @@ class xGrandCanonical:
         """Masks are True where values are stable. Only works for unstacked data."""
 
         if not isinstance(self._parent, lnPiCollection):
-            raise ValueError("only implmented for lnPiCollection")
+            msg = "only implemented for lnPiCollection"
+            raise TypeError(msg)
 
         if not self._xarray_unstack:
             # raise Value'only mask with unstack')
             pv = self.betapV()
             sample = self._parent._concat_dim
-            out = (
-                pv.unstack(sample)
-                .pipe(lambda x: x.max("phase") == x)
-                .stack(sample=pv.indexes[sample].names)
-                .loc[pv.indexes["sample"]]
+            return (  # type: ignore[no-any-return] # pyright: ignore[reportUnknownVariableType]
+                pv.unstack(sample)  # pyright: ignore[reportUnknownMemberType]  # noqa: PD010, PD013
+                .pipe(lambda x: x.max("phase") == x)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType]
+                .stack(sample=pv.indexes[sample].names)  # pyright: ignore[reportUnknownMemberType]
+                .loc[pv.indexes["sample"]]  # pyright: ignore[reportUnknownMemberType]
             )
-        else:
-            out = self.betapV().pipe(lambda x: x.max("phase") == x)
 
-        return out  # type: ignore
+        return self.betapV().pipe(lambda x: x.max("phase") == x)  # type: ignore[no-any-return] # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
 
     # @cached_meth
     @xr_name(r"$\beta p(\mu,V,T)/\rho$", standard_name="compressibility_factor")
@@ -848,39 +843,38 @@ class xGrandCanonical:
         The results can be easily convert to a :class:`pandas.DataFrame` using ``ds.to_frame()``
         """
 
-        out = []
+        out: list[xr.DataArray] = []
         if ref is not None:
             out.append(self.edge_distance(ref))
 
         def _process_keys(x: str | Sequence[str] | None) -> list[str]:
             if x is None:
                 return []
-            elif isinstance(x, str):
+            if isinstance(x, str):
                 return [x]
-            else:
-                return list(x)
+            return list(x)
 
         keys = _process_keys(keys) + _process_keys(default_keys)
         if not keys:
-            raise ValueError("must specify some keys or default_keys to use")
+            msg = "must specify some keys or default_keys to use"
+            raise ValueError(msg)
 
         # only unique keys
         # this preserves order
         for key in dict.fromkeys(keys):
             try:
                 v = getattr(self, key, None)
-                if v is None:
-                    raise ValueError(f"no attribute {key} in self")
-                if callable(v):
-                    v = v()
-                out.append(v)
-            except Exception:
+                if v is not None:
+                    if callable(v):
+                        v = v()
+                    out.append(v)
+            except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 
-        ds: xr.Dataset = xr.merge(out)
+        ds: xr.Dataset = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
         if "lnz" in keys:
             # if including property lnz, then drop lnz_0, lnz_1,...
-            ds = ds.drop(ds["lnz"]["dims_lnz"])
+            ds = ds.drop(ds["lnz"]["dims_lnz"])  # pyright: ignore[reportUnknownMemberType]
 
         if mask_stable:
             # mask_stable inserts nan in non-stable
@@ -890,9 +884,9 @@ class xGrandCanonical:
             else:
                 phase = ds.phase
                 ds = (
-                    ds.where(mask)
+                    ds.where(mask)  # pyright: ignore[reportUnknownMemberType]
                     .max("phase")
-                    .assign_coords(phase=lambda x: phase[mask.argmax("phase")])
+                    .assign_coords(phase=lambda x: phase[mask.argmax("phase")])  # noqa: ARG005  # pyright: ignore[reportUnknownLambdaType]
                 )
 
         if dim_to_suffix is not None:
@@ -908,8 +902,8 @@ class xGrandCanonical:
         r"""Scaled Gibbs free energy :math:`\beta G = \sum_i \beta \mu_i \overline{N}_i`."""
         # return self.betamu.pipe(lambda betamu: (betamu * self.nvec).sum(betamu.dims_comp))
         # return (self.betamu * self.nvec).sum(self.dims_comp)
-        return xr.dot(  # type: ignore
-            self.betamu, self.nvec, dims=self.dims_comp, **self._xarray_dot_kws
+        return xr_dot(  # type: ignore[no-any-return]
+            self.betamu, self.nvec, dim=self.dims_comp, **self._xarray_dot_kws
         )
 
     @property
@@ -958,7 +952,7 @@ class xGrandCanonical:
 #     return xCanonical(parent)
 
 
-class xCanonical:
+class xCanonical:  # noqa: N801
     """
     Canonical ensemble properties
 
@@ -986,7 +980,7 @@ class xCanonical:
         return (
             self._xge.ncoords
             # NOTE: if don't use '.values', then get extra coords don't want
-            .where(~self._xge.lnpi(np.nan).isnull().values)
+            .where(~self._xge.lnpi(np.nan).isnull().to_numpy())  # pyright: ignore[reportUnknownMemberType]  # noqa: PD003
         )
 
     @property
@@ -1014,12 +1008,13 @@ class xCanonical:
         x = self._parent.xge
 
         if lnpi_zero is None:
-            # TODO: Take another look at this...
+            # TODO(wpk): Take another look at this...
             lnpi_zero = self._parent.data.ravel()[0]
             # lnpi_zero = x.lnpi_zero
 
         return (
             (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
+            # pyright: ignore[reportUnknownMemberType]
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)
@@ -1043,7 +1038,8 @@ class xCanonical:
         # if betaPE available, use that:
         PE = self._parent.extra_kws.get("PE", None)
         if PE is None:
-            raise AttributeError('must set "PE" in "extra_kws" of lnPiMasked')
+            msg = 'must set "PE" in "extra_kws" of lnPiMasked'
+            raise AttributeError(msg)
         x = self._xge
         coords = dict(x._wrapper.coords_n, **self._parent.state_kws)
         return xr.DataArray(PE, dims=x.dims_n, coords=coords, attrs=x._standard_attrs)
@@ -1079,7 +1075,7 @@ class xCanonical:
     @cached_meth
     @xr_name(r"$\beta {\bf\mu}({bf n},V,T)$", standard_name="absolute_activity")
     def _betamu(self, lnpi_zero: xArrayLike | None = None) -> xr.DataArray:
-        return xr.concat(
+        return xr.concat(  # pyright: ignore[reportUnknownMemberType]
             [self.betaF(lnpi_zero).differentiate(n) for n in self._xge.dims_n],
             dim=self._xge.dims_comp[0],
         ).assign_attrs(self._xge._standard_attrs)
@@ -1129,9 +1125,7 @@ class xCanonical:
     def table(
         self,
         keys: str | Sequence[str] | None = None,
-        default_keys: str
-        | Sequence[str]
-        | None = (
+        default_keys: str | Sequence[str] | None = (
             "betamu",
             "betapV",
             "PE_n",
@@ -1157,15 +1151,14 @@ class xCanonical:
         table : Dataset
         """
 
-        out = []
+        out: list[xr.DataArray] = []
 
         def _process_keys(x: str | Sequence[str] | None) -> list[str]:
             if x is None:
                 return []
-            elif isinstance(x, str):
+            if isinstance(x, str):
                 return [x]
-            else:
-                return list(x)
+            return list(x)
 
         keys_total = _process_keys(keys) + _process_keys(default_keys)
 
@@ -1176,10 +1169,10 @@ class xCanonical:
                 if callable(v):
                     v = v()
                 out.append(v)
-            except Exception:
+            except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 
-        ds = xr.merge(out)
+        ds = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
 
         if dim_to_suffix is not None:
             if isinstance(dim_to_suffix, str):

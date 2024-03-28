@@ -1,4 +1,6 @@
 <!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD013 -->
+<!-- prettier-ignore-start -->
 
 # Changelog
 
@@ -6,9 +8,31 @@ Changelog for `lnpy`
 
 ## Unreleased
 
-See the fragment files in [changelog.d](https://github.com/usnistgov/tmmc-lnpy)
+[changelog.d]: https://github.com/usnistgov/tmmc-lnpy/tree/main/changelog.d
+
+See the fragment files in [changelog.d]
+
+<!-- prettier-ignore-end -->
+
+<!-- markdownlint-enable MD013 -->
 
 <!-- scriv-insert-here -->
+
+## v0.7.0 — 2024-03-28
+
+### Added
+
+- Added submodule `lnpy.combine` to combine $\ln\Pi$ from multiple simulations.
+
+## v0.6.0 — 2023-08-24
+
+### Added
+
+- Added type hints to most all code. Passing mypy (with strict) and pyright
+  (non-strict).
+- Clean up doc strings in several places.
+- Added nbval testing.
+- Ran linters across all code and notebooks.
 
 ## v0.5.0 — 2023-07-06
 
@@ -43,14 +67,14 @@ Full set of changes:
 - Moved from local cached module to module-utilities.cached
 - Add support for python3.11
 
-Full set of changes:
-[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...v0.3.0)
-
 ### Changed
 
 - Update package layout
 - New linters via pre-commit
 - Development env now handled by tox
+
+Full set of changes:
+[`v0.2.2...0.3.0`](https://github.com/usnistgov/tmmc-lnpy/compare/v0.2.2...v0.3.0)
 
 ## v0.2.2 - 2023-04-05
 

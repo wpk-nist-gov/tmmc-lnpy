@@ -2,15 +2,18 @@
 Local free energy of lnPi (:mod:`~lnpy.lnpienergy`)
 ===================================================
 """
+
 from __future__ import annotations
 
 import itertools
 import warnings
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
+import numpy as np
+import pandas as pd
+import xarray as xr
 from module_utilities import cached
 
-from ._lazy_imports import np, pd, xr
 from .docstrings import docfiller
 from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
@@ -18,9 +21,8 @@ from .utils import labels_to_masks, masks_change_convention, parallel_map_func_s
 if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Sequence, Union
 
-    from typing_extensions import Self
-
     from ._typing import MaskConvention, MyNDArray
+    from ._typing_compat import Self
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
@@ -29,7 +31,7 @@ if TYPE_CHECKING:
 
     _FillArg = Union[int, None]
     _FillVal = Union[_FillArg, float]
-    _ExtremaArg = Union[int, "tuple[int, ...]", None]  # noqa
+    _ExtremaArg = Union[int, "tuple[int, ...]", None]
 
 
 @docfiller.decorate
@@ -80,8 +82,7 @@ def find_boundaries_overlap(
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["exact"] = ...,
-) -> dict[tuple[int, int, int], MyNDArray | None]:
-    ...
+) -> dict[tuple[int, int, int], MyNDArray | None]: ...
 
 
 @overload
@@ -93,8 +94,7 @@ def find_boundaries_overlap(
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["approx"],
-) -> dict[tuple[int, int], MyNDArray | None]:
-    ...
+) -> dict[tuple[int, int], MyNDArray | None]: ...
 
 
 # @overload
@@ -150,12 +150,19 @@ def find_boundaries_overlap(
     """
 
     n = len(masks)
-    assert method in ["approx", "exact"]
+    possible_methods = {"approx", "exact"}
+
+    if method not in possible_methods:
+        msg = f"{method=} not in {possible_methods}"
+        raise ValueError(msg)
 
     if boundaries is None:
         boundaries = find_boundaries(masks, mode=mode, connectivity=connectivity)
 
-    assert n == len(boundaries)
+    # assert n == len(boundaries)
+    if n != len(boundaries):
+        msg = f"{boundaries=} must have length {n}."
+        raise ValueError(msg)
 
     def _get_approx() -> dict[tuple[int, int], MyNDArray | None]:
         result: dict[tuple[int, int], MyNDArray | None] = {}
@@ -182,10 +189,11 @@ def find_boundaries_overlap(
 
     if method == "approx":
         return _get_approx()
-    elif method == "exact":
+    if method == "exact":
         return _get_exact()
-    else:
-        raise ValueError(f"unknown method={method}")
+
+    msg = f"unknown method={method}"
+    raise ValueError(msg)
 
 
 @docfiller.decorate
@@ -232,7 +240,8 @@ def find_masked_extrema(
     elif extrema == "min":
         func = np.argmin
     else:
-        raise ValueError('extrema must be on of {"min", "max}')
+        msg = 'extrema must be on of {"min", "max}'
+        raise ValueError(msg)
 
     masks = masks_change_convention(masks, convention, "image")
 
@@ -252,10 +261,10 @@ def find_masked_extrema(
         else:
             mask_flat = mask.reshape(-1)
             arg = positions_flat[mask_flat][func(data_flat[mask_flat])]
-            val = data_flat[arg]  # type: ignore
+            val = data_flat[arg]  # type: ignore[assignment]
 
             if unravel:
-                arg = np.unravel_index(arg, data.shape)  # type: ignore
+                arg = np.unravel_index(arg, data.shape)  # type: ignore[assignment,arg-type]
 
         out_arg.append(arg)
         out_val.append(val)
@@ -321,8 +330,8 @@ def merge_regions(
     w_min = np.array(w_min, copy=True)
 
     # keep track of keep/kill
-    mapping = {i: msk for i, msk in enumerate(masks)}
-    for cnt in range(nfeature):
+    mapping = dict(enumerate(masks))
+    for _cnt in range(nfeature):
         # number of finite minima
         nfeature = len(mapping)
 
@@ -340,7 +349,7 @@ def merge_regions(
                         stacklevel=2,
                     )
                 break
-            elif nfeature <= nfeature_max:
+            if nfeature <= nfeature_max:
                 break
 
         idx_keep, idx_kill = min_arg
@@ -359,7 +368,7 @@ def merge_regions(
 
         # new mask
         mapping[idx_keep] |= mapping[idx_kill]  # type: ignore[index]
-        del mapping[idx_kill]  # type: ignore
+        del mapping[idx_kill]  # type: ignore[arg-type]
 
     # from mapping create some new stuff
     # new w/de
@@ -379,7 +388,7 @@ def merge_regions(
 
 
 @docfiller.decorate
-class wFreeEnergy:
+class wFreeEnergy:  # noqa: N801
     r"""
     Analysis of local free energy :math:`w = \beta f = - \ln \Pi`.
 
@@ -508,7 +517,9 @@ class wFreeEnergy:
         out_arg: dict[tuple[int, int], _ExtremaArg] = {}
         out_max = np.full((self.nfeature,) * 2, dtype=float, fill_value=fill_value)
         if method == "approx":
-            for (i, j), arg, val in zip(overlap.keys(), argmax, valmax):
+            for (i, j), arg, val in zip(
+                cast("Iterable[tuple[int, int]]", overlap), argmax, valmax
+            ):
                 out_max[i, j] = out_max[j, i] = val
                 out_arg[i, j] = arg
 
@@ -519,15 +530,17 @@ class wFreeEnergy:
             valmax_dict = dict(zip(overlap_keys, valmax))
 
             # loop over unique keys
-            for i, j in {(i, j) for i, j, _ in overlap}:  # type: ignore
+            for i, j in {
+                (i, j) for i, j, _ in cast("Iterable[tuple[int, int, int]]", overlap)
+            }:
                 vals = [valmax_dict[i, j, index] for index in range(2)]
                 # take min value of maxes
                 if np.all(np.isnan(vals)):
                     out_arg[i, j] = None
                 else:
                     idx_min = np.nanargmin(vals)
-                    out_arg[i, j] = argmax_dict[i, j, idx_min]  # type: ignore
-                    out_max[i, j] = out_max[j, i] = valmax_dict[i, j, idx_min]  # type: ignore
+                    out_arg[i, j] = argmax_dict[i, j, idx_min]  # type: ignore[index]
+                    out_max[i, j] = out_max[j, i] = valmax_dict[i, j, idx_min]  # type: ignore[index]
         return out_arg, out_max
 
     @property
@@ -613,13 +626,13 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
     w_tran = (
-        pd.DataFrame(
+        pd.DataFrame(  # type: ignore[call-overload]  # noqa: PD013
             w.w_tran,
             index=index,
             columns=index.get_level_values("phase").rename("phase_nebr"),
         )
         .stack()
-        .rename("w_tran")  # type: ignore
+        .rename("w_tran")  # pyright: ignore[reportArgumentType]
     )
 
     # get argtrans values for each index
@@ -650,7 +663,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     }  # [index_map, w.w_argtran]}
 
 
-class wFreeEnergyCollection:
+class wFreeEnergyCollection:  # noqa: N801
     r"""
     Calculate the transition free energies for a :class:`lnpy.lnpiseries.lnPiCollection`.
 
@@ -676,7 +689,7 @@ class wFreeEnergyCollection:
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
-            masks = [x.mask for x in phases.values]
+            masks = [x.mask for x in phases.to_numpy()]
 
             ws.append(
                 wFreeEnergy(data=phases.iloc[0].data, masks=masks, convention=False)
@@ -691,9 +704,7 @@ class wFreeEnergyCollection:
             _get_w_data, items=seq, use_joblib=self._use_joblib, total=len(ws)
         )
 
-        result = {key: pd.concat([x[key] for x in out]) for key in out[0].keys()}
-
-        return result
+        return {key: pd.concat([x[key] for x in out]) for key in out[0]}
 
     @property
     def w_min(self) -> pd.Series[Any]:
@@ -764,8 +775,7 @@ class wFreeEnergyCollection:
             nebrs = delta_w.indexes["phase_nebr"].intersection(idx_nebr)
             delta_w = delta_w.sel(phase=idx, phase_nebr=nebrs)
 
-        out = delta_w.min("phase_nebr").fillna(0.0)
-        return out
+        return delta_w.min("phase_nebr").fillna(0.0)
 
     def get_dw(
         self, idx: int, idx_nebr: int | list[int] | None = None
@@ -775,7 +785,7 @@ class wFreeEnergyCollection:
 
 
 # @lnPiCollection.decorate_accessor("wfe_phases")
-class wFreeEnergyPhases(wFreeEnergyCollection):
+class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
     """
     Stripped down version of :class:`wFreeEnergyCollection` for single phase grouping.
 
@@ -809,7 +819,9 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
         """Series representation of delta_w"""
         return self.dwx.to_series()
 
-    def get_dw(self, idx: int, idx_nebr: int | Iterable[int] | None = None) -> float | MyNDArray:  # type: ignore[override]
+    def get_dw(  # type: ignore[override]
+        self, idx: int, idx_nebr: int | Iterable[int] | None = None
+    ) -> float | MyNDArray:
         dw = self.dwx
         index = dw.indexes["phase"]
 
@@ -825,7 +837,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):
 
         if len(nebrs) == 0:
             return np.inf
-        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").values
+        return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").to_numpy()
 
 
 # @lnPiCollection.decorate_accessor("wfe")
