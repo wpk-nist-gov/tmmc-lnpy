@@ -18,6 +18,12 @@ See the fragment files in [changelog.d]
 
 <!-- scriv-insert-here -->
 
+## v0.7.0 — 2024-03-28
+
+### Added
+
+- Added submodule `lnpy.combine` to combine $\ln\Pi$ from multiple simulations.
+
 ## v0.6.0 — 2023-08-24
 
 ### Added
