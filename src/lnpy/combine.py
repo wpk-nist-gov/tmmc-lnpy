@@ -419,7 +419,10 @@ def combine_scaled_lnpi(
         )
 
         lhs = (a.T @ a).toarray()
-        rhs = a.T @ b
+        # There's a bug with multiplying a shape=(1,1) a into b.
+        # The result will be a scalar.
+        # so make sure its a vector
+        rhs = np.atleast_1d(a.T @ b)
 
     else:
         a = _create_lhs_matrix_numpy(
