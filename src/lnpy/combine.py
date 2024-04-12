@@ -286,10 +286,6 @@ def _create_lhs_matrix_numpy(
     )
     return a
 
-    # .. math::
-
-    #     \min_{C_0, C_1, ..., C_{W-1}} \sum_{\rm{overlap}_m} \in \rm{overlaps}}\, \sum_{N_m, k \in \rm{overlap}_m} [\ln \bar{\Pi}(N_m) - (\ln \Pi_k (N_m) + C_k)]^2
-
 
 def _create_initial_table(
     tables: pd.DataFrame | Iterable[pd.DataFrame],
@@ -379,8 +375,6 @@ def combine_scaled_lnpi(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import numpy as np
     >>> states = pd.DataFrame(range(5), columns=["state"])
     >>> tables = [states.iloc[:3], states.iloc[2:]]
     >>> tables = [
@@ -512,8 +506,6 @@ def combine_dropfirst(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import numpy as np
     >>> states = pd.DataFrame(range(5), columns=["state"])
     >>> tables = [states.iloc[:3], states.iloc[2:]]
     >>> tables = [
@@ -745,9 +737,13 @@ def delta_lnpi_from_updown(
     delta_lnpi_name: str = "delta_lnpi",
 ) -> pd.DataFrame:
     r"""
-    Add :math:`\Delta \ln Pi(N) = \ln Pi(N) - \ln Pi(N-1)` from up/down probabilities.
+    Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
 
-    This assumes ``table`` is sorted by ``state`` value.
+    This assumes ``table`` is sorted by ``state`` value. This function is
+    useful if the simulation windows use extended ensemble sampling and have
+    non-integer steps in the ``state`` variable. The deltas can be combined
+    with :func:`combine_dropfirst`, cumalitively summed, then non integer
+    states dropped.
 
     Parameters
     ----------
