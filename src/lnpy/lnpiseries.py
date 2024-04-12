@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     from . import ensembles, lnpienergy, stability
     from ._typing import IndexingInt, MyNDArray, Scalar
-    from ._typing_compat import Self
+    from ._typing_compat import IndexAny, Self
     from .lnpidata import lnPiMasked
 
 
@@ -93,7 +93,7 @@ class _LocIndexer:
     @overload
     def __getitem__(
         self,
-        idx: list[Scalar] | pd.Index[Any] | slice | Callable[[pd.Series[Any]], Any],
+        idx: list[Scalar] | IndexAny | slice | Callable[[pd.Series[Any]], Any],
     ) -> lnPiCollection: ...
 
     @overload
@@ -127,9 +127,7 @@ class _iLocIndexer:  # noqa: N801
     def __getitem__(self, idx: IndexingInt) -> lnPiMasked: ...
 
     @overload
-    def __getitem__(
-        self, idx: Sequence[int] | pd.Index[Any] | slice
-    ) -> lnPiCollection: ...
+    def __getitem__(self, idx: Sequence[int] | IndexAny | slice) -> lnPiCollection: ...
 
     @overload
     def __getitem__(self, idx: Any) -> lnPiMasked | lnPiCollection: ...
@@ -204,7 +202,7 @@ class _LocIndexer_unstack_mloc:  # noqa: N801
         self._index_names = set(self._index.names)
         self._loc = self._parent._series.iloc
 
-    def _get_loc_idx(self, idx: pd.MultiIndex | pd.Index[Any]) -> Any:
+    def _get_loc_idx(self, idx: pd.MultiIndex | IndexAny) -> Any:
         index = self._index
         if isinstance(idx, pd.MultiIndex):
             # names in idx and
@@ -217,7 +215,7 @@ class _LocIndexer_unstack_mloc:  # noqa: N801
             index = index.droplevel(drop)
         return index.get_indexer_for(idx)  # type: ignore[no-untyped-call]
 
-    def __getitem__(self, idx: pd.MultiIndex | pd.Index[Any]) -> lnPiCollection:
+    def __getitem__(self, idx: pd.MultiIndex | IndexAny) -> lnPiCollection:
         indexer = self._get_loc_idx(idx)
         out = self._loc[indexer]
 
@@ -268,7 +266,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     def __init__(
         self,
         data: Sequence[lnPiMasked] | pd.Series[Any],
-        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
+        index: ArrayLike | IndexAny | pd.MultiIndex | None = None,
         xarray_output: bool = True,
         concat_dim: str | None = None,
         concat_coords: str | None = None,
@@ -336,7 +334,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     def new_like(
         self,
         data: Sequence[lnPiMasked] | pd.Series[Any] | None = None,
-        index: ArrayLike | pd.Index[Any] | pd.MultiIndex | None = None,
+        index: ArrayLike | IndexAny | pd.MultiIndex | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create new object with optional new data/index"""
@@ -384,7 +382,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return self.values
 
     @property
-    def index(self) -> pd.Index[Any]:
+    def index(self) -> IndexAny:
         """Series index"""
         return self._series.index
 
@@ -710,28 +708,24 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     # Note: use property(cached.meth(func)) here
     # normal cache.prop has some logic issues
     # with this pattern.
-    @property
-    @cached.meth
+
+    @cached.prop
     def loc(self) -> _LocIndexer:
         return _LocIndexer(self)
 
-    @property
-    @cached.meth
+    @cached.prop
     def iloc(self) -> _iLocIndexer:
         return _iLocIndexer(self)
 
-    @property
-    @cached.meth
+    @cached.prop
     def query(self) -> _Query:
         return _Query(self)
 
-    @property
-    @cached.meth
+    @cached.prop
     def zloc(self) -> _LocIndexer_unstack_zloc:
         return _LocIndexer_unstack_zloc(self)
 
-    @property
-    @cached.meth
+    @cached.prop
     def mloc(self) -> _LocIndexer_unstack_mloc:
         return _LocIndexer_unstack_mloc(self)
 
@@ -803,7 +797,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             lnz = lnz[component]
         return lnz
 
-    def _get_level(self, level: str = "phase") -> pd.Index[Any]:
+    def _get_level(self, level: str = "phase") -> IndexAny:
         """Return level values from index"""
         index = self.index
         if isinstance(index, pd.MultiIndex):
@@ -811,7 +805,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             index = index.levels[level_idx]
         return index
 
-    def get_index_level(self, level: str = "phase") -> pd.Index[Any]:
+    def get_index_level(self, level: str = "phase") -> IndexAny:
         """Get index values for specified level"""
         return self._get_level(level=level)
 

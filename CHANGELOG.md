@@ -18,6 +18,13 @@ See the fragment files in [changelog.d]
 
 <!-- scriv-insert-here -->
 
+## v0.8.0 — 2024-04-12
+
+### Added
+
+- Added methods to work with collection matrix (`lnpy.combine`).
+- Fixed some minor typing bugs
+
 ## v0.7.0 — 2024-03-28
 
 ### Added
