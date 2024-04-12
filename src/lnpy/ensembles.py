@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     from ._typing import C_Ensemble, MyNDArray, P, R, T_Ensemble, xArrayLike
+    from ._typing_compat import IndexAny
 
 # from lnpy.lnpidata import lnPiMasked
 # from lnpy.lnpiseries import lnPiCollection
@@ -246,12 +247,11 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     def first(self) -> lnPiMasked:
         if isinstance(self._parent, lnPiCollection):
             return self._parent.iloc[0]
-
         return self._parent
 
     # @cached_prop to much memory
     @property
-    def _rec_coords(self) -> dict[str, pd.Index[Any] | pd.MultiIndex | float | int]:
+    def _rec_coords(self) -> dict[str, IndexAny | pd.MultiIndex | float | int]:
         if isinstance(self._parent, lnPiMasked):
             return dict(self._parent._index_dict(), **self._parent.state_kws)
 

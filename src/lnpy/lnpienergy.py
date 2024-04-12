@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing import Any, Iterable, Literal, Sequence, Union
 
     from ._typing import MaskConvention, MyNDArray
-    from ._typing_compat import Self
+    from ._typing_compat import IndexAny, Self
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
@@ -684,7 +684,7 @@ class wFreeEnergyCollection:  # noqa: N801
 
         self._cache: dict[str, Any] = {}
 
-    def _get_items_ws(self) -> tuple[list[pd.Index[Any]], list[wFreeEnergy]]:
+    def _get_items_ws(self) -> tuple[list[IndexAny], list[wFreeEnergy]]:
         indexes = []
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):

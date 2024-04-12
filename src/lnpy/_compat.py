@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -10,6 +11,15 @@ if TYPE_CHECKING:
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
     from ._typing import MyNDArray
+
+
+if sys.version_info < (3, 10):
+    import importlib_resources as resources
+else:
+    from importlib import resources
+
+
+__all__ = ["resources", "rootresults", "xr_dot"]
 
 
 def xr_dot(
