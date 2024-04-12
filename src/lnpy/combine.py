@@ -33,6 +33,7 @@ lnpi_name :
     Column name corresponding to :math:`\ln \Pi`.
 window_name :
     Column name corresponding to "window", i.e., an individual simulation.
+    Note that this is only used if passing in a single dataframe with multiple windows.
 state_name :
     Column name corresponding to simulation state. For example, ``state="state"``.
 macrostate_names :
@@ -374,6 +375,39 @@ def combine_scaled_lnpi(
     DataFrame
         Combined table with appropriately shifted ``lnpi_name`` column.
         Note that the table is not yet averaged over ``macrostate_names``.
+
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> states = pd.DataFrame(range(5), columns=["state"])
+    >>> tables = [states.iloc[:3], states.iloc[2:]]
+    >>> tables = [
+    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
+    ...     for i, table in enumerate(tables)
+    ... ]
+    >>> print(tables[0])
+       state  lnpi
+    0      0     0
+    1      1     1
+    2      2     2
+    >>> print(tables[1])
+       state  lnpi
+    2      2    12
+    3      3    13
+    4      4    14
+
+    >>> combined_table = combine_scaled_lnpi(tables, lnpi_name="lnpi")
+    >>> print(combined_table)
+       state  lnpi
+    0      0   0.0
+    1      1   1.0
+    2      2   2.0
+    2      2   2.0
+    3      3   3.0
+    4      4   4.0
+
     """
     window_index_name = "_window_index"
     table = _create_initial_table(
@@ -475,7 +509,39 @@ def combine_dropfirst(
     ----
     If there is not expanded ensemble sampling (i.e., non-integer ``state``
     values) in windows, you should prefer using :func:`combine_updown_mean`.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> states = pd.DataFrame(range(5), columns=["state"])
+    >>> tables = [states.iloc[:3], states.iloc[2:]]
+    >>> tables = [
+    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
+    ...     for i, table in enumerate(tables)
+    ... ]
+    >>> print(tables[0])
+       state  lnpi
+    0      0     0
+    1      1     1
+    2      2     2
+    >>> print(tables[1])
+       state  lnpi
+    2      2    12
+    3      3    13
+    4      4    14
+
+    >>> combined_table = combine_dropfirst(tables)
+    >>> print(combined_table)
+       state  lnpi
+    0      0     0
+    1      1     1
+    2      2     2
+    3      3    13
+    4      4    14
     """
+
+    window_index_name = "_window_index"
 
     if isinstance(tables, pd.DataFrame):
         table = tables
@@ -488,6 +554,8 @@ def combine_dropfirst(
         tables = iter(tables)
         first = next(tables)
 
+        # use window_name = window_index_name
+        window_name = window_index_name
         table = pd.concat(
             dict(enumerate(itertools.chain([first], tables))),
             names=[window_name, *first.index.names],
@@ -496,7 +564,6 @@ def combine_dropfirst(
             table = table.drop(window_name, axis=1)
         table = table.reset_index(window_name)
 
-    window_index_name = "_window_index"
     window_map = (
         table[[window_name, state_name]]
         .groupby(window_name, as_index=False)

@@ -9,7 +9,7 @@
 #
 autodocsumm
 bottleneck
-importlib_resources
+importlib_resources;python_version<"3.10"
 ipywidgets
 joblib
 lazy_loader

@@ -13,7 +13,6 @@ dependencies:
   - python=3.11
   - autodocsumm
   - bottleneck
-  - importlib_resources
   - ipywidgets
   - joblib
   - lazy_loader

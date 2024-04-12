@@ -5,17 +5,14 @@ Examples (:mod:`~lnpy.examples`)
 
 from __future__ import annotations
 
-try:
-    import importlib_resources as resources
-except ImportError:
-    from importlib import resources  # type: ignore[no-redef]
-
 import json
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import xarray as xr
+
+from ._compat import resources
 
 # from .lnpiseries import lnPiCollection
 from .segment import BuildPhasesBase, PhaseCreator
@@ -54,7 +51,13 @@ def json_to_dict(basename: str) -> dict[str, Any]:
     else:
         fopen = open  # type: ignore[assignment]
 
-    with fopen(resources.files("lnpy.data").joinpath(basename), "r") as f:  # pyright: ignore[reportCallIssue,reportArgumentType]
+    # path = Path(resources.files("lnpy.data").joinpath(basename))
+    # with fopen(path, "r") as f:  # pyright: ignore[reportCallIssue,reportArgumentType]
+    #     return json.load(f)  # type: ignore[no-any-return]
+
+    with resources.as_file(
+        resources.files("lnpy.data").joinpath(basename)
+    ) as path, fopen(path, "r") as f:
         return json.load(f)  # type: ignore[no-any-return]
 
 

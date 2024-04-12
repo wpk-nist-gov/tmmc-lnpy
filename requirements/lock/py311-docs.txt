@@ -23,11 +23,10 @@ executing==2.0.1          # via stack-data
 fastjsonschema==2.19.1    # via nbformat
 fonttools==4.51.0         # via matplotlib
 greenlet==3.0.3           # via sqlalchemy
-idna==3.6                 # via requests
+idna==3.7                 # via requests
 imageio==2.34.0           # via scikit-image
 imagesize==1.4.1          # via sphinx
 importlib-metadata==7.1.0  # via jupyter-cache, myst-nb
-importlib-resources==6.4.0
 ipykernel==6.29.4         # via myst-nb
 ipython==8.23.0           # via ipykernel, ipywidgets, myst-nb
 ipywidgets==8.1.2
@@ -50,7 +49,7 @@ matplotlib-inline==0.1.6  # via ipykernel, ipython
 mdit-py-plugins==0.4.0    # via myst-parser
 mdurl==0.1.2              # via markdown-it-py
 module-utilities==0.9.0
-myst-nb==1.0.0
+myst-nb==1.1.0
 myst-parser==2.0.0        # via myst-nb
 nbclient==0.10.0          # via jupyter-cache, myst-nb
 nbformat==5.10.4          # via jupyter-cache, myst-nb, nbclient

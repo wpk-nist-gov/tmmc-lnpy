@@ -12,7 +12,6 @@ channels:
 dependencies:
   - python=3.11
   - bottleneck
-  - importlib_resources
   - joblib
   - lazy_loader
   - module-utilities>=0.9.0
