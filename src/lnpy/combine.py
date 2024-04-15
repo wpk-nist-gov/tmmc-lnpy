@@ -21,9 +21,11 @@ from .docstrings import docfiller
 if TYPE_CHECKING:
     from typing import Any, Callable, Iterable, Sequence
 
+    import xarray as xr
     from numpy.typing import NDArray
 
-    T = TypeVar("T", pd.Series[Any], NDArray[Any])
+    T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
+    T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
 
 _docstrings_local = r"""
@@ -391,7 +393,6 @@ def combine_scaled_lnpi(
     2      2    12
     3      3    13
     4      4    14
-
     >>> combined_table = combine_scaled_lnpi(tables, lnpi_name="lnpi")
     >>> print(combined_table)
        state  lnpi
@@ -402,6 +403,16 @@ def combine_scaled_lnpi(
     3      3   3.0
     4      4   4.0
 
+    Note that the resulting dataframe includes all (properly scaled) data.
+    To, for example, average over separate windows, use something like:
+    >>> combined_table.groupby("state").mean()
+           lnpi
+    state
+    0       0.0
+    1       1.0
+    2       2.0
+    3       3.0
+    4       4.0
     """
     window_index_name = "_window_index"
     table = _create_initial_table(
@@ -467,8 +478,12 @@ def combine_scaled_lnpi(
     shift[:-1] = np.linalg.solve(lhs, rhs)
     shift -= shift[0]
 
-    table[lnpi_name] += shift[table[window_index_name].to_numpy()]
-    return table.drop(window_index_name, axis=1)
+    return table.assign(
+        **{lnpi_name: table[lnpi_name] + shift[table[window_index_name].to_numpy()]}
+    ).drop(window_index_name, axis=1)
+
+    # table[lnpi_name] += shift[table[window_index_name].to_numpy()]
+    # return table.drop(window_index_name, axis=1)
 
 
 # * Collection matrix
@@ -731,11 +746,11 @@ def updown_from_collectionmatrix(
 
 @docfiller_local
 def delta_lnpi_from_updown(
-    table: pd.DataFrame,
+    table: T_Frame,
     up_name: str = "P_up",
     down_name: str = "P_down",
     delta_lnpi_name: str = "delta_lnpi",
-) -> pd.DataFrame:
+) -> T_Frame:
     r"""
     Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
 
@@ -762,17 +777,20 @@ def delta_lnpi_from_updown(
     delta = np.empty_like(down)
     delta[0] = 0.0
     delta[1:] = np.log(up[:-1] / down[1:])
-    return table.assign(**{delta_lnpi_name: delta})
+
+    if isinstance(table, pd.DataFrame):
+        return table.assign(**{delta_lnpi_name: delta})
+    return table.assign({delta_lnpi_name: table[down_name].copy(data=delta)})
 
 
 @docfiller_local
 def lnpi_from_updown(
-    table: pd.DataFrame,
+    table: T_Frame,
     lnpi_name: str = "ln_prob",
     down_name: str = "P_down",
     up_name: str = "P_up",
     norm: bool = True,
-) -> pd.DataFrame:
+) -> T_Frame:
     r"""
     Assign :math:`\ln \Pi(N)` from up/down sorted probabilities.
 
@@ -805,10 +823,15 @@ def lnpi_from_updown(
 
     ln_prob -= ln_prob.max()
 
-    return table.assign(**{lnpi_name: normalize_lnpi(ln_prob) if norm else ln_prob})
+    if norm:
+        ln_prob = normalize_lnpi(ln_prob)
+
+    if isinstance(table, pd.DataFrame):
+        return table.assign(**{lnpi_name: ln_prob})
+    return table.assign({lnpi_name: table[down_name].copy(data=ln_prob)})
 
 
-def normalize_lnpi(lnpi: T) -> T:
+def normalize_lnpi(lnpi: T_Array) -> T_Array:
     r"""Normalize :math:`\ln\Pi` series or array."""
     offset: float = np.log(np.exp(lnpi).sum())
     return lnpi - offset
