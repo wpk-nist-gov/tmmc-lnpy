@@ -213,7 +213,7 @@ def peak_local_max_adaptive(
     if not isinstance(min_distance, Iterable):
         min_distance = [min_distance]
 
-    data = data - bottleneck.nanmin(data)
+    data = data - bottleneck.nanmin(data)  # noqa: PLR6104
     kwargs = dict({"exclude_border": False}, **kwargs)
 
     n = idx = None
@@ -912,7 +912,7 @@ class BuildPhasesBase:
 
     def _set_x(self, x: list[float | None]) -> None:
         # assert sum([x is None for x in x]) == 1
-        if sum([x is None for x in x]) != 1:
+        if sum(x is None for x in x) != 1:
             msg = f"{x=} must have a single element which is None.  This will be the dimension varied."
             raise ValueError(msg)
         self._x = x

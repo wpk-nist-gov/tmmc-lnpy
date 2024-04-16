@@ -753,7 +753,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
             If True, :math:`C(N) = \ln \Pi(N) `.  Otherwise, :math:`C=0`.
         """
         if correction:
-            betaF_can = betaF_can + self.lnpi_norm
+            betaF_can = betaF_can + self.lnpi_norm  # noqa: PLR6104
         # return (self.pi_norm * betaF_can).sum(self.dims_n)
         return self._mean_pi(betaF_can)
 

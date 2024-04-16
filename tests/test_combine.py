@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 
 from lnpy import combine
 
@@ -93,7 +94,7 @@ def dfs(table: pd.DataFrame, request: pytest.FixtureRequest) -> list[pd.DataFram
         ub = lb + split + 1
         dfs.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))  # noqa: B023
 
-        lb = lb + split
+        lb += split
         if lb >= len(table):
             break
 
@@ -342,28 +343,64 @@ def table_updown(rng: np.random.Generator) -> pd.DataFrame:
     return pd.DataFrame(rng.random((10, 3)), columns=["n_trials", "P_down", "P_up"])
 
 
-def test_delta_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
-    out = combine.delta_lnpi_from_updown(table_updown)
-
+def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     delta_lnpi = (
         np.log(table_updown["P_up"].shift(1) / table_updown["P_down"]).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
     )
+
+    out = combine.assign_delta_lnpi_from_updown(table_updown)
     np.testing.assert_allclose(delta_lnpi, out["delta_lnpi"])
 
+    # test dataset
+    ds = table_updown.to_xarray()
+    out_ds = combine.assign_delta_lnpi_from_updown(ds, delta_lnpi_name="my_delta")
+    np.testing.assert_allclose(delta_lnpi, out_ds["my_delta"])
 
-def test_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
+    # Series with name
+    out_series = combine.delta_lnpi_from_updown(
+        down=table_updown["P_down"], up=table_updown["P_up"], name="my_delta"
+    )
+    assert isinstance(out_series, pd.Series)
+    assert out_series.name == "my_delta"
+    np.testing.assert_allclose(delta_lnpi, out_series)
+
+    # xarray
+    out_dataarray = combine.delta_lnpi_from_updown(
+        down=table_updown["P_down"].to_xarray(),
+        up=table_updown["P_up"].to_xarray(),
+        name="my_delta",
+    )
+    assert isinstance(out_dataarray, xr.DataArray)
+    assert out_dataarray.name == "my_delta"
+    np.testing.assert_allclose(delta_lnpi, out_series)
+
+    # numpy
+    delta = combine.delta_lnpi_from_updown(
+        down=table_updown["P_down"].to_numpy(),
+        up=table_updown["P_up"].to_numpy(),
+    )
+    np.testing.assert_allclose(delta_lnpi, delta)
+
+
+def test_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     table = (
-        combine.delta_lnpi_from_updown(table_updown)
+        combine.assign_delta_lnpi_from_updown(table_updown)
         .assign(ln_prob=lambda x: x["delta_lnpi"].cumsum())
         .assign(ln_prob=lambda x: x["ln_prob"] - x["ln_prob"].max())
     )
-    out = combine.lnpi_from_updown(table_updown, norm=False)
+    out = combine.assign_lnpi_from_updown(table_updown, norm=False)
     np.testing.assert_allclose(out["ln_prob"], table["ln_prob"])
 
-    out = combine.lnpi_from_updown(table_updown, norm=True)
+    out = combine.assign_lnpi_from_updown(table_updown, norm=True)
     table = table.assign(
         ln_prob=lambda x: x["ln_prob"] - np.log(np.exp(x["ln_prob"]).sum())
     )
+    np.testing.assert_allclose(out["ln_prob"], table["ln_prob"])
+
+    # dataset
+    ds = combine.assign_lnpi_from_updown(table_updown.to_xarray(), norm=True)
+    assert isinstance(ds, xr.Dataset)
+
     np.testing.assert_allclose(out["ln_prob"], table["ln_prob"])
 
 

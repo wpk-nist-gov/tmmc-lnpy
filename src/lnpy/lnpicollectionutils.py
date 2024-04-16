@@ -173,7 +173,7 @@ def get_lnz_min(
                 # went to far
                 new_lnz -= dlnz_right
                 # reset to half dlnz
-                dlnz_right = dlnz_right * 0.5
+                dlnz_right *= 0.5
             elif getter(p).to_numpy() > target:
                 right = p
                 break

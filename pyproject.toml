@@ -49,7 +49,7 @@ dependencies = [
 ]
 [project.optional-dependencies]
 dev = [
-    "tmmc-lnpy[dev-extras,test,typing,pipxrun,mypy,viz,nbval]",
+    "tmmc-lnpy[dev-extras,test,typing,pipxrun,mypy,viz,resample,nbval]",
 ]
 dev-complete = [
     "tmmc-lnpy[dev,tools]",
@@ -90,6 +90,9 @@ pipxrun-tools = [
     "pyright >= 1.1.357, != 1.1.358", # note pyright == 1.1.358 breaks cached.meth of lnPiCollection.loc/iloc/etc.  Need to patch module-utilities...
     "tmmc-lnpy[mypy]",
     "twine >= 5.0.0",
+]
+resample = [
+    "cmomy >= 0.10.0",
 ]
 test = [
     "pytest",
@@ -275,7 +278,7 @@ testpaths = [
 branch = true
 
 [tool.coverage.report]
-# show_missing = true
+show_missing = true
 exclude_also = ["if TYPE_CHECKING:", "@overload"]
 omit = ["*/vendored/*", "*/_typing.py"]
 include = ["src/*"]

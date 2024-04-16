@@ -10,6 +10,7 @@ cfgv==3.4.0               # via pre-commit
 charset-normalizer==3.3.2  # via requests
 click==8.1.7              # via click-log, scriv, userpath
 click-log==0.4.0          # via scriv
+cmomy==0.10.0
 colorlog==6.8.2           # via nox
 comm==0.2.2               # via ipykernel, ipywidgets
 contourpy==1.2.1          # via matplotlib
@@ -18,6 +19,7 @@ cycler==0.12.1            # via matplotlib
 debugpy==1.8.1            # via ipykernel
 decorator==5.1.1          # via ipython
 distlib==0.3.8            # via virtualenv
+docstring-inheritance==2.2.0  # via cmomy
 execnet==2.1.1            # via pytest-xdist
 executing==2.0.1          # via stack-data
 fastjsonschema==2.19.1    # via nbformat
@@ -39,13 +41,14 @@ jupyter-client==8.6.1     # via ipykernel, nbclient, nbval
 jupyter-core==5.7.2       # via ipykernel, jupyter-client, nbclient, nbformat
 jupyterlab-widgets==3.0.10  # via ipywidgets
 kiwisolver==1.4.5         # via matplotlib
-lazy-loader==0.4          # via scikit-image
+lazy-loader==0.4          # via cmomy, scikit-image
+llvmlite==0.42.0          # via numba
 markdown-it-py==3.0.0     # via scriv
 markupsafe==2.1.5         # via jinja2
 matplotlib==3.8.4
 matplotlib-inline==0.1.6  # via ipykernel, ipython
 mdurl==0.1.2              # via markdown-it-py
-module-utilities==0.9.0
+module-utilities==0.9.0   # via cmomy
 mypy==1.9.0
 mypy-extensions==1.0.0    # via mypy
 nbclient==0.10.0
@@ -55,7 +58,8 @@ nest-asyncio==1.6.0       # via ipykernel
 networkx==3.3             # via scikit-image
 nodeenv==1.8.0            # via pre-commit
 nox==2024.3.2
-numpy==1.26.4             # via bottleneck, contourpy, imageio, matplotlib, pandas, pandas-stubs, scikit-image, scipy, tifffile, xarray
+numba==0.59.1             # via cmomy
+numpy==1.26.4             # via bottleneck, cmomy, contourpy, imageio, matplotlib, numba, pandas, pandas-stubs, scikit-image, scipy, tifffile, xarray
 packaging==24.0           # via ipykernel, lazy-loader, matplotlib, nox, pipx, pytest, pytest-sugar, scikit-image, xarray
 pandas==2.2.2             # via xarray
 pandas-stubs==2.2.1.240316
@@ -104,4 +108,4 @@ userpath==1.9.2           # via pipx
 virtualenv==20.25.1       # via nox, pre-commit
 wcwidth==0.2.13           # via prompt-toolkit
 widgetsnbextension==4.0.10  # via ipywidgets
-xarray==2024.3.0
+xarray==2024.3.0          # via cmomy

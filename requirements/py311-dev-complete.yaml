@@ -12,6 +12,7 @@ channels:
 dependencies:
   - python=3.11
   - bottleneck
+  - cmomy>=0.10.0
   - ipykernel
   - ipython
   - ipywidgets

@@ -101,7 +101,7 @@ def _initial_bracket_molfrac(
                 # went to far
                 new_lnz -= dlnz_
                 # reset to half dlnz
-                dlnz_ = dlnz_ * 0.5
+                dlnz_ *= 0.5
             elif getter(p).to_numpy() > target:
                 right = p
                 break

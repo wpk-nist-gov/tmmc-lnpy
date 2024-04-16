@@ -479,7 +479,7 @@ def labels_to_masks(
                 segmentation.find_boundaries(m.astype(int), **kwargs),  # pyright: ignore[reportUnknownMemberType]
             )
             # fmt: on
-            m = m | b
+            m |= b
         if not convention:
             m = ~m
         output.append(m)

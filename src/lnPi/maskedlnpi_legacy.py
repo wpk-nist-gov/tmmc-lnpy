@@ -176,7 +176,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         return np.unravel_index(self.argmax(*args, **kwargs), self.shape)
 
     # @cached.meth
-    def local_max(self, *args, **kwargs):
+    def local_max(self, *args, **kwargs):  # noqa: FURB118
         return self[self.local_argmax(*args, **kwargs)]
 
     # @cached.meth

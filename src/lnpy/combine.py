@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Iterator, TypeVar, cast
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from module_utilities.docfiller import DocFiller
 from scipy.sparse import coo_array
 
@@ -21,10 +22,10 @@ from .docstrings import docfiller
 if TYPE_CHECKING:
     from typing import Any, Callable, Iterable, Sequence
 
-    import xarray as xr
     from numpy.typing import NDArray
 
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
+    T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
 
@@ -49,7 +50,7 @@ down_name :
 weight_name :
     Column name corresponding to "weight" of probability.
 table_assign | table :
-    :class:`pandas.DataFrame`
+    :class:`pandas.DataFrame` or :class:`xarray.Dataset` data container.
 check_connected :
     If ``True``, check that all windows form a connected graph.
 tables :
@@ -57,7 +58,14 @@ tables :
     :class:`~pandas.DataFrame`, it must contain the column ``window_name``.
     Otherwise, the individual frames will be concatenated and the
     ``window_name`` column will be added (or replaced if already present).
-
+up :
+    Probability of moving from ``state[i]`` to ``state[i+1]``.
+down :
+    Probability of moving from ``state[i]`` to ``state[i-1]``.
+norm :
+    If True, normalize :math:`\ln \Pi(N)`.
+array_name | name:
+    Optional name to assign to the output :class:`pandas.Series` or `xarray.DataArray`.
 
 
 Raises
@@ -405,14 +413,13 @@ def combine_scaled_lnpi(
 
     Note that the resulting dataframe includes all (properly scaled) data.
     To, for example, average over separate windows, use something like:
-    >>> combined_table.groupby("state").mean()
-           lnpi
-    state
-    0       0.0
-    1       1.0
-    2       2.0
-    3       3.0
-    4       4.0
+    >>> combined_table.groupby("state", as_index=False).mean()
+       state  lnpi
+    0      0   0.0
+    1      1   1.0
+    2      2   2.0
+    3      3   3.0
+    4      4   4.0
     """
     window_index_name = "_window_index"
     table = _create_initial_table(
@@ -744,8 +751,103 @@ def updown_from_collectionmatrix(
     )
 
 
+def _get_delta_lnpi(*, down: NDArray[Any], up: NDArray[Any]) -> NDArray[Any]:
+    delta = np.empty_like(down)
+    delta[0] = 0.0
+    delta[1:] = np.log(up[:-1] / down[1:])
+    return delta
+
+
 @docfiller_local
 def delta_lnpi_from_updown(
+    down: T_Array,
+    up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
+    name: str | None = None,
+) -> T_Array:
+    r"""
+    Calculate :math:`\Delta \ln \Pi(N)` from up/down probabilities.
+
+    This assumes ``table`` is sorted by ``state`` value. This function is
+    useful if the simulation windows use extended ensemble sampling and have
+    non-integer steps in the ``state`` variable. The deltas can be combined
+    with :func:`combine_dropfirst`, cumalitively summed, then non integer
+    states dropped.
+
+    Parameters
+    ----------
+    {down}
+    {up}
+    {array_name}
+
+    Returns
+    -------
+    Series or DataArray or ndarray
+        Calculated value of same type as ``down``.
+    """
+
+    up_ = (
+        up.to_numpy()
+        if isinstance(up, (pd.Series, xr.DataArray))
+        else cast("NDArray[Any]", up)
+    )
+
+    if isinstance(down, pd.Series):
+        return pd.Series(
+            _get_delta_lnpi(down=down.to_numpy(), up=up_), name=name, index=down.index
+        )
+
+    if isinstance(down, xr.DataArray):
+        out = down.copy(data=_get_delta_lnpi(down=down.to_numpy(), up=up_))
+        if name:
+            out = out.rename(name)
+        return out
+
+    if isinstance(down, np.ndarray):
+        return _get_delta_lnpi(down=down, up=up_)
+
+    msg = f"{type(down)=} must be ndarray, Series, or DataArray"
+    raise TypeError(msg)
+
+
+@docfiller_local
+def lnpi_from_updown(
+    down: T_Array,
+    up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
+    name: str | None = None,
+    norm: bool = False,
+) -> T_Array:
+    r"""
+    Calculate :math:`\ln \Pi(N)` from up/down sorted probabilities.
+
+    This assumes ``table`` is sorted by ``state`` value.
+
+    Parameters
+    ----------
+    {down}
+    {up}
+    {array_name}
+    norm :
+        If ``True``, normalize distribution.
+
+    Returns
+    -------
+    Series or DataArray or ndarray
+        Calculated value of same type as ``down``.
+    """
+
+    ln_prob: T_Array = delta_lnpi_from_updown(down=down, up=up, name=name).cumsum()
+    ln_prob -= ln_prob.max()  # pyright: ignore[reportAssignmentType]
+    return normalize_lnpi(ln_prob) if norm else ln_prob
+
+
+def normalize_lnpi(lnpi: T_Array) -> T_Array:
+    r"""Normalize :math:`\ln\Pi` series or array."""
+    offset: float = np.log(np.exp(lnpi).sum())
+    return lnpi - offset
+
+
+@docfiller_local
+def assign_delta_lnpi_from_updown(
     table: T_Frame,
     up_name: str = "P_up",
     down_name: str = "P_down",
@@ -772,11 +874,8 @@ def delta_lnpi_from_updown(
     DataFrame
         Table with ``delta_lnpi_name`` column.
     """
-    down = table[down_name].to_numpy()
-    up = table[up_name].to_numpy()
-    delta = np.empty_like(down)
-    delta[0] = 0.0
-    delta[1:] = np.log(up[:-1] / down[1:])
+
+    delta = delta_lnpi_from_updown(up=table[up_name], down=table[down_name])  # type: ignore[arg-type]
 
     if isinstance(table, pd.DataFrame):
         return table.assign(**{delta_lnpi_name: delta})
@@ -784,7 +883,7 @@ def delta_lnpi_from_updown(
 
 
 @docfiller_local
-def lnpi_from_updown(
+def assign_lnpi_from_updown(
     table: T_Frame,
     lnpi_name: str = "ln_prob",
     down_name: str = "P_down",
@@ -813,25 +912,14 @@ def lnpi_from_updown(
     DataFrame
         New dataframe with assigned :math:`\ln \Pi`.
     """
-    down = table[down_name].to_numpy()
-    up = table[up_name].to_numpy()
 
-    ln_prob = np.empty_like(down)
-
-    ln_prob[0] = 0.0
-    ln_prob[1:] = np.log(up[:-1] / down[1:]).cumsum()
-
-    ln_prob -= ln_prob.max()
-
-    if norm:
-        ln_prob = normalize_lnpi(ln_prob)
+    ln_prob = lnpi_from_updown(
+        down=table[down_name],  # type: ignore[arg-type]
+        up=table[up_name],
+        norm=norm,
+        name=lnpi_name,
+    )
 
     if isinstance(table, pd.DataFrame):
         return table.assign(**{lnpi_name: ln_prob})
     return table.assign({lnpi_name: table[down_name].copy(data=ln_prob)})
-
-
-def normalize_lnpi(lnpi: T_Array) -> T_Array:
-    r"""Normalize :math:`\ln\Pi` series or array."""
-    offset: float = np.log(np.exp(lnpi).sum())
-    return lnpi - offset
