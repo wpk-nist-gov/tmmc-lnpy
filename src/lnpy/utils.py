@@ -6,7 +6,7 @@ Utility functions (:mod:`~lnpy.utils`)
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import starmap
+from itertools import chain, starmap
 from typing import TYPE_CHECKING, TypedDict, cast, overload
 
 import numpy as np
@@ -16,7 +16,7 @@ from .options import OPTIONS
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Any, Callable, Hashable, Iterable, Mapping, Sequence
+    from typing import Any, Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray
@@ -755,3 +755,13 @@ def array_to_scalar(x: float | MyNDArray) -> float:
     if isinstance(x, np.ndarray):
         return x.flat[0]  # type: ignore[no-any-return]
     return x
+
+
+# * Helpers
+def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
+    """Returns the first value from iterable, as well as a new iterator with
+    the same content as the original iterable
+    """
+    gen = iter(iterable)
+    peek = next(gen)
+    return peek, chain([peek], gen)

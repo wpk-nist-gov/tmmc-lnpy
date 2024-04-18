@@ -7,7 +7,6 @@ Routines to combine :math:`\ln \Pi` data (:mod:`~lnpy.combine`)
 
 from __future__ import annotations
 
-import itertools
 from functools import lru_cache
 from typing import TYPE_CHECKING, Iterator, TypeVar, cast, overload
 
@@ -18,6 +17,7 @@ from module_utilities.docfiller import DocFiller
 from scipy.sparse import coo_array
 
 from .docstrings import docfiller
+from .utils import peek_at
 
 if TYPE_CHECKING:
     from typing import Any, Callable, Iterable, Sequence
@@ -25,10 +25,13 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
+
     T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
     T_Dataset_Array = TypeVar("T_Dataset_Array", xr.DataArray, xr.Dataset)
+
+    # T_Frame_Array = TypeVar("T_Frame_Array", pd.DataFrame, xr.DataArray, xr.Dataset)
 
 _docstrings_local = r"""
 Parameters
@@ -298,6 +301,57 @@ def _create_lhs_matrix_numpy(
     return a
 
 
+def _concat_window_dataframes(
+    first: pd.DataFrame,
+    tables: Iterator[pd.DataFrame],
+    window_name: str,
+) -> pd.DataFrame:
+    """
+    Concat windows of dataframes.
+
+    Should use first, tables = peek_at(tables).
+    """
+    table = pd.concat(
+        dict(enumerate(tables)),
+        names=[window_name, *first.index.names],
+    )
+    if window_name in table.columns:
+        table = table.drop(window_name, axis=1)
+    return table.reset_index(window_name)
+
+
+def _concat_window_datasets(
+    first: T_Dataset_Array,
+    tables: Iterator[T_Dataset_Array],
+    index_name: str,
+    window_name: str,
+    state_name: str,
+) -> T_Dataset_Array:
+    if index_name not in first.coords:
+        # stack each object
+        # if wait until end, dtype might change because of missing values during concat and stack...
+        out = xr.concat(
+            (
+                (
+                    cast("xr.DataArray | xr.Dataset", ds)  # noqa: PD013
+                    .pipe(
+                        lambda x: x.expand_dims(window_name).assign_coords(
+                            {window_name: (window_name, [i])}  # noqa: B023
+                        )
+                        if window_name not in x.dims
+                        else x
+                    )
+                    .stack({index_name: [window_name, state_name]})  # pyright: ignore[reportArgumentType]
+                )
+                for i, ds in enumerate(tables)
+            ),
+            dim=index_name,
+        )
+    else:
+        out = xr.concat(tables, dim=index_name)  # pyright: ignore[reportCallIssue, reportArgumentType]
+    return cast("T_Dataset_Array", out)
+
+
 def _create_initial_table(
     tables: pd.DataFrame | Iterable[pd.DataFrame],
     window_name: str,
@@ -313,16 +367,8 @@ def _create_initial_table(
             table, window_name=window_name, window_index_name=window_index_name
         )
 
-    tables = iter(tables)
-    first = next(tables)
-
-    table = pd.concat(
-        dict(enumerate(itertools.chain([first], tables))),
-        names=[window_index_name, *first.index.names],
-    )
-    if window_index_name in table.columns:
-        table = table.drop(window_index_name, axis=1)
-    return table.reset_index(window_index_name)
+    first, tables_iter = peek_at(tables)
+    return _concat_window_dataframes(first, tables_iter, window_name=window_index_name)
 
 
 @docfiller_local
@@ -544,6 +590,15 @@ def _filter_min_max_dropfirst(
 
 # * Collection matrix
 # NOTE: have to use sequence here because xr.Dataset is an Iterable[xr.DataArray]...
+@overload
+def combine_dropfirst(
+    tables: pd.DataFrame | Sequence[pd.DataFrame],
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -555,17 +610,6 @@ def combine_dropfirst(
     index_name: str = ...,
     reset_window: bool = ...,
 ) -> xr.DataArray: ...
-
-
-@overload
-def combine_dropfirst(
-    tables: pd.DataFrame | Sequence[pd.DataFrame],
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> pd.DataFrame: ...
 
 
 @overload
@@ -587,6 +631,9 @@ def combine_dropfirst(
     | Sequence[xr.DataArray]
     | xr.Dataset
     | Sequence[xr.Dataset],
+    # | Iterator[pd.DataFrame],
+    # | Iterator[xr.DataArray]
+    # | Iterator[xr.Dataset],
     window_name: str = "window",
     state_name: str = "state",
     check_connected: bool = False,
@@ -698,15 +745,22 @@ def combine_dropfirst(
     """
 
     window_index_name = "_window_index"
-    data: xr.DataArray | xr.Dataset | pd.DataFrame
-    if isinstance(tables, pd.DataFrame):
-        data = tables
+
+    def _process_dataframe(data: pd.DataFrame) -> pd.DataFrame:
         if window_name not in data.columns:
             msg = f"Passed single table must contain {window_name=} column."
             raise ValueError(msg)
 
-    elif isinstance(tables, (xr.DataArray, xr.Dataset)):
-        data = tables
+        return _filter_min_max_dropfirst(
+            table=data,
+            window_name=window_name,
+            state_name=state_name,
+            window_index_name=window_index_name,
+            check_connected=check_connected,
+        )
+
+    def _process_xarray(data: T_Dataset_Array) -> T_Dataset_Array:
+        # make sure correct
         if index_name in data.coords:
             names = data.indexes[index_name].names
             if window_name not in names or state_name not in names:
@@ -718,79 +772,83 @@ def combine_dropfirst(
                 raise ValueError(msg)
             # set index
             data = data.stack({index_name: [window_name, state_name]})  # noqa: PD013
-    else:
-        import itertools
 
-        tables_iter = iter(tables)
-        first = next(tables_iter)
-        tables_chain = itertools.chain([first], tables_iter)
-
-        if isinstance(first, pd.DataFrame):
-            window_name = window_index_name
-            data = pd.concat(
-                dict(enumerate(tables_chain)),  # type: ignore[arg-type] # pyright: ignore[reportCallIssue]
-                names=[window_name, *first.index.names],
+        # indexing dataframe
+        frame = (
+            data[index_name]
+            .pipe(lambda x: x.copy(data=range(len(x))))
+            .to_dataframe()[index_name]
+            .reset_index()
+            .pipe(
+                _filter_min_max_dropfirst,
+                window_name=window_name,
+                state_name=state_name,
+                window_index_name=window_index_name,
+                check_connected=check_connected,
             )
-            if window_name in data.columns:
-                data = data.drop(window_name, axis=1)  # pyright: ignore[reportArgumentType]
+        )
+        # select relevant indices
+        data = data.isel({index_name: frame[index_name].to_numpy()})
+        # optionally reset window_name
+        if reset_window:
             data = data.reset_index(window_name)
+            if len(data.indexes[index_name].names) == 1:
+                # Only have "state_name"
+                data = data.rename({index_name: state_name})
+        return data
 
-        elif isinstance(first, (xr.DataArray, xr.Dataset)):
-            if index_name not in first.coords:
-                # stack each object
-                # if wait until end, dtype might change because of missing values during concat and stack...
-                tables_chain = (  # type: ignore[assignment]
-                    (
-                        ds.pipe(  # noqa: PD013
-                            lambda x: x.expand_dims(window_name).assign_coords(
-                                {window_name: (window_name, [i])}  # noqa: B023
-                            )
-                            if window_name not in x.dims
-                            else x
-                        ).stack({index_name: [window_name, state_name]})  # type: ignore[attr-defined]  # pyright: ignore[reportArgumentType]
-                    )
-                    for i, ds in enumerate(tables_chain)
-                )
-            data = cast(
-                "xr.DataArray | xr.Dataset", xr.concat(tables_chain, dim=index_name)
-            )  # type: ignore[type-var] # pyright: ignore[reportCallIssue]
-        else:
-            msg = "Unknown type(tables[0])={type(first)}"
-            raise TypeError(msg)
+    # Do calculation
+    if isinstance(tables, pd.DataFrame):
+        return _process_dataframe(tables)
+    if isinstance(tables, xr.DataArray):
+        return _process_xarray(tables)
+    if isinstance(tables, xr.Dataset):
+        return _process_xarray(tables)
 
-    if isinstance(data, pd.DataFrame):
-        return _filter_min_max_dropfirst(
-            table=data,
-            window_name=window_name,
-            state_name=state_name,
-            window_index_name=window_index_name,
-            check_connected=check_connected,
+    # sequence type
+    first, tables_iter = peek_at(tables)
+    if isinstance(first, pd.DataFrame):
+        window_name = window_index_name
+        return _process_dataframe(
+            _concat_window_dataframes(
+                first,
+                cast("Iterator[pd.DataFrame]", tables_iter),
+                window_name=window_index_name,
+            )
         )
-
-    frame = (
-        data[index_name]
-        .pipe(lambda x: x.copy(data=range(len(x))))
-        .to_dataframe()[index_name]
-        .reset_index()
-        .pipe(
-            _filter_min_max_dropfirst,
-            window_name=window_name,
-            state_name=state_name,
-            window_index_name=window_index_name,
-            check_connected=check_connected,
+    if isinstance(first, xr.DataArray):
+        return _process_xarray(
+            _concat_window_datasets(
+                first=first,
+                tables=cast("Iterator[xr.DataArray]", tables_iter),
+                index_name=index_name,
+                window_name=window_name,
+                state_name=state_name,
+            )
         )
-    )
-    # select relevant indices
-    data = data.isel({index_name: frame[index_name].to_numpy()})
+    if isinstance(first, xr.Dataset):
+        return _process_xarray(
+            _concat_window_datasets(
+                first=first,
+                tables=cast("Iterator[xr.Dataset]", tables_iter),
+                index_name=index_name,
+                window_name=window_name,
+                state_name=state_name,
+            )
+        )
+    # if isinstance(first, (xr.DataArray, xr.Dataset)):
+    #     return _process_xarray(
+    #         _concat_window_datasets(
+    #             first=cast("T_Dataset_Array", first),
+    #             tables=cast("Iterator[T_Dataset_Array]", tables_iter),
+    #             index_name=index_name,
+    #             window_name=window_name,
+    #             state_name=state_name,
+    #         )
+    #     )
 
-    # optionally reset window_name
-    if reset_window:
-        data = data.reset_index(window_name)
-        if len(data.indexes[index_name].names) == 1:
-            # Only have "state_name"
-            data = data.rename({index_name: state_name})
-
-    return data
+    msg = f"Unknown type {type(first)}"
+    raise TypeError(msg)
 
 
 # combine on mean
@@ -974,7 +1032,11 @@ def delta_lnpi_from_updown(
             out = out.rename(name)
         return out
 
-    return _get_delta_lnpi(down=down, up=up_)
+    if isinstance(down, np.ndarray):
+        return _get_delta_lnpi(down=down, up=up_)
+
+    msg = f"Unknown type {type(down)}"
+    raise TypeError(msg)
 
 
 @docfiller_local

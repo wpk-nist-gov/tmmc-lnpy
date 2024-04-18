@@ -332,7 +332,7 @@ def test_combine_dropfirst_xarray_routines(table_dataset: xr.Dataset) -> None:
         combine.combine_dropfirst(table_dataset)
 
     with pytest.raises(TypeError, match="Unknown .*"):
-        combine.combine_dropfirst(["hello"])
+        combine.combine_dropfirst(["hello"])  # type: ignore[list-item]  # on purpose error
 
 
 def test_combine_dropfirst_split(
