@@ -68,7 +68,7 @@ def test_check_windows_overlap() -> None:
         )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def table() -> pd.DataFrame:
     x = np.linspace(0, 10)
     return pd.DataFrame(
@@ -81,7 +81,9 @@ def table() -> pd.DataFrame:
 
 
 @pytest.fixture(params=[1, 2, 4, 5])
-def dfs(table: pd.DataFrame, request: pytest.FixtureRequest) -> list[pd.DataFrame]:
+def table_sequence(
+    table: pd.DataFrame, request: pytest.FixtureRequest
+) -> list[pd.DataFrame]:
     n = request.param
 
     if n == 1:
@@ -89,24 +91,36 @@ def dfs(table: pd.DataFrame, request: pytest.FixtureRequest) -> list[pd.DataFram
 
     split = len(table) // n
     lb = 0
-    dfs = []
+    table_sequence = []
     for i in range(n + 1):
         ub = lb + split + 1
-        dfs.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))  # noqa: B023
+        table_sequence.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))  # noqa: B023
 
         lb += split
         if lb >= len(table):
             break
 
-    return dfs
+    return table_sequence
 
 
-def test_dfs(table: pd.DataFrame, dfs: list[pd.DataFrame]) -> None:
-    if len(dfs) == 1:
-        pd.testing.assert_frame_equal(table, dfs[0])
+@pytest.fixture()
+def table_dataset(table: pd.DataFrame) -> xr.Dataset:
+    return table.set_index("x").to_xarray()
+
+
+@pytest.fixture()
+def table_dataset_sequence(table_sequence: list[pd.DataFrame]) -> list[xr.Dataset]:
+    return [x.set_index("x").to_xarray() for x in table_sequence]
+
+
+def test_table_sequence(
+    table: pd.DataFrame, table_sequence: list[pd.DataFrame]
+) -> None:
+    if len(table_sequence) == 1:
+        pd.testing.assert_frame_equal(table, table_sequence[0])
 
     else:
-        other = pd.concat(dfs).groupby("x", as_index=False).mean()
+        other = pd.concat(table_sequence).groupby("x", as_index=False).mean()
 
         np.testing.assert_allclose(table["x"], other["x"])
         with pytest.raises(AssertionError):
@@ -117,10 +131,10 @@ def test_dfs(table: pd.DataFrame, dfs: list[pd.DataFrame]) -> None:
 def test_combine_scaled_lnpi_no_overlap(table: pd.DataFrame) -> None:
     mid = len(table) // 2
     # no overlap:
-    dfs = [table.iloc[:mid], table.iloc[mid:]]
+    table_sequence = [table.iloc[:mid], table.iloc[mid:]]
     with pytest.raises(combine.OverlapError):
         combine.combine_scaled_lnpi(
-            dfs,
+            table_sequence,
             macrostate_names="x",
             lnpi_name="y",
         ).groupby("x", as_index=False).mean()
@@ -128,10 +142,10 @@ def test_combine_scaled_lnpi_no_overlap(table: pd.DataFrame) -> None:
 
 def test_combine_scaled_lnpi_single_table(table: pd.DataFrame) -> None:
     # single table
-    dfs = [table]
+    table_sequence = [table]
     new = (
         combine.combine_scaled_lnpi(
-            dfs,
+            table_sequence,
             macrostate_names="x",
             lnpi_name="y",
         )
@@ -149,13 +163,13 @@ mark_sparse = pytest.mark.parametrize("use_sparse", [False, True])
 @mark_sparse
 def test_combine_scaled_lnpi_split(
     table: pd.DataFrame,
-    dfs: list[pd.DataFrame],
+    table_sequence: list[pd.DataFrame],
     check_connected: bool,
     use_sparse: bool,
 ) -> None:
     new = (
         combine.combine_scaled_lnpi(
-            dfs,
+            table_sequence,
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -173,14 +187,17 @@ def test_combine_scaled_lnpi_split(
 @mark_sparse
 def test_combine_scaled_lnpi_split_other(
     table: pd.DataFrame,
-    dfs: list[pd.DataFrame],
+    table_sequence: list[pd.DataFrame],
     check_connected: bool,
     use_sparse: bool,
 ) -> None:
     # with window name already there
     new = (
         combine.combine_scaled_lnpi(
-            [x.assign(window="hello", other=1, _window_index="there") for x in dfs],
+            [
+                x.assign(window="hello", other=1, _window_index="there")
+                for x in table_sequence
+            ],
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -198,14 +215,14 @@ def test_combine_scaled_lnpi_split_other(
 @mark_sparse
 def test_combine_scaled_lnpi_split_single_table(
     table: pd.DataFrame,
-    dfs: list[pd.DataFrame],
+    table_sequence: list[pd.DataFrame],
     check_connected: bool,
     use_sparse: bool,
 ) -> None:
     # already formed single table:
     new = (
         combine.combine_scaled_lnpi(
-            pd.concat((x.assign(window=i) for i, x in enumerate(dfs))),
+            pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))),
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -221,7 +238,7 @@ def test_combine_scaled_lnpi_split_single_table(
     # wrong name:
     with pytest.raises(ValueError, match=r".* single table must contain .*"):
         combine.combine_scaled_lnpi(
-            pd.concat((x.assign(window_wrong=i) for i, x in enumerate(dfs))),
+            pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -232,24 +249,105 @@ def test_combine_scaled_lnpi_split_single_table(
 # * combine.combine_dropfirst
 def test_combine_dropfirst_no_overlap(table: pd.DataFrame) -> None:
     mid = len(table) // 2
-    dfs = [table.iloc[:mid], table.iloc[mid:]]
+    table_sequence = [table.iloc[:mid], table.iloc[mid:]]
     with pytest.raises(combine.OverlapError):
-        combine.combine_dropfirst(dfs, state_name="x", check_connected=True)
+        combine.combine_dropfirst(table_sequence, state_name="x", check_connected=True)
+
+    # dataset
+    dss = [x.set_index("x").to_xarray() for x in table_sequence]
+    with pytest.raises(combine.OverlapError):
+        combine.combine_dropfirst(dss, state_name="x", check_connected=True)
+
+    # dataarray
+    das = [x["z"] for x in dss]
+    with pytest.raises(combine.OverlapError):
+        combine.combine_dropfirst(das, state_name="x", check_connected=True)
 
 
 def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
     new = combine.combine_dropfirst([table], state_name="x")
     pd.testing.assert_frame_equal(table, new[table.columns])
 
+    new = combine.combine_dropfirst(table.assign(window=0), state_name="x")
+    pd.testing.assert_frame_equal(table, new[table.columns])
 
-def test_combine_dropfirst_split(table: pd.DataFrame, dfs: list[pd.DataFrame]) -> None:
-    new = combine.combine_dropfirst(dfs, state_name="x")
+    # dataset
+    ds = table.set_index("x").to_xarray()
+    ds_out = combine.combine_dropfirst([ds], state_name="x")
+    xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    ds_expand = ds.expand_dims("window")
+    ds_out = combine.combine_dropfirst(ds_expand, state_name="x")
+    xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    ds_out = combine.combine_dropfirst([ds_expand], state_name="x")
+    xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    ds_stack = ds.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
+    ds_out = combine.combine_dropfirst(ds_stack, state_name="x")
+    xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    ds_out = combine.combine_dropfirst(ds_stack, state_name="x", reset_window=False)
+    xr.testing.assert_allclose(ds_stack, ds_out)
+
+    ds_out = combine.combine_dropfirst([ds_stack], state_name="x")
+    xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    # dataarray
+    da = ds["z"]
+    da_out = combine.combine_dropfirst([da], state_name="x")
+    xr.testing.assert_allclose(da, da_out.drop_vars("window"))
+
+    da_expanded = da.expand_dims("window")
+    da_out = combine.combine_dropfirst(da_expanded, state_name="x")
+    xr.testing.assert_allclose(da, da_out.drop_vars("window"))
+
+    da_out = combine.combine_dropfirst([da_expanded], state_name="x")
+    xr.testing.assert_allclose(da, da_out.drop_vars("window"))
+
+    da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
+    da_out = combine.combine_dropfirst(da_stack, state_name="x")
+    xr.testing.assert_allclose(da, da_out.drop_vars("window"))
+
+    da_out = combine.combine_dropfirst(da_stack, state_name="x", reset_window=False)
+    xr.testing.assert_allclose(da_stack, da_out)
+
+    da_out = combine.combine_dropfirst([da_stack], state_name="x")
+    xr.testing.assert_allclose(da, da_out.drop_vars("window"))
+
+    # multiple variables in index
+    da_stack = da.expand_dims(["rec", "window"]).stack(index=["rec", "window", "x"])  # noqa: PD013
+    da_out = combine.combine_dropfirst(da_stack, state_name="x")
+    expected = da_stack.reset_index("window")
+    xr.testing.assert_allclose(expected, da_out)
+
+
+def test_combine_dropfirst_xarray_routines(table_dataset: xr.Dataset) -> None:
+    # no window in coords:
+    with pytest.raises(ValueError, match=r".* tables.indexes.*"):
+        combine.combine_dropfirst(table_dataset.stack(index=["x"]))  # noqa: PD013
+
+    # not window in dims
+    with pytest.raises(ValueError, match=r".* in dimensions"):
+        combine.combine_dropfirst(table_dataset)
+
+    with pytest.raises(TypeError, match="Unknown .*"):
+        combine.combine_dropfirst(["hello"])
+
+
+def test_combine_dropfirst_split(
+    table: pd.DataFrame, table_sequence: list[pd.DataFrame]
+) -> None:
+    new = combine.combine_dropfirst(table_sequence, state_name="x")
     np.testing.assert_allclose(table["x"], new["x"])
     np.testing.assert_allclose(table["z"], new["z"])
 
     # test odd window names:
     new = combine.combine_dropfirst(
-        [x.assign(window="hello", other=1, _window_index="there") for x in dfs],
+        [
+            x.assign(window="hello", other=1, _window_index="there")
+            for x in table_sequence
+        ],
         state_name="x",
     )
     np.testing.assert_allclose(table["x"], new["x"])
@@ -257,7 +355,8 @@ def test_combine_dropfirst_split(table: pd.DataFrame, dfs: list[pd.DataFrame]) -
 
     # using single table:
     new = combine.combine_dropfirst(
-        pd.concat((x.assign(window=i) for i, x in enumerate(dfs))), state_name="x"
+        pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))),
+        state_name="x",
     )
     np.testing.assert_allclose(table["x"], new["x"])
     np.testing.assert_allclose(table["z"], new["z"])
@@ -265,9 +364,39 @@ def test_combine_dropfirst_split(table: pd.DataFrame, dfs: list[pd.DataFrame]) -
     # wrong name
     with pytest.raises(ValueError, match=r".* single table must contain .*"):
         combine.combine_dropfirst(
-            pd.concat((x.assign(window_wrong=i) for i, x in enumerate(dfs))),
+            pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
             state_name="x",
         )
+
+
+# def test_combine_dropfirst_split_dataset(table_dataset: xr.Dataset, table_dataset_sequence: list[xr.Dataset]) -> None:
+#     new = combine.combine_dropfirst(table_dataset_sequence, state_name="x")
+#     new = new.unstack("index")
+
+#     np.testing.assert_allclose(table_dataset["x"], new["x"])
+#     np.testing.assert_allclose(table_dataset["z"], new["z"])
+
+# # test odd window names:
+# new = combine.combine_dropfirst(
+#     [x.assign(window="hello", other=1, _window_index="there") for x in table_sequence],
+#     state_name="x",
+# )
+# np.testing.assert_allclose(table["x"], new["x"])
+# np.testing.assert_allclose(table["z"], new["z"])
+
+# # using single table:
+# new = combine.combine_dropfirst(
+#     pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))), state_name="x"
+# )
+# np.testing.assert_allclose(table["x"], new["x"])
+# np.testing.assert_allclose(table["z"], new["z"])
+
+# # wrong name
+# with pytest.raises(ValueError, match=r".* single table must contain .*"):
+#     combine.combine_dropfirst(
+#         pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
+#         state_name="x",
+#     )
 
 
 # * Utilities
@@ -402,37 +531,3 @@ def test_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     assert isinstance(ds, xr.Dataset)
 
     np.testing.assert_allclose(out["ln_prob"], table["ln_prob"])
-
-
-# @mark_connected
-# @mark_sparse
-# def test_split_mult(table: pd.DataFrame, check_connected: bool, use_sparse: bool) -> None:
-
-#     # multiple splits:
-#     n = 5
-#     split = len(table) // n
-#     lb = 0
-
-#     dfs = []
-#     for i in range(n + 1):
-#         ub = lb + split + 1
-#         dfs.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))
-
-#         lb = lb + split
-#         if lb >= len(table):
-#             break
-
-#     new = (
-#         combine.combine_scaled_lnpi(
-#             dfs,
-#             macrostate_names="x",
-#             lnpi_name="y",
-#             use_sparse=use_sparse,
-#             check_connected=check_connected,
-#         )
-#         .groupby("x", as_index=False)
-#         .mean()
-#     )
-
-#     np.testing.assert_allclose(table["x"], new["x"])
-#     np.testing.assert_allclose(table["y"], new["y"])

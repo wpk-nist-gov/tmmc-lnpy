@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import itertools
 from functools import lru_cache
-from typing import TYPE_CHECKING, Iterator, TypeVar, cast
+from typing import TYPE_CHECKING, Iterator, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
+    T_Dataset_Array = TypeVar("T_Dataset_Array", xr.DataArray, xr.Dataset)
 
 _docstrings_local = r"""
 Parameters
@@ -489,95 +490,14 @@ def combine_scaled_lnpi(
         **{lnpi_name: table[lnpi_name] + shift[table[window_index_name].to_numpy()]}
     ).drop(window_index_name, axis=1)
 
-    # table[lnpi_name] += shift[table[window_index_name].to_numpy()]
-    # return table.drop(window_index_name, axis=1)
 
-
-# * Collection matrix
-@docfiller_local
-def combine_dropfirst(
-    tables: pd.DataFrame | Iterable[pd.DataFrame],
-    window_name: str = "window",
-    state_name: str = "state",
-    check_connected: bool = False,
+def _filter_min_max_dropfirst(
+    table: pd.DataFrame,
+    window_name: str,
+    state_name: str,
+    window_index_name: str,
+    check_connected: bool,
 ) -> pd.DataFrame:
-    """
-    Combine windows by dropping first elements that overlap previous window.
-
-    For example, if have two windows `A` and `B` with states `state_A=[0,1,2]`
-    and `state_B=[1,2,3]` and observable `x_A(state_A)`, `x_B(state_B)`, then
-    the combined result will be `state=[0,1,2,3]`, `x = [x_A(0), x_A(1),
-    x_A(2), x_B(3)]`.
-
-    Parameters
-    ----------
-    {tables}
-    {window_name}
-    {state_name}
-    {check_connected}
-
-    Returns
-    -------
-    DataFrame
-        Combined table.
-
-    Note
-    ----
-    If there is not expanded ensemble sampling (i.e., non-integer ``state``
-    values) in windows, you should prefer using :func:`combine_updown_mean`.
-
-    Examples
-    --------
-    >>> states = pd.DataFrame(range(5), columns=["state"])
-    >>> tables = [states.iloc[:3], states.iloc[2:]]
-    >>> tables = [
-    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
-    ...     for i, table in enumerate(tables)
-    ... ]
-    >>> print(tables[0])
-       state  lnpi
-    0      0     0
-    1      1     1
-    2      2     2
-    >>> print(tables[1])
-       state  lnpi
-    2      2    12
-    3      3    13
-    4      4    14
-
-    >>> combined_table = combine_dropfirst(tables)
-    >>> print(combined_table)
-       state  lnpi
-    0      0     0
-    1      1     1
-    2      2     2
-    3      3    13
-    4      4    14
-    """
-
-    window_index_name = "_window_index"
-
-    if isinstance(tables, pd.DataFrame):
-        table = tables
-        if window_name not in tables.columns:
-            msg = f"Passed single table must contain {window_name=} column."
-            raise ValueError(msg)
-    else:
-        import itertools
-
-        tables = iter(tables)
-        first = next(tables)
-
-        # use window_name = window_index_name
-        window_name = window_index_name
-        table = pd.concat(
-            dict(enumerate(itertools.chain([first], tables))),
-            names=[window_name, *first.index.names],
-        )
-        if window_name in table.columns:
-            table = table.drop(window_name, axis=1)
-        table = table.reset_index(window_name)
-
     window_map = (
         table[[window_name, state_name]]
         .groupby(window_name, as_index=False)
@@ -586,13 +506,13 @@ def combine_dropfirst(
         .pipe(lambda x: pd.Series(range(len(x)), index=x))
     )
 
+    window_max = window_map.iloc[-1]
+    if window_max == 0:
+        return table
+
     table = table.assign(
         **{window_index_name: window_map[table[window_name]].to_numpy()}
     )
-    # return table
-    window_max = cast(int, table[window_index_name].iloc[-1])
-    if window_max == 0:
-        return table
 
     if check_connected:
         _create_overlap_table(
@@ -622,6 +542,258 @@ def combine_dropfirst(
     )
 
 
+# * Collection matrix
+# NOTE: have to use sequence here because xr.Dataset is an Iterable[xr.DataArray]...
+
+
+@overload
+def combine_dropfirst(
+    tables: xr.DataArray | Sequence[xr.DataArray],
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> xr.DataArray: ...
+
+
+@overload
+def combine_dropfirst(
+    tables: pd.DataFrame | Sequence[pd.DataFrame],
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> pd.DataFrame: ...
+
+
+@overload
+def combine_dropfirst(
+    tables: xr.Dataset | Sequence[xr.Dataset],
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> xr.Dataset: ...
+
+
+@docfiller_local
+def combine_dropfirst(
+    tables: pd.DataFrame
+    | Sequence[pd.DataFrame]
+    | xr.DataArray
+    | Sequence[xr.DataArray]
+    | xr.Dataset
+    | Sequence[xr.Dataset],
+    window_name: str = "window",
+    state_name: str = "state",
+    check_connected: bool = False,
+    index_name: str = "index",
+    reset_window: bool = True,
+) -> pd.DataFrame | xr.DataArray | xr.Dataset:
+    """
+    Combine windows by dropping first elements that overlap previous window.
+
+    For example, if have two windows `A` and `B` with states `state_A=[0,1,2]`
+    and `state_B=[1,2,3]` and observable `x_A(state_A)`, `x_B(state_B)`, then
+    the combined result will be `state=[0,1,2,3]`, `x = [x_A(0), x_A(1),
+    x_A(2), x_B(3)]`.
+
+    Parameters
+    ----------
+    {tables}
+    {window_name}
+    {state_name}
+    {check_connected}
+    index_name :
+        When passing in :class:`~xarray.Dataset` or :class:`~xarray.DataArray`,
+        ``window_name`` and ``state_name`` will be stacked into a single
+        multiindex of name ``index_name``. The passed objects can either
+        already have the stacked ``index_name`` or it will be created.
+    reset_window :
+        If ``True`` remove ``window_name`` from ``index_name``. If resulting
+        multiindex only contains ``state_name``, then reset this as well. Only
+        applies to :mod:`xarray` objects.
+
+    Returns
+    -------
+    DataFrame
+        Combined table.
+
+    Note
+    ----
+    If there is not expanded ensemble sampling (i.e., non-integer ``state``
+    values) in windows, you should prefer using :func:`combine_updown_mean`.
+
+    Examples
+    --------
+    >>> states = pd.DataFrame(range(5), columns=["state"])
+    >>> tables = [states.iloc[:3], states.iloc[2:]]
+    >>> tables = [
+    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
+    ...     for i, table in enumerate(tables)
+    ... ]
+    >>> print(tables[0])
+       state  lnpi
+    0      0     0
+    1      1     1
+    2      2     2
+    >>> print(tables[1])
+       state  lnpi
+    2      2    12
+    3      3    13
+    4      4    14
+    >>> combined_table = combine_dropfirst(tables)
+    >>> print(combined_table)
+       state  lnpi
+    0      0     0
+    1      1     1
+    2      2     2
+    3      3    13
+    4      4    14
+
+    This alsow works with :class:`~xarray.Dataset` and :class:`~xarray.DataArray` objects.
+    For example
+
+    >>> datasets = [df.set_index("state").to_xarray() for df in tables]
+    >>> datasets[0]
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (state: 3)
+    Coordinates:
+      * state    (state) int64 24B 0 1 2
+    Data variables:
+        lnpi     (state) int64 24B 0 1 2
+    >>> datasets[1]
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (state: 3)
+    Coordinates:
+      * state    (state) int64 24B 2 3 4
+    Data variables:
+        lnpi     (state) int64 24B 12 13 14
+    >>> combine_dropfirst(datasets)
+    <xarray.Dataset> Size: 120B
+    Dimensions:  (state: 5)
+    Coordinates:
+      * state    (state) int64 40B 0 1 2 3 4
+        window   (state) int64 40B 0 0 0 1 1
+    Data variables:
+        lnpi     (state) int64 40B 0 1 2 13 14
+
+    Note that internally, ``state_name`` and ``window_name`` are
+    stacked into a multiindex.  ``window_name`` is by default removed from
+    the index after combining.  To keep the multiindex, use:
+
+    >>> combine_dropfirst(datasets, reset_window=False)
+    <xarray.Dataset> Size: 160B
+    Dimensions:  (index: 5)
+    Coordinates:
+      * index    (index) object 40B MultiIndex
+      * window   (index) int64 40B 0 0 0 1 1
+      * state    (index) int64 40B 0 1 2 3 4
+    Data variables:
+        lnpi     (index) int64 40B 0 1 2 13 14
+
+    """
+
+    window_index_name = "_window_index"
+    data: xr.DataArray | xr.Dataset | pd.DataFrame
+    if isinstance(tables, pd.DataFrame):
+        data = tables
+        if window_name not in data.columns:
+            msg = f"Passed single table must contain {window_name=} column."
+            raise ValueError(msg)
+
+    elif isinstance(tables, (xr.DataArray, xr.Dataset)):
+        data = tables
+        if index_name in data.coords:
+            names = data.indexes[index_name].names
+            if window_name not in names or state_name not in names:
+                msg = f"Passed Dataset or DataArray must contain {window_name} and {state_name} in tables.indexes['{index_name}'].names"
+                raise ValueError(msg)
+        else:
+            if window_name not in data.dims or state_name not in data.dims:
+                msg = f"Passed Dataset or DataArray must contain {window_name} and {state_name} in dimensions"
+                raise ValueError(msg)
+            # set index
+            data = data.stack({index_name: [window_name, state_name]})  # noqa: PD013
+    else:
+        import itertools
+
+        tables_iter = iter(tables)
+        first = next(tables_iter)
+        tables_chain = itertools.chain([first], tables_iter)
+
+        if isinstance(first, pd.DataFrame):
+            window_name = window_index_name
+            data = pd.concat(
+                dict(enumerate(tables_chain)),  # type: ignore[arg-type] # pyright: ignore[reportCallIssue]
+                names=[window_name, *first.index.names],
+            )
+            if window_name in data.columns:
+                data = data.drop(window_name, axis=1)  # pyright: ignore[reportArgumentType]
+            data = data.reset_index(window_name)
+
+        elif isinstance(first, (xr.DataArray, xr.Dataset)):
+            if index_name not in first.coords:
+                # stack each object
+                # if wait until end, dtype might change because of missing values during concat and stack...
+                tables_chain = (  # type: ignore[assignment]
+                    (
+                        ds.pipe(  # noqa: PD013
+                            lambda x: x.expand_dims(window_name).assign_coords(
+                                {window_name: (window_name, [i])}  # noqa: B023
+                            )
+                            if window_name not in x.dims
+                            else x
+                        ).stack({index_name: [window_name, state_name]})  # type: ignore[attr-defined]  # pyright: ignore[reportArgumentType]
+                    )
+                    for i, ds in enumerate(tables_chain)
+                )
+            data = cast(
+                "xr.DataArray | xr.Dataset", xr.concat(tables_chain, dim=index_name)
+            )  # type: ignore[type-var] # pyright: ignore[reportCallIssue]
+        else:
+            msg = "Unknown type(tables[0])={type(first)}"
+            raise TypeError(msg)
+
+    if isinstance(data, pd.DataFrame):
+        return _filter_min_max_dropfirst(
+            table=data,
+            window_name=window_name,
+            state_name=state_name,
+            window_index_name=window_index_name,
+            check_connected=check_connected,
+        )
+
+    frame = (
+        data[index_name]
+        .pipe(lambda x: x.copy(data=range(len(x))))
+        .to_dataframe()[index_name]
+        .reset_index()
+        .pipe(
+            _filter_min_max_dropfirst,
+            window_name=window_name,
+            state_name=state_name,
+            window_index_name=window_index_name,
+            check_connected=check_connected,
+        )
+    )
+    # select relevant indices
+    data = data.isel({index_name: frame[index_name].to_numpy()})
+
+    # optionally reset window_name
+    if reset_window:
+        data = data.reset_index(window_name)
+        if len(data.indexes[index_name].names) == 1:
+            # Only have "state_name"
+            data = data.rename({index_name: state_name})
+
+    return data
+
+
+# combine on mean
 @lru_cache
 def _factory_average_updown(
     weight_name: str = "n_trials", down_name: str = "P_down", up_name: str = "P_up"
@@ -802,11 +974,7 @@ def delta_lnpi_from_updown(
             out = out.rename(name)
         return out
 
-    if isinstance(down, np.ndarray):
-        return _get_delta_lnpi(down=down, up=up_)
-
-    msg = f"{type(down)=} must be ndarray, Series, or DataArray"
-    raise TypeError(msg)
+    return _get_delta_lnpi(down=down, up=up_)
 
 
 @docfiller_local
