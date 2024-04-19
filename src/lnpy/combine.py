@@ -589,10 +589,21 @@ def _filter_min_max_dropfirst(
 
 
 # * Collection matrix
-# NOTE: have to use sequence here because xr.Dataset is an Iterable[xr.DataArray]...
+# NOTE: have to spell it out because of overlaps between types...
 @overload
-def combine_dropfirst(
-    tables: xr.Dataset | Sequence[xr.Dataset],
+def combine_dropfirst(  # type: ignore[overload-overlap]
+    tables: xr.DataArray,
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> xr.DataArray: ...
+
+
+@overload
+def combine_dropfirst(  # type: ignore[overload-overlap]
+    tables: xr.Dataset,
     window_name: str = ...,
     state_name: str = ...,
     check_connected: bool = ...,
@@ -603,7 +614,7 @@ def combine_dropfirst(
 
 @overload
 def combine_dropfirst(
-    tables: xr.DataArray | Sequence[xr.DataArray],
+    tables: Iterable[xr.DataArray],
     window_name: str = ...,
     state_name: str = ...,
     check_connected: bool = ...,
@@ -614,7 +625,18 @@ def combine_dropfirst(
 
 @overload
 def combine_dropfirst(
-    tables: pd.DataFrame | Sequence[pd.DataFrame],
+    tables: Iterable[xr.Dataset],
+    window_name: str = ...,
+    state_name: str = ...,
+    check_connected: bool = ...,
+    index_name: str = ...,
+    reset_window: bool = ...,
+) -> xr.Dataset: ...
+
+
+@overload
+def combine_dropfirst(
+    tables: pd.DataFrame | Iterable[pd.DataFrame],
     window_name: str = ...,
     state_name: str = ...,
     check_connected: bool = ...,
@@ -625,15 +647,12 @@ def combine_dropfirst(
 
 @docfiller_local
 def combine_dropfirst(
-    tables: pd.DataFrame
+    tables: xr.Dataset
     | xr.DataArray
-    | xr.Dataset
-    | Sequence[pd.DataFrame]
-    | Sequence[xr.DataArray]
-    | Sequence[xr.Dataset],
-    # | Iterator[pd.DataFrame],
-    # | Iterator[xr.DataArray]
-    # | Iterator[xr.Dataset],
+    | pd.DataFrame
+    | Iterable[xr.Dataset]
+    | Iterable[xr.DataArray]
+    | Iterable[pd.DataFrame],
     window_name: str = "window",
     state_name: str = "state",
     check_connected: bool = False,
@@ -727,6 +746,13 @@ def combine_dropfirst(
         window   (state) int64 40B 0 0 0 1 1
     Data variables:
         lnpi     (state) int64 40B 0 1 2 13 14
+    >>> combine_dropfirst([d["lnpi"] for d in datasets])
+    <xarray.DataArray 'lnpi' (state: 5)> Size: 40B
+    array([ 0,  1,  2, 13, 14])
+    Coordinates:
+      * state    (state) int64 40B 0 1 2 3 4
+        window   (state) int64 40B 0 0 0 1 1
+
 
     Note that internally, ``state_name`` and ``window_name`` are
     stacked into a multiindex.  ``window_name`` is by default removed from
@@ -775,7 +801,7 @@ def combine_dropfirst(
 
         # indexing dataframe
         frame = (
-            data[index_name]
+            data[index_name]  # pyright: ignore[reportIndexIssue]  # py38 only
             .pipe(lambda x: x.copy(data=range(len(x))))
             .to_dataframe()[index_name]
             .reset_index()
@@ -1032,17 +1058,18 @@ def delta_lnpi_from_updown(
             out = out.rename(name)
         return out
 
-    if isinstance(down, np.ndarray):
+    if isinstance(down, np.ndarray):  # pragma: no branch
         return _get_delta_lnpi(down=down, up=up_)
 
-    msg = f"Unknown type {type(down)}"
-    raise TypeError(msg)
+    msg = f"Unknown type {type(down)}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 @docfiller_local
 def lnpi_from_updown(
     down: T_Array,
     up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
+    # up: T_Array,
     name: str | None = None,
     norm: bool = False,
 ) -> T_Array:

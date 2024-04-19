@@ -229,7 +229,7 @@ def xr_name(
             if long_name is not None:
                 attrs["long_name"] = long_name
             out = out.assign_attrs(**attrs)
-            if unstack and self._xarray_unstack:
+            if unstack and self._xarray_unstack:  # type: ignore[attr-defined]
                 out = out.unstack()  # noqa: PD010
             return out
 

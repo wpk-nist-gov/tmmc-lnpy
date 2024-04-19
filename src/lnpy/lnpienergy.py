@@ -801,6 +801,8 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
     """
 
+    # @property
+    # @cached.meth
     @cached.prop
     def dwx(self) -> xr.DataArray:  # type: ignore[override]
         index = list(self._parent.index.get_level_values("phase"))
@@ -812,6 +814,8 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
+    # @property
+    # @cached.meth
     @cached.prop
     def dw(self) -> pd.Series[Any]:  # type: ignore[override]
         """Series representation of delta_w"""

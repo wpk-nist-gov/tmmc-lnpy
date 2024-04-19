@@ -271,6 +271,10 @@ def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
     new = combine.combine_dropfirst(table.assign(window=0), state_name="x")
     pd.testing.assert_frame_equal(table, new[table.columns])
 
+    (_ for _ in [table])
+    # reveal_type(y)
+    # reveal_type(combine.combine_dropfirst(y))
+
     # dataset
     ds = table.set_index("x").to_xarray()
     ds_out = combine.combine_dropfirst([ds], state_name="x")
@@ -282,6 +286,10 @@ def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
 
     ds_out = combine.combine_dropfirst([ds_expand], state_name="x")
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
+
+    (_ for _ in [ds_expand])
+    # reveal_type(ya)
+    # reveal_type(combine.combine_dropfirst(ya))
 
     ds_stack = ds.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
     ds_out = combine.combine_dropfirst(ds_stack, state_name="x")
@@ -305,7 +313,9 @@ def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_out = combine.combine_dropfirst([da_expanded], state_name="x")
-    # reveal_type(combine.combine_dropfirst((_ for _ in [da_expanded]), state_name="x"))
+    (_ for _ in [da_expanded])
+    # reveal_type(yy)
+    # reveal_type(combine.combine_dropfirst(yy, state_name="x"))
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
