@@ -87,7 +87,7 @@ pipxrun-tools = [
     "conda-lock >= 2.5.5",
     "grayskull >= 2.5.3",
     "nbqa >= 1.8.4",
-    "pyright >= 1.1.357, != 1.1.358", # note pyright == 1.1.358 breaks cached.meth of lnPiCollection.loc/iloc/etc.  Need to patch module-utilities...
+    "pyright >= 1.1.359",
     "tmmc-lnpy[mypy]",
     "twine >= 5.0.0",
 ]

@@ -299,10 +299,13 @@ def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_expanded = da.expand_dims("window")
+    # reveal_type(da_expanded)
+    # reveal_type(combine.combine_dropfirst(da_expanded, state_name="x"))
     da_out = combine.combine_dropfirst(da_expanded, state_name="x")
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_out = combine.combine_dropfirst([da_expanded], state_name="x")
+    # reveal_type(combine.combine_dropfirst((_ for _ in [da_expanded]), state_name="x"))
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013

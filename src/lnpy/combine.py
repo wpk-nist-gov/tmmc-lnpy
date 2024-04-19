@@ -592,13 +592,13 @@ def _filter_min_max_dropfirst(
 # NOTE: have to use sequence here because xr.Dataset is an Iterable[xr.DataArray]...
 @overload
 def combine_dropfirst(
-    tables: pd.DataFrame | Sequence[pd.DataFrame],
+    tables: xr.Dataset | Sequence[xr.Dataset],
     window_name: str = ...,
     state_name: str = ...,
     check_connected: bool = ...,
     index_name: str = ...,
     reset_window: bool = ...,
-) -> pd.DataFrame: ...
+) -> xr.Dataset: ...
 
 
 @overload
@@ -614,22 +614,22 @@ def combine_dropfirst(
 
 @overload
 def combine_dropfirst(
-    tables: xr.Dataset | Sequence[xr.Dataset],
+    tables: pd.DataFrame | Sequence[pd.DataFrame],
     window_name: str = ...,
     state_name: str = ...,
     check_connected: bool = ...,
     index_name: str = ...,
     reset_window: bool = ...,
-) -> xr.Dataset: ...
+) -> pd.DataFrame: ...
 
 
 @docfiller_local
 def combine_dropfirst(
     tables: pd.DataFrame
-    | Sequence[pd.DataFrame]
     | xr.DataArray
-    | Sequence[xr.DataArray]
     | xr.Dataset
+    | Sequence[pd.DataFrame]
+    | Sequence[xr.DataArray]
     | Sequence[xr.Dataset],
     # | Iterator[pd.DataFrame],
     # | Iterator[xr.DataArray]

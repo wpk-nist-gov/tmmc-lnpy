@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike
 
-    from ._typing import C_Ensemble, MyNDArray, P, R, T_Ensemble, xArrayLike
+    from ._typing import MyNDArray, P, R, xArrayLike
     from ._typing_compat import IndexAny
 
 # from lnpy.lnpidata import lnPiMasked
@@ -172,26 +172,58 @@ class xlnPiWrapper:  # noqa: N801
 # register xge property to collection classes
 
 
+# def xr_name(
+#     long_name: str | None = None,
+#     name: str | None = None,
+#     unstack: bool = True,
+#     **kws: Any,
+# ) -> Callable[
+#     [C_Ensemble[T_Ensemble, P, xr.DataArray]], C_Ensemble[T_Ensemble, P, xr.DataArray]
+# ]:
+#     """Decorator to add name, longname to xarray output"""
+
+#     def decorator(
+#         func: C_Ensemble[T_Ensemble, P, xr.DataArray],
+#     ) -> C_Ensemble[T_Ensemble, P, xr.DataArray]:
+#         _name = func.__name__.lstrip("_") if name is None else name
+
+#         @wraps(func)
+#         def wrapper(
+#             self: T_Ensemble, /, *args: P.args, **kwargs: P.kwargs
+#         ) -> xr.DataArray:
+#             out = func(self, *args, **kwargs).rename(_name)
+#             attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
+
+#             if long_name is not None:
+#                 attrs["long_name"] = long_name
+#             out = out.assign_attrs(**attrs)
+#             if unstack and self._xarray_unstack:
+#                 out = out.unstack()
+
+#             return out
+
+#         return wrapper
+
+
+#     return decorator
+# Go with the below because if issues with above and pyright
 def xr_name(
     long_name: str | None = None,
     name: str | None = None,
     unstack: bool = True,
     **kws: Any,
-) -> Callable[
-    [C_Ensemble[T_Ensemble, P, xr.DataArray]], C_Ensemble[T_Ensemble, P, xr.DataArray]
-]:
+) -> Callable[[Callable[P, xr.DataArray]], Callable[P, xr.DataArray]]:
     """Decorator to add name, longname to xarray output"""
 
     def decorator(
-        func: C_Ensemble[T_Ensemble, P, xr.DataArray],
-    ) -> C_Ensemble[T_Ensemble, P, xr.DataArray]:
+        func: Callable[P, xr.DataArray],
+    ) -> Callable[P, xr.DataArray]:
         _name = func.__name__.lstrip("_") if name is None else name
 
         @wraps(func)
-        def wrapper(
-            self: T_Ensemble, /, *args: P.args, **kwargs: P.kwargs
-        ) -> xr.DataArray:
-            out = func(self, *args, **kwargs).rename(_name)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> xr.DataArray:
+            out = func(*args, **kwargs).rename(_name)
+            self = args[0]
             attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
 
             if long_name is not None:
@@ -199,7 +231,6 @@ def xr_name(
             out = out.assign_attrs(**attrs)
             if unstack and self._xarray_unstack:
                 out = out.unstack()  # noqa: PD010
-
             return out
 
         return wrapper
