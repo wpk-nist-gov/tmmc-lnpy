@@ -25,13 +25,13 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
-
     T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
     T_Dataset_Array = TypeVar("T_Dataset_Array", xr.DataArray, xr.Dataset)
 
-    # T_Frame_Array = TypeVar("T_Frame_Array", pd.DataFrame, xr.DataArray, xr.Dataset)
+    T_Frame_Array = TypeVar("T_Frame_Array", pd.DataFrame, xr.DataArray, xr.Dataset)
+
 
 _docstrings_local = r"""
 Parameters
@@ -177,6 +177,324 @@ def check_windows_overlap(
         raise OverlapError(msg)
 
 
+# * concat objects
+def _concat_windows_dataframe(
+    first: pd.DataFrame,
+    tables: Iterator[pd.DataFrame],
+    window_name: str,
+    overwrite_window: bool = True,
+) -> pd.DataFrame:
+    """
+    Concat windows of dataframes.
+
+    Should use first, tables = peek_at(tables).
+    """
+    table = pd.concat(
+        dict(enumerate(tables)),
+        names=[window_name, *first.index.names],
+    )
+    if window_name in table.columns:
+        if overwrite_window:
+            return table.drop(window_name, axis=1).reset_index(window_name)
+        return table.reset_index(window_name, drop=True)
+
+    return table.reset_index(window_name)
+
+
+def _concat_windows_xarray(
+    first: T_Dataset_Array,
+    tables: Iterator[T_Dataset_Array],
+    window_name: str,
+    coord_names: str | Iterable[str],
+    index_name: str,
+    overwrite_window: bool = True,
+) -> T_Dataset_Array:
+    if index_name not in first.coords:
+        # stack each object
+        # if wait until end, dtype might change because of missing values during concat and stack...
+        def _process_object(obj: T_Dataset_Array, window: int) -> T_Dataset_Array:
+            if window_name not in obj.dims:
+                return obj.expand_dims(window_name).assign_coords(
+                    {window_name: (window_name, [window])}
+                )
+            if overwrite_window:
+                return obj.assign_coords(
+                    {window_name: xr.full_like(obj[window_name], fill_value=window)}
+                )
+            return obj
+
+        out = xr.concat(  # pyright: ignore[reportCallIssue]
+            (
+                (
+                    _process_object(ds, window).stack(  # noqa: PD013
+                        {index_name: [window_name, *_str_or_iterable(coord_names)]}
+                    )  # pyright: ignore[reportArgumentType]
+                )
+                for window, ds in enumerate(tables)
+            ),
+            dim=index_name,
+        )
+    else:
+        out = xr.concat(tables, dim=index_name)  # pyright: ignore[reportCallIssue, reportArgumentType]
+    return out
+
+
+@overload
+def concat_windows(
+    tables: Iterable[xr.Dataset],
+    window_name: str = ...,
+    coord_names: str | Iterable[str] = ...,
+    index_name: str = ...,
+    overwrite_window: bool = ...,
+) -> xr.Dataset: ...
+
+
+@overload
+def concat_windows(
+    tables: Iterable[xr.DataArray],
+    window_name: str = ...,
+    coord_names: str | Iterable[str] = ...,
+    index_name: str = ...,
+    overwrite_window: bool = ...,
+) -> xr.DataArray: ...
+
+
+@overload
+def concat_windows(
+    tables: Iterable[pd.DataFrame],
+    window_name: str = ...,
+    coord_names: str | Iterable[str] = ...,
+    index_name: str = ...,
+    overwrite_window: bool = ...,
+) -> pd.DataFrame: ...
+
+
+def concat_windows(
+    tables: Iterable[xr.Dataset] | Iterable[xr.DataArray] | Iterable[pd.DataFrame],
+    window_name: str = "window",
+    coord_names: str | Iterable[str] = "state",
+    index_name: str = "index",
+    overwrite_window: bool = True,
+) -> xr.Dataset | xr.DataArray | pd.DataFrame:
+    """
+    Concatenate object windows to single stacked object.
+
+    Parameters
+    ----------
+    tables :
+        Each object is for a single window.
+    window_name :
+        Name of column or coordinate to track window. This will the index of
+        the window in ``tables``.
+    coord_names :
+        Name of additional coordinates for :mod:`xarray` objects.
+    index_name :
+        Name of stacked multiindex coordinate for :mod:`xarray` objects.
+
+    Returns
+    -------
+    Dataset or DataArray or DataFrame
+        Concatenated object with ``window_name`` added. For :mod:`xarray`
+        output, stack ``window_name`` and ``coord_names`` to ``index_name``.
+
+    Examples
+    --------
+    >>> table = pd.DataFrame({"state": range(5), "rec": [0] * 5, "values": range(5)})
+    >>> tables = [table.iloc[:3], table.iloc[2:]]
+    >>> tables[0]
+       state  rec  values
+    0      0    0       0
+    1      1    0       1
+    2      2    0       2
+    >>> tables[1]
+       state  rec  values
+    2      2    0       2
+    3      3    0       3
+    4      4    0       4
+    >>> concat_windows(tables)
+       window  state  rec  values
+    0       0      0    0       0
+    1       0      1    0       1
+    2       0      2    0       2
+    2       1      2    0       2
+    3       1      3    0       3
+    4       1      4    0       4
+
+    To keep the supplied window value, use ``overwrite_window=False``
+    >>> tables_with_window = [
+    ...     x.assign(window=name) for x, name in zip(tables, ["a", "b"])
+    ... ]
+    >>> print(tables_with_window[0])
+       state  rec  values window
+    0      0    0       0      a
+    1      1    0       1      a
+    2      2    0       2      a
+    >>> print(tables_with_window[1])
+       state  rec  values window
+    2      2    0       2      b
+    3      3    0       3      b
+    4      4    0       4      b
+    >>> # Identical to above without the option
+    >>> concat_windows(tables_with_window)
+       window  state  rec  values
+    0       0      0    0       0
+    1       0      1    0       1
+    2       0      2    0       2
+    2       1      2    0       2
+    3       1      3    0       3
+    4       1      4    0       4
+    >>> concat_windows(tables_with_window, overwrite_window=False)
+       state  rec  values window
+    0      0    0       0      a
+    1      1    0       1      a
+    2      2    0       2      a
+    2      2    0       2      b
+    3      3    0       3      b
+    4      4    0       4      b
+
+    This also works for :class:`~xarray.Dataset` and :class:`~xarray.DataArray`
+    objects. In this case, ``window_name`` will be added to ``coord_names`` and
+    put in the multiindex ``index_name``.
+    >>> datasets = [x.set_index("state").to_xarray() for x in tables]
+    >>> datasets[0]
+    <xarray.Dataset> Size: 72B
+    Dimensions:  (state: 3)
+    Coordinates:
+      * state    (state) int64 24B 0 1 2
+    Data variables:
+        rec      (state) int64 24B 0 0 0
+        values   (state) int64 24B 0 1 2
+    >>> datasets[1]
+    <xarray.Dataset> Size: 72B
+    Dimensions:  (state: 3)
+    Coordinates:
+      * state    (state) int64 24B 2 3 4
+    Data variables:
+        rec      (state) int64 24B 0 0 0
+        values   (state) int64 24B 2 3 4
+
+    >>> concat_windows(datasets, coord_names="state")
+    <xarray.Dataset> Size: 240B
+    Dimensions:  (index: 6)
+    Coordinates:
+      * index    (index) object 48B MultiIndex
+      * window   (index) int64 48B 0 0 0 1 1 1
+      * state    (index) int64 48B 0 1 2 2 3 4
+    Data variables:
+        rec      (index) int64 48B 0 0 0 0 0 0
+        values   (index) int64 48B 0 1 2 2 3 4
+
+
+    This also works for multiple coordinates and assigned windows
+    >>> data = [
+    ...     x.assign(window=name).set_index(["rec", "window", "state"]).to_xarray()
+    ...     for x, name in zip(tables, ["a", "b"])
+    ... ]
+    >>> data[0]
+    <xarray.Dataset> Size: 64B
+    Dimensions:  (rec: 1, window: 1, state: 3)
+    Coordinates:
+      * rec      (rec) int64 8B 0
+      * window   (window) object 8B 'a'
+      * state    (state) int64 24B 0 1 2
+    Data variables:
+        values   (rec, window, state) int64 24B 0 1 2
+    >>> data[1]
+    <xarray.Dataset> Size: 64B
+    Dimensions:  (rec: 1, window: 1, state: 3)
+    Coordinates:
+      * rec      (rec) int64 8B 0
+      * window   (window) object 8B 'b'
+      * state    (state) int64 24B 2 3 4
+    Data variables:
+        values   (rec, window, state) int64 24B 2 3 4
+    >>> concat_windows(data, coord_names=["rec", "state"], overwrite_window=False)
+    <xarray.Dataset> Size: 240B
+    Dimensions:  (index: 6)
+    Coordinates:
+      * index    (index) object 48B MultiIndex
+      * window   (index) object 48B 'a' 'a' 'a' 'b' 'b' 'b'
+      * rec      (index) int64 48B 0 0 0 0 0 0
+      * state    (index) int64 48B 0 1 2 2 3 4
+    Data variables:
+        values   (index) int64 48B 0 1 2 2 3 4
+
+
+    Things work as expected if data is already stacked. This simply calls
+    :func:`xarray.concat` with ``dim=index_name``.
+    >>> data = [
+    ...     x.assign(window=name)
+    ...     .to_xarray()
+    ...     .set_index(index=["rec", "window", "state"])
+    ...     for x, name in zip(tables, ["a", "b"])
+    ... ]
+    >>> data[0]
+    <xarray.Dataset> Size: 120B
+    Dimensions:  (index: 3)
+    Coordinates:
+      * index    (index) object 24B MultiIndex
+      * rec      (index) int64 24B 0 0 0
+      * window   (index) object 24B 'a' 'a' 'a'
+      * state    (index) int64 24B 0 1 2
+    Data variables:
+        values   (index) int64 24B 0 1 2
+    >>> data[1]
+    <xarray.Dataset> Size: 120B
+    Dimensions:  (index: 3)
+    Coordinates:
+      * index    (index) object 24B MultiIndex
+      * rec      (index) int64 24B 0 0 0
+      * window   (index) object 24B 'b' 'b' 'b'
+      * state    (index) int64 24B 2 3 4
+    Data variables:
+        values   (index) int64 24B 2 3 4
+    >>> concat_windows(data, index_name="index")
+    <xarray.Dataset> Size: 240B
+    Dimensions:  (index: 6)
+    Coordinates:
+      * index    (index) object 48B MultiIndex
+      * rec      (index) int64 48B 0 0 0 0 0 0
+      * window   (index) object 48B 'a' 'a' 'a' 'b' 'b' 'b'
+      * state    (index) int64 48B 0 1 2 2 3 4
+    Data variables:
+        values   (index) int64 48B 0 1 2 2 3 4
+
+    """
+
+    first, tables_iter = peek_at(tables)
+
+    if isinstance(first, xr.Dataset):
+        return _concat_windows_xarray(
+            first=first,
+            tables=cast("Iterator[xr.Dataset]", tables_iter),
+            index_name=index_name,
+            window_name=window_name,
+            coord_names=coord_names,
+            overwrite_window=overwrite_window,
+        )
+
+    if isinstance(first, xr.DataArray):
+        return _concat_windows_xarray(
+            first=first,
+            tables=cast("Iterator[xr.DataArray]", tables_iter),
+            index_name=index_name,
+            window_name=window_name,
+            coord_names=coord_names,
+            overwrite_window=overwrite_window,
+        )
+
+    if isinstance(first, pd.DataFrame):  # progma: no branch
+        return _concat_windows_dataframe(
+            first=first,
+            tables=cast("Iterator[pd.DataFrame]", tables_iter),
+            window_name=window_name,
+            overwrite_window=overwrite_window,
+        )
+
+    msg = f"Unknown element type {type(first)}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
+
+
 # * Matrix Equation construction
 def _add_window_index(
     table: pd.DataFrame,
@@ -301,57 +619,6 @@ def _create_lhs_matrix_numpy(
     return a
 
 
-def _concat_window_dataframes(
-    first: pd.DataFrame,
-    tables: Iterator[pd.DataFrame],
-    window_name: str,
-) -> pd.DataFrame:
-    """
-    Concat windows of dataframes.
-
-    Should use first, tables = peek_at(tables).
-    """
-    table = pd.concat(
-        dict(enumerate(tables)),
-        names=[window_name, *first.index.names],
-    )
-    if window_name in table.columns:
-        table = table.drop(window_name, axis=1)
-    return table.reset_index(window_name)
-
-
-def _concat_window_datasets(
-    first: T_Dataset_Array,
-    tables: Iterator[T_Dataset_Array],
-    index_name: str,
-    window_name: str,
-    state_name: str,
-) -> T_Dataset_Array:
-    if index_name not in first.coords:
-        # stack each object
-        # if wait until end, dtype might change because of missing values during concat and stack...
-        out = xr.concat(
-            (
-                (
-                    cast("xr.DataArray | xr.Dataset", ds)  # noqa: PD013
-                    .pipe(
-                        lambda x: x.expand_dims(window_name).assign_coords(
-                            {window_name: (window_name, [i])}  # noqa: B023
-                        )
-                        if window_name not in x.dims
-                        else x
-                    )
-                    .stack({index_name: [window_name, state_name]})  # pyright: ignore[reportArgumentType]
-                )
-                for i, ds in enumerate(tables)
-            ),
-            dim=index_name,
-        )
-    else:
-        out = xr.concat(tables, dim=index_name)  # pyright: ignore[reportCallIssue, reportArgumentType]
-    return cast("T_Dataset_Array", out)
-
-
 def _create_initial_table(
     tables: pd.DataFrame | Iterable[pd.DataFrame],
     window_name: str,
@@ -368,7 +635,7 @@ def _create_initial_table(
         )
 
     first, tables_iter = peek_at(tables)
-    return _concat_window_dataframes(first, tables_iter, window_name=window_index_name)
+    return _concat_windows_dataframe(first, tables_iter, window_name=window_index_name)
 
 
 @docfiller_local
@@ -836,7 +1103,7 @@ def combine_dropfirst(
     if isinstance(first, pd.DataFrame):
         window_name = window_index_name
         return _process_dataframe(
-            _concat_window_dataframes(
+            _concat_windows_dataframe(
                 first,
                 cast("Iterator[pd.DataFrame]", tables_iter),
                 window_name=window_index_name,
@@ -844,27 +1111,27 @@ def combine_dropfirst(
         )
     if isinstance(first, xr.DataArray):
         return _process_xarray(
-            _concat_window_datasets(
+            _concat_windows_xarray(
                 first=first,
                 tables=cast("Iterator[xr.DataArray]", tables_iter),
                 index_name=index_name,
                 window_name=window_name,
-                state_name=state_name,
+                coord_names=state_name,
             )
         )
     if isinstance(first, xr.Dataset):
         return _process_xarray(
-            _concat_window_datasets(
+            _concat_windows_xarray(
                 first=first,
                 tables=cast("Iterator[xr.Dataset]", tables_iter),
                 index_name=index_name,
                 window_name=window_name,
-                state_name=state_name,
+                coord_names=state_name,
             )
         )
     # if isinstance(first, (xr.DataArray, xr.Dataset)):
     #     return _process_xarray(
-    #         _concat_window_datasets(
+    #         _concat_windows_xarray(
     #             first=cast("T_Dataset_Array", first),
     #             tables=cast("Iterator[T_Dataset_Array]", tables_iter),
     #             index_name=index_name,

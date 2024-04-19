@@ -64,9 +64,11 @@ repos:
     rev: v0.4.0
     hooks:
       - id: ruff
+        alias: ruff-all
         types_or: &ruff-types-or [python, pyi, jupyter]
         args: [--fix, --show-fixes]
       - id: ruff-format
+        alias: ruff-all
         types_or: *ruff-types-or
 
   # * Spelling
@@ -74,6 +76,7 @@ repos:
     rev: v2.2.6
     hooks:
       - id: codespell
+        alias: spell
         additional_dependencies: [tomli]
         args: [-I, docs/spelling_wordlist.txt]
         exclude_types: [jupyter]
@@ -83,13 +86,13 @@ repos:
     rev: 1.8.5
     hooks:
       - id: nbqa
-        alias: nbqa-codespell
+        alias: spell
         name: nbqa-codespell
         additional_dependencies: &codespell-deps [codespell==2.2.6, tomli] # make sure same as above
         args:
           [codespell, --ignore-words=docs/spelling_wordlist.txt, --nbqa-shell]
       - id: nbqa
-        alias: nbqa-codespell
+        alias: spell
         name: nbqa-codespell-markdown
         additional_dependencies: *codespell-deps
         args:

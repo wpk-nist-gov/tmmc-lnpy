@@ -382,34 +382,63 @@ def test_combine_dropfirst_split(
         )
 
 
-# def test_combine_dropfirst_split_dataset(table_dataset: xr.Dataset, table_dataset_sequence: list[xr.Dataset]) -> None:
-#     new = combine.combine_dropfirst(table_dataset_sequence, state_name="x")
-#     new = new.unstack("index")
+@pytest.mark.parametrize("use_array", [False, True])
+def test_combine_dropfirst_split_dataset(
+    table_dataset: xr.Dataset, table_dataset_sequence: list[xr.Dataset], use_array: bool
+) -> None:
+    seq: list[xr.DataArray] | list[xr.Dataset]
+    seq = (
+        [_["z"] for _ in table_dataset_sequence]
+        if use_array
+        else table_dataset_sequence
+    )
 
-#     np.testing.assert_allclose(table_dataset["x"], new["x"])
-#     np.testing.assert_allclose(table_dataset["z"], new["z"])
+    def _test_output(new: xr.DataArray | xr.Dataset) -> None:
+        np.testing.assert_allclose(table_dataset["x"], new["x"])  # type: ignore[arg-type, unused-ignore]
+        if isinstance(new, xr.DataArray):
+            np.testing.assert_allclose(table_dataset["z"], new)
+        else:
+            np.testing.assert_allclose(table_dataset["z"], new["z"])
 
-# # test odd window names:
-# new = combine.combine_dropfirst(
-#     [x.assign(window="hello", other=1, _window_index="there") for x in table_sequence],
-#     state_name="x",
-# )
-# np.testing.assert_allclose(table["x"], new["x"])
-# np.testing.assert_allclose(table["z"], new["z"])
+    _test_output(combine.combine_dropfirst(seq, state_name="x"))
 
-# # using single table:
-# new = combine.combine_dropfirst(
-#     pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))), state_name="x"
-# )
-# np.testing.assert_allclose(table["x"], new["x"])
-# np.testing.assert_allclose(table["z"], new["z"])
+    # test odd window names:
+    _test_output(
+        combine.combine_dropfirst(
+            [  # pyright: ignore[reportCallIssue, reportArgumentType]
+                x.expand_dims("window").assign_coords(
+                    window=("window", [str(-i)]), _window_index=("window", ["there"])
+                )
+                for i, x in enumerate(seq)
+            ],
+            state_name="x",
+        )
+    )
 
-# # wrong name
-# with pytest.raises(ValueError, match=r".* single table must contain .*"):
-#     combine.combine_dropfirst(
-#         pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
-#         state_name="x",
-#     )
+    # using single table:
+    stacked = xr.concat(
+        (
+            x.expand_dims("window")  # noqa: PD013
+            .assign_coords(window=("window", [i]))
+            .stack(index=["window", "x"])
+            for i, x in enumerate(table_dataset_sequence)
+        ),
+        dim="index",
+    )
+    _test_output(
+        combine.combine_dropfirst(
+            stacked,
+            state_name="x",
+        )
+    )
+
+    # wrong name
+    with pytest.raises(ValueError, match=r".*names"):
+        combine.combine_dropfirst(
+            stacked,
+            state_name="x",
+            window_name="window_other",
+        )
 
 
 # * Utilities
