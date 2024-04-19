@@ -219,7 +219,7 @@ def _concat_windows_xarray(
                 )
             if overwrite_window:
                 return obj.assign_coords(
-                    {window_name: xr.full_like(obj[window_name], fill_value=window)}
+                    {window_name: xr.full_like(obj[window_name], fill_value=window)}  # pyright: ignore[reportIndexIssue]
                 )
             return obj
 
@@ -495,7 +495,8 @@ def concat_windows(
     raise TypeError(msg)  # pragma: no cover
 
 
-# * Matrix Equation construction
+# * Shift lnPi
+# ** Matrix Equation construction
 def _add_window_index(
     table: pd.DataFrame,
     window_name: str,
@@ -619,28 +620,9 @@ def _create_lhs_matrix_numpy(
     return a
 
 
-def _create_initial_table(
-    tables: pd.DataFrame | Iterable[pd.DataFrame],
-    window_name: str,
-    window_index_name: str,
-) -> pd.DataFrame:
-    if isinstance(tables, pd.DataFrame):
-        table = tables
-        if window_name not in table.columns:
-            msg = f"Passed single table must contain {window_name=} column."
-            raise ValueError(msg)
-        # add in window_index_name
-        return _add_window_index(
-            table, window_name=window_name, window_index_name=window_index_name
-        )
-
-    first, tables_iter = peek_at(tables)
-    return _concat_windows_dataframe(first, tables_iter, window_name=window_index_name)
-
-
 @docfiller_local
-def combine_scaled_lnpi(
-    tables: pd.DataFrame | Iterable[pd.DataFrame],
+def shift_lnpi_windows(
+    table: pd.DataFrame,
     macrostate_names: str | Iterable[str] = "state",
     lnpi_name: str = "ln_prob",
     window_name: str = "window",
@@ -648,7 +630,7 @@ def combine_scaled_lnpi(
     check_connected: bool = False,
 ) -> pd.DataFrame:
     r"""
-    Combine multiple windows by scaling each :math:`\ln \Pi`.
+    Shift :math:`\ln \Pi` windows by minimizing error between average and each window.
 
     This performs least squares on the problem:
 
@@ -700,44 +682,47 @@ def combine_scaled_lnpi(
     Examples
     --------
     >>> states = pd.DataFrame(range(5), columns=["state"])
-    >>> tables = [states.iloc[:3], states.iloc[2:]]
-    >>> tables = [
-    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
-    ...     for i, table in enumerate(tables)
-    ... ]
-    >>> print(tables[0])
-       state  lnpi
-    0      0     0
-    1      1     1
-    2      2     2
-    >>> print(tables[1])
-       state  lnpi
-    2      2    12
-    3      3    13
-    4      4    14
-    >>> combined_table = combine_scaled_lnpi(tables, lnpi_name="lnpi")
-    >>> print(combined_table)
-       state  lnpi
-    0      0   0.0
-    1      1   1.0
-    2      2   2.0
-    2      2   2.0
-    3      3   3.0
-    4      4   4.0
+    >>> table = concat_windows(
+    ...     [
+    ...         table.assign(lnpi=lambda x: x["state"] + i * 10)
+    ...         for i, table in enumerate([states.iloc[:3], states.iloc[2:]])
+    ...     ]
+    ... )
+    >>> table
+       window  state  lnpi
+    0       0      0     0
+    1       0      1     1
+    2       0      2     2
+    2       1      2    12
+    3       1      3    13
+    4       1      4    14
+    >>> shifted = shift_lnpi_windows(table, lnpi_name="lnpi")
+    >>> shifted
+       window  state  lnpi
+    0       0      0   0.0
+    1       0      1   1.0
+    2       0      2   2.0
+    2       1      2   2.0
+    3       1      3   3.0
+    4       1      4   4.0
 
-    Note that the resulting dataframe includes all (properly scaled) data.
+    Note that the resulting dataframe includes all (properly shifted) data.
     To, for example, average over separate windows, use something like:
-    >>> combined_table.groupby("state", as_index=False).mean()
-       state  lnpi
-    0      0   0.0
-    1      1   1.0
-    2      2   2.0
-    3      3   3.0
-    4      4   4.0
+    >>> shifted.groupby("state", as_index=False).mean()
+       state  window  lnpi
+    0      0     0.0   0.0
+    1      1     0.0   1.0
+    2      2     0.5   2.0
+    3      3     1.0   3.0
+    4      4     1.0   4.0
     """
     window_index_name = "_window_index"
-    table = _create_initial_table(
-        tables, window_name=window_name, window_index_name=window_index_name
+
+    if window_name not in table.columns:
+        msg = f"Passed single table must contain {window_name=} column."
+        raise ValueError(msg)
+    table = _add_window_index(
+        table, window_name=window_name, window_index_name=window_index_name
     )
 
     window_max = cast(int, table[window_index_name].iloc[-1])
@@ -804,6 +789,7 @@ def combine_scaled_lnpi(
     ).drop(window_index_name, axis=1)
 
 
+# * dropfirst
 def _filter_min_max_dropfirst(
     table: pd.DataFrame,
     window_name: str,

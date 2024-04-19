@@ -128,24 +128,24 @@ def test_table_sequence(
 
 
 # * combine_scaled
-def test_combine_scaled_lnpi_no_overlap(table: pd.DataFrame) -> None:
+def test_shift_lnpi_windows_no_overlap(table: pd.DataFrame) -> None:
     mid = len(table) // 2
     # no overlap:
     table_sequence = [table.iloc[:mid], table.iloc[mid:]]
     with pytest.raises(combine.OverlapError):
-        combine.combine_scaled_lnpi(
-            table_sequence,
+        combine.shift_lnpi_windows(
+            combine.concat_windows(table_sequence),
             macrostate_names="x",
             lnpi_name="y",
         ).groupby("x", as_index=False).mean()
 
 
-def test_combine_scaled_lnpi_single_table(table: pd.DataFrame) -> None:
+def test_shift_lnpi_windows_single_table(table: pd.DataFrame) -> None:
     # single table
     table_sequence = [table]
     new = (
-        combine.combine_scaled_lnpi(
-            table_sequence,
+        combine.shift_lnpi_windows(
+            combine.concat_windows(table_sequence),
             macrostate_names="x",
             lnpi_name="y",
         )
@@ -161,15 +161,15 @@ mark_sparse = pytest.mark.parametrize("use_sparse", [False, True])
 
 @mark_connected
 @mark_sparse
-def test_combine_scaled_lnpi_split(
+def test_shift_lnpi_windows_split(
     table: pd.DataFrame,
     table_sequence: list[pd.DataFrame],
     check_connected: bool,
     use_sparse: bool,
 ) -> None:
     new = (
-        combine.combine_scaled_lnpi(
-            table_sequence,
+        combine.shift_lnpi_windows(
+            combine.concat_windows(table_sequence),
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -185,7 +185,7 @@ def test_combine_scaled_lnpi_split(
 
 @mark_connected
 @mark_sparse
-def test_combine_scaled_lnpi_split_other(
+def test_shift_lnpi_windows_split_other(
     table: pd.DataFrame,
     table_sequence: list[pd.DataFrame],
     check_connected: bool,
@@ -193,11 +193,13 @@ def test_combine_scaled_lnpi_split_other(
 ) -> None:
     # with window name already there
     new = (
-        combine.combine_scaled_lnpi(
-            [
-                x.assign(window="hello", other=1, _window_index="there")
-                for x in table_sequence
-            ],
+        combine.shift_lnpi_windows(
+            combine.concat_windows(
+                [
+                    x.assign(window="hello", other=1, _window_index="there")
+                    for x in table_sequence
+                ]
+            ),
             macrostate_names="x",
             lnpi_name="y",
             use_sparse=use_sparse,
@@ -213,7 +215,7 @@ def test_combine_scaled_lnpi_split_other(
 
 @mark_connected
 @mark_sparse
-def test_combine_scaled_lnpi_split_single_table(
+def test_shift_lnpi_windows_split_single_table(
     table: pd.DataFrame,
     table_sequence: list[pd.DataFrame],
     check_connected: bool,
@@ -221,7 +223,7 @@ def test_combine_scaled_lnpi_split_single_table(
 ) -> None:
     # already formed single table:
     new = (
-        combine.combine_scaled_lnpi(
+        combine.shift_lnpi_windows(
             pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))),
             macrostate_names="x",
             lnpi_name="y",
@@ -237,7 +239,7 @@ def test_combine_scaled_lnpi_split_single_table(
 
     # wrong name:
     with pytest.raises(ValueError, match=r".* single table must contain .*"):
-        combine.combine_scaled_lnpi(
+        combine.shift_lnpi_windows(
             pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
             macrostate_names="x",
             lnpi_name="y",
