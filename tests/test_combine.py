@@ -248,128 +248,147 @@ def test_shift_lnpi_windows_split_single_table(
         )
 
 
-# * combine.combine_dropfirst
-def test_combine_dropfirst_no_overlap(table: pd.DataFrame) -> None:
+# * combine.keep_first
+def test_combine_keep_first_no_overlap(table: pd.DataFrame) -> None:
     mid = len(table) // 2
     table_sequence = [table.iloc[:mid], table.iloc[mid:]]
     with pytest.raises(combine.OverlapError):
-        combine.combine_dropfirst(table_sequence, state_name="x", check_connected=True)
+        combine.keep_first(
+            combine.concat_windows(table_sequence), state_name="x", check_connected=True
+        )
 
     # dataset
     dss = [x.set_index("x").to_xarray() for x in table_sequence]
     with pytest.raises(combine.OverlapError):
-        combine.combine_dropfirst(dss, state_name="x", check_connected=True)
+        combine.keep_first(
+            combine.concat_windows(dss, coord_names="x"),
+            state_name="x",
+            check_connected=True,
+        )
 
     # dataarray
-    das = [x["z"] for x in dss]
+    das = combine.concat_windows([x["z"] for x in dss], coord_names="x")
     with pytest.raises(combine.OverlapError):
-        combine.combine_dropfirst(das, state_name="x", check_connected=True)
+        combine.keep_first(das, state_name="x", check_connected=True)
 
 
-def test_combine_dropfirst_single_table(table: pd.DataFrame) -> None:
-    new = combine.combine_dropfirst([table], state_name="x")
+def test_combine_keep_first_single_table(table: pd.DataFrame) -> None:
+    new = combine.keep_first(combine.concat_windows([table]), state_name="x")
     pd.testing.assert_frame_equal(table, new[table.columns])
 
-    new = combine.combine_dropfirst(table.assign(window=0), state_name="x")
+    new = combine.keep_first(table.assign(window=0), state_name="x")
     pd.testing.assert_frame_equal(table, new[table.columns])
-
-    (_ for _ in [table])
-    # reveal_type(y)
-    # reveal_type(combine.combine_dropfirst(y))
 
     # dataset
     ds = table.set_index("x").to_xarray()
-    ds_out = combine.combine_dropfirst([ds], state_name="x")
+    ds_out = combine.keep_first(
+        combine.concat_windows([ds], coord_names="x"), state_name="x"
+    )
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
     ds_expand = ds.expand_dims("window")
-    ds_out = combine.combine_dropfirst(ds_expand, state_name="x")
+    ds_out = combine.keep_first(ds_expand, state_name="x")
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
-    ds_out = combine.combine_dropfirst([ds_expand], state_name="x")
+    ds_out = combine.keep_first(
+        combine.concat_windows([ds_expand], coord_names="x"), state_name="x"
+    )
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
     (_ for _ in [ds_expand])
     # reveal_type(ya)
-    # reveal_type(combine.combine_dropfirst(ya))
+    # reveal_type(combine.keep_first(ya))
 
     ds_stack = ds.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
-    ds_out = combine.combine_dropfirst(ds_stack, state_name="x")
+    ds_out = combine.keep_first(ds_stack, state_name="x")
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
-    ds_out = combine.combine_dropfirst(ds_stack, state_name="x", reset_window=False)
+    ds_out = combine.keep_first(ds_stack, state_name="x", reset_window=False)
     xr.testing.assert_allclose(ds_stack, ds_out)
 
-    ds_out = combine.combine_dropfirst([ds_stack], state_name="x")
+    ds_out = combine.keep_first(
+        combine.concat_windows([ds_stack], coord_names="x"), state_name="x"
+    )
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
     # dataarray
     da = ds["z"]
-    da_out = combine.combine_dropfirst([da], state_name="x")
+    da_out = combine.keep_first(
+        combine.concat_windows([da], coord_names="x"), state_name="x"
+    )
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_expanded = da.expand_dims("window")
     # reveal_type(da_expanded)
-    # reveal_type(combine.combine_dropfirst(da_expanded, state_name="x"))
-    da_out = combine.combine_dropfirst(da_expanded, state_name="x")
+    # reveal_type(combine.keep_first(da_expanded, state_name="x"))
+    da_out = combine.keep_first(da_expanded, state_name="x")
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
-    da_out = combine.combine_dropfirst([da_expanded], state_name="x")
+    da_out = combine.keep_first(
+        combine.concat_windows([da_expanded], coord_names="x"), state_name="x"
+    )
     (_ for _ in [da_expanded])
     # reveal_type(yy)
-    # reveal_type(combine.combine_dropfirst(yy, state_name="x"))
+    # reveal_type(combine.keep_first(yy, state_name="x"))
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
-    da_out = combine.combine_dropfirst(da_stack, state_name="x")
+    da_out = combine.keep_first(da_stack, state_name="x")
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
-    da_out = combine.combine_dropfirst(da_stack, state_name="x", reset_window=False)
+    da_out = combine.keep_first(da_stack, state_name="x", reset_window=False)
     xr.testing.assert_allclose(da_stack, da_out)
 
-    da_out = combine.combine_dropfirst([da_stack], state_name="x")
+    da_out = combine.keep_first(
+        combine.concat_windows([da_stack], coord_names="x"), state_name="x"
+    )
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     # multiple variables in index
     da_stack = da.expand_dims(["rec", "window"]).stack(index=["rec", "window", "x"])  # noqa: PD013
-    da_out = combine.combine_dropfirst(da_stack, state_name="x")
+    da_out = combine.keep_first(da_stack, state_name="x")
     expected = da_stack.reset_index("window")
     xr.testing.assert_allclose(expected, da_out)
 
 
-def test_combine_dropfirst_xarray_routines(table_dataset: xr.Dataset) -> None:
+def test_combine_keep_first_xarray_routines(table_dataset: xr.Dataset) -> None:
     # no window in coords:
     with pytest.raises(ValueError, match=r".* tables.indexes.*"):
-        combine.combine_dropfirst(table_dataset.stack(index=["x"]))  # noqa: PD013
+        combine.keep_first(table_dataset.stack(index=["x"]))  # noqa: PD013
 
     # not window in dims
     with pytest.raises(ValueError, match=r".* in dimensions"):
-        combine.combine_dropfirst(table_dataset)
+        combine.keep_first(table_dataset)
 
     with pytest.raises(TypeError, match="Unknown .*"):
-        combine.combine_dropfirst(["hello"])  # type: ignore[list-item]  # on purpose error
+        combine.concat_windows(["hello"])  # type: ignore[list-item]  # on purpose error
 
 
-def test_combine_dropfirst_split(
+def test_combine_keep_first_split(
     table: pd.DataFrame, table_sequence: list[pd.DataFrame]
 ) -> None:
-    new = combine.combine_dropfirst(table_sequence, state_name="x")
+    new = combine.keep_first(
+        combine.concat_windows(table_sequence, coord_names="x"), state_name="x"
+    )
     np.testing.assert_allclose(table["x"], new["x"])
     np.testing.assert_allclose(table["z"], new["z"])
 
     # test odd window names:
-    new = combine.combine_dropfirst(
-        [
-            x.assign(window="hello", other=1, _window_index="there")
-            for x in table_sequence
-        ],
+    new = combine.keep_first(
+        combine.concat_windows(
+            [
+                x.assign(window="hello", other=1, _window_index="there")
+                for x in table_sequence
+            ],
+            coord_names="x",
+        ),
         state_name="x",
     )
     np.testing.assert_allclose(table["x"], new["x"])
     np.testing.assert_allclose(table["z"], new["z"])
 
     # using single table:
-    new = combine.combine_dropfirst(
+    new = combine.keep_first(
         pd.concat((x.assign(window=i) for i, x in enumerate(table_sequence))),
         state_name="x",
     )
@@ -378,14 +397,14 @@ def test_combine_dropfirst_split(
 
     # wrong name
     with pytest.raises(ValueError, match=r".* single table must contain .*"):
-        combine.combine_dropfirst(
+        combine.keep_first(
             pd.concat((x.assign(window_wrong=i) for i, x in enumerate(table_sequence))),
             state_name="x",
         )
 
 
 @pytest.mark.parametrize("use_array", [False, True])
-def test_combine_dropfirst_split_dataset(
+def test_combine_keep_first_split_dataset(
     table_dataset: xr.Dataset, table_dataset_sequence: list[xr.Dataset], use_array: bool
 ) -> None:
     seq: list[xr.DataArray] | list[xr.Dataset]
@@ -402,17 +421,23 @@ def test_combine_dropfirst_split_dataset(
         else:
             np.testing.assert_allclose(table_dataset["z"], new["z"])
 
-    _test_output(combine.combine_dropfirst(seq, state_name="x"))
+    _test_output(
+        combine.keep_first(combine.concat_windows(seq, coord_names="x"), state_name="x")  # type: ignore[type-var]
+    )
 
     # test odd window names:
     _test_output(
-        combine.combine_dropfirst(
-            [  # pyright: ignore[reportCallIssue, reportArgumentType]
-                x.expand_dims("window").assign_coords(
-                    window=("window", [str(-i)]), _window_index=("window", ["there"])
-                )
-                for i, x in enumerate(seq)
-            ],
+        combine.keep_first(
+            combine.concat_windows(
+                [  # pyright: ignore[reportCallIssue, reportArgumentType]
+                    x.expand_dims("window").assign_coords(
+                        window=("window", [str(-i)]),
+                        _window_index=("window", ["there"]),
+                    )
+                    for i, x in enumerate(seq)
+                ],
+                coord_names="x",
+            ),
             state_name="x",
         )
     )
@@ -428,7 +453,7 @@ def test_combine_dropfirst_split_dataset(
         dim="index",
     )
     _test_output(
-        combine.combine_dropfirst(
+        combine.keep_first(
             stacked,
             state_name="x",
         )
@@ -436,7 +461,7 @@ def test_combine_dropfirst_split_dataset(
 
     # wrong name
     with pytest.raises(ValueError, match=r".*names"):
-        combine.combine_dropfirst(
+        combine.keep_first(
             stacked,
             state_name="x",
             window_name="window_other",
@@ -446,7 +471,7 @@ def test_combine_dropfirst_split_dataset(
 # * Utilities
 @pytest.mark.parametrize("use_running", [True, False])
 @pytest.mark.parametrize("as_index", [True, False])
-def test_combine_updown_mean(
+def test_updown_mean(
     as_index: bool, use_running: bool, rng: np.random.Generator
 ) -> None:
     nstate = 10
@@ -477,7 +502,7 @@ def test_combine_updown_mean(
     )
     df_total = pd.concat((df_updown, df_add))
 
-    out = combine.combine_updown_mean(
+    out = combine.updown_mean(
         df_total, by="state", as_index=as_index, use_running=use_running
     )
 

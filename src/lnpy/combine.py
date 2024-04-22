@@ -387,37 +387,33 @@ def concat_windows(
 
     This also works for multiple coordinates and assigned windows
     >>> data = [
-    ...     x.assign(window=name).set_index(["rec", "window", "state"]).to_xarray()
+    ...     x.assign(window=name)
+    ...     .set_index(["rec", "window", "state"])
+    ...     .to_xarray()["values"]
     ...     for x, name in zip(tables, ["a", "b"])
     ... ]
     >>> data[0]
-    <xarray.Dataset> Size: 64B
-    Dimensions:  (rec: 1, window: 1, state: 3)
+    <xarray.DataArray 'values' (rec: 1, window: 1, state: 3)> Size: 24B
+    array([[[0, 1, 2]]])
     Coordinates:
       * rec      (rec) int64 8B 0
       * window   (window) object 8B 'a'
       * state    (state) int64 24B 0 1 2
-    Data variables:
-        values   (rec, window, state) int64 24B 0 1 2
     >>> data[1]
-    <xarray.Dataset> Size: 64B
-    Dimensions:  (rec: 1, window: 1, state: 3)
+    <xarray.DataArray 'values' (rec: 1, window: 1, state: 3)> Size: 24B
+    array([[[2, 3, 4]]])
     Coordinates:
       * rec      (rec) int64 8B 0
       * window   (window) object 8B 'b'
       * state    (state) int64 24B 2 3 4
-    Data variables:
-        values   (rec, window, state) int64 24B 2 3 4
     >>> concat_windows(data, coord_names=["rec", "state"], overwrite_window=False)
-    <xarray.Dataset> Size: 240B
-    Dimensions:  (index: 6)
+    <xarray.DataArray 'values' (index: 6)> Size: 48B
+    array([0, 1, 2, 2, 3, 4])
     Coordinates:
       * index    (index) object 48B MultiIndex
       * window   (index) object 48B 'a' 'a' 'a' 'b' 'b' 'b'
       * rec      (index) int64 48B 0 0 0 0 0 0
       * state    (index) int64 48B 0 1 2 2 3 4
-    Data variables:
-        values   (index) int64 48B 0 1 2 2 3 4
 
 
     Things work as expected if data is already stacked. This simply calls
@@ -678,6 +674,10 @@ def shift_lnpi_windows(
         Combined table with appropriately shifted ``lnpi_name`` column.
         Note that the table is not yet averaged over ``macrostate_names``.
 
+    See Also
+    --------
+    concat_window
+    keep_first
 
     Examples
     --------
@@ -789,8 +789,8 @@ def shift_lnpi_windows(
     ).drop(window_index_name, axis=1)
 
 
-# * dropfirst
-def _filter_min_max_dropfirst(
+# * keep_first
+def _filter_min_max_keep_first(
     table: pd.DataFrame,
     window_name: str,
     state_name: str,
@@ -842,87 +842,33 @@ def _filter_min_max_dropfirst(
 
 
 # * Collection matrix
-# NOTE: have to spell it out because of overlaps between types...
-@overload
-def combine_dropfirst(  # type: ignore[overload-overlap]
-    tables: xr.DataArray,
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> xr.DataArray: ...
-
-
-@overload
-def combine_dropfirst(  # type: ignore[overload-overlap]
-    tables: xr.Dataset,
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> xr.Dataset: ...
-
-
-@overload
-def combine_dropfirst(
-    tables: Iterable[xr.DataArray],
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> xr.DataArray: ...
-
-
-@overload
-def combine_dropfirst(
-    tables: Iterable[xr.Dataset],
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> xr.Dataset: ...
-
-
-@overload
-def combine_dropfirst(
-    tables: pd.DataFrame | Iterable[pd.DataFrame],
-    window_name: str = ...,
-    state_name: str = ...,
-    check_connected: bool = ...,
-    index_name: str = ...,
-    reset_window: bool = ...,
-) -> pd.DataFrame: ...
-
-
 @docfiller_local
-def combine_dropfirst(
-    tables: xr.Dataset
-    | xr.DataArray
-    | pd.DataFrame
-    | Iterable[xr.Dataset]
-    | Iterable[xr.DataArray]
-    | Iterable[pd.DataFrame],
+def keep_first(
+    table: T_Frame_Array,
     window_name: str = "window",
     state_name: str = "state",
     check_connected: bool = False,
     index_name: str = "index",
     reset_window: bool = True,
-) -> pd.DataFrame | xr.DataArray | xr.Dataset:
+) -> T_Frame_Array:
     """
-    Combine windows by dropping first elements that overlap previous window.
+    Keep overlaps in the "first" window and drop in subsequent windows.
 
     For example, if have two windows `A` and `B` with states `state_A=[0,1,2]`
     and `state_B=[1,2,3]` and observable `x_A(state_A)`, `x_B(state_B)`, then
     the combined result will be `state=[0,1,2,3]`, `x = [x_A(0), x_A(1),
     x_A(2), x_B(3)]`.
 
+    Note that the windows are first sorted by the minimum value of ``state_name``.
+
     Parameters
     ----------
-    {tables}
+    table :
+        Input data. If :class:`~pandas.DataFrame`, must have columns
+        ``window_name`` and ``state_name``. If :class:`~xarray.Dataset` or
+        :class:`~xarray.DataArray`, must have either stacked index
+        ``index_name`` that contains ``window_name`` and ``state_name``, or
+        ``window_name`` and ``state_name`` will be stacked to ``index_name``.
     {window_name}
     {state_name}
     {check_connected}
@@ -938,60 +884,79 @@ def combine_dropfirst(
 
     Returns
     -------
-    DataFrame
-        Combined table.
+    DataFrame or Dataset or DataArray
+        Same type as input ``table``
 
     Note
     ----
     If there is not expanded ensemble sampling (i.e., non-integer ``state``
-    values) in windows, you should prefer using :func:`combine_updown_mean`.
+    values) in windows, you should prefer using :func:`updown_mean`.
+
+    See Also
+    --------
+    concat_windows
+    shift_lnpi_windows
 
     Examples
     --------
     >>> states = pd.DataFrame(range(5), columns=["state"])
-    >>> tables = [states.iloc[:3], states.iloc[2:]]
     >>> tables = [
-    ...     table.assign(lnpi=lambda x: x["state"] + i * 10)
-    ...     for i, table in enumerate(tables)
+    ...     x.assign(lnpi=lambda x: x["state"] + i * 10)
+    ...     for i, x in enumerate([states.iloc[:3], states.iloc[2:]])
     ... ]
-    >>> print(tables[0])
-       state  lnpi
-    0      0     0
-    1      1     1
-    2      2     2
-    >>> print(tables[1])
-       state  lnpi
-    2      2    12
-    3      3    13
-    4      4    14
-    >>> combined_table = combine_dropfirst(tables)
-    >>> print(combined_table)
-       state  lnpi
-    0      0     0
-    1      1     1
-    2      2     2
-    3      3    13
-    4      4    14
+    >>> table = concat_windows(tables)
+    >>> table
+       window  state  lnpi
+    0       0      0     0
+    1       0      1     1
+    2       0      2     2
+    2       1      2    12
+    3       1      3    13
+    4       1      4    14
+    >>> keep_first(table)
+       window  state  lnpi
+    0       0      0     0
+    1       0      1     1
+    2       0      2     2
+    3       1      3    13
+    4       1      4    14
 
-    This alsow works with :class:`~xarray.Dataset` and :class:`~xarray.DataArray` objects.
-    For example
 
-    >>> datasets = [df.set_index("state").to_xarray() for df in tables]
-    >>> datasets[0]
-    <xarray.Dataset> Size: 48B
-    Dimensions:  (state: 3)
+    The actual value of ``window_name`` does not matter.
+    Windows are sorted by the minimum value of ``state_name``
+    for each unique window.
+
+    >>> table = concat_windows(tables[-1::-1])
+    >>> table
+       window  state  lnpi
+    2       0      2    12
+    3       0      3    13
+    4       0      4    14
+    0       1      0     0
+    1       1      1     1
+    2       1      2     2
+    >>> keep_first(table)
+       window  state  lnpi
+    3       0      3    13
+    4       0      4    14
+    0       1      0     0
+    1       1      1     1
+    2       1      2     2
+
+    This also works with :class:`~xarray.Dataset` and
+    :class:`~xarray.DataArray` objects. For example
+
+    >>> data = concat_windows([df.set_index("state").to_xarray() for df in tables])
+    >>> data
+    <xarray.Dataset> Size: 192B
+    Dimensions:  (index: 6)
     Coordinates:
-      * state    (state) int64 24B 0 1 2
+      * index    (index) object 48B MultiIndex
+      * window   (index) int64 48B 0 0 0 1 1 1
+      * state    (index) int64 48B 0 1 2 2 3 4
     Data variables:
-        lnpi     (state) int64 24B 0 1 2
-    >>> datasets[1]
-    <xarray.Dataset> Size: 48B
-    Dimensions:  (state: 3)
-    Coordinates:
-      * state    (state) int64 24B 2 3 4
-    Data variables:
-        lnpi     (state) int64 24B 12 13 14
-    >>> combine_dropfirst(datasets)
+        lnpi     (index) int64 48B 0 1 2 12 13 14
+    >>> keep_first(data)
     <xarray.Dataset> Size: 120B
     Dimensions:  (state: 5)
     Coordinates:
@@ -999,7 +964,7 @@ def combine_dropfirst(
         window   (state) int64 40B 0 0 0 1 1
     Data variables:
         lnpi     (state) int64 40B 0 1 2 13 14
-    >>> combine_dropfirst([d["lnpi"] for d in datasets])
+    >>> keep_first(data["lnpi"])
     <xarray.DataArray 'lnpi' (state: 5)> Size: 40B
     array([ 0,  1,  2, 13, 14])
     Coordinates:
@@ -1007,11 +972,11 @@ def combine_dropfirst(
         window   (state) int64 40B 0 0 0 1 1
 
 
-    Note that internally, ``state_name`` and ``window_name`` are
-    stacked into a multiindex.  ``window_name`` is by default removed from
-    the index after combining.  To keep the multiindex, use:
+    Note that internally, ``state_name`` and ``window_name`` are stacked into a
+    multiindex. ``window_name`` is by default removed from the index after
+    combining. To keep the multiindex, use:
 
-    >>> combine_dropfirst(datasets, reset_window=False)
+    >>> keep_first(data, reset_window=False)
     <xarray.Dataset> Size: 160B
     Dimensions:  (index: 5)
     Coordinates:
@@ -1030,7 +995,7 @@ def combine_dropfirst(
             msg = f"Passed single table must contain {window_name=} column."
             raise ValueError(msg)
 
-        return _filter_min_max_dropfirst(
+        return _filter_min_max_keep_first(
             table=data,
             window_name=window_name,
             state_name=state_name,
@@ -1059,7 +1024,7 @@ def combine_dropfirst(
             .to_dataframe()[index_name]
             .reset_index()
             .pipe(
-                _filter_min_max_dropfirst,
+                _filter_min_max_keep_first,
                 window_name=window_name,
                 state_name=state_name,
                 window_index_name=window_index_name,
@@ -1077,57 +1042,9 @@ def combine_dropfirst(
         return data
 
     # Do calculation
-    if isinstance(tables, pd.DataFrame):
-        return _process_dataframe(tables)
-    if isinstance(tables, xr.DataArray):
-        return _process_xarray(tables)
-    if isinstance(tables, xr.Dataset):
-        return _process_xarray(tables)
-
-    # sequence type
-    first, tables_iter = peek_at(tables)
-    if isinstance(first, pd.DataFrame):
-        window_name = window_index_name
-        return _process_dataframe(
-            _concat_windows_dataframe(
-                first,
-                cast("Iterator[pd.DataFrame]", tables_iter),
-                window_name=window_index_name,
-            )
-        )
-    if isinstance(first, xr.DataArray):
-        return _process_xarray(
-            _concat_windows_xarray(
-                first=first,
-                tables=cast("Iterator[xr.DataArray]", tables_iter),
-                index_name=index_name,
-                window_name=window_name,
-                coord_names=state_name,
-            )
-        )
-    if isinstance(first, xr.Dataset):
-        return _process_xarray(
-            _concat_windows_xarray(
-                first=first,
-                tables=cast("Iterator[xr.Dataset]", tables_iter),
-                index_name=index_name,
-                window_name=window_name,
-                coord_names=state_name,
-            )
-        )
-    # if isinstance(first, (xr.DataArray, xr.Dataset)):
-    #     return _process_xarray(
-    #         _concat_windows_xarray(
-    #             first=cast("T_Dataset_Array", first),
-    #             tables=cast("Iterator[T_Dataset_Array]", tables_iter),
-    #             index_name=index_name,
-    #             window_name=window_name,
-    #             state_name=state_name,
-    #         )
-    #     )
-
-    msg = f"Unknown type {type(first)}"
-    raise TypeError(msg)
+    if isinstance(table, pd.DataFrame):
+        return _process_dataframe(table)
+    return _process_xarray(table)
 
 
 # combine on mean
@@ -1156,7 +1073,7 @@ def _factory_average_updown(
 
 
 @docfiller_local
-def combine_updown_mean(
+def updown_mean(
     table: pd.DataFrame,
     by: str | Sequence[str] = "state",
     as_index: bool = False,
@@ -1175,7 +1092,7 @@ def combine_updown_mean(
     Notes
     -----
     If any windows use expanded ensemble (i.e., non-integer ``state`` values),
-    then this method should not be used to splice across windows.  Instead, use :func:`combine_dropfirst`
+    then this method should not be used to splice across windows.  Instead, use :func:`keep_first`
 
     Parameters
     ----------
@@ -1279,7 +1196,7 @@ def delta_lnpi_from_updown(
     This assumes ``table`` is sorted by ``state`` value. This function is
     useful if the simulation windows use extended ensemble sampling and have
     non-integer steps in the ``state`` variable. The deltas can be combined
-    with :func:`combine_dropfirst`, cumalitively summed, then non integer
+    with :func:`keep_first`, cumalitively summed, then non integer
     states dropped.
 
     Parameters
@@ -1369,7 +1286,7 @@ def assign_delta_lnpi_from_updown(
     This assumes ``table`` is sorted by ``state`` value. This function is
     useful if the simulation windows use extended ensemble sampling and have
     non-integer steps in the ``state`` variable. The deltas can be combined
-    with :func:`combine_dropfirst`, cumalitively summed, then non integer
+    with :func:`keep_first`, cumalitively summed, then non integer
     states dropped.
 
     Parameters
