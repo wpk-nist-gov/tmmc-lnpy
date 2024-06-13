@@ -95,7 +95,7 @@ optional-dependencies.pipxrun-tools = [
     "twine>=5.0.0",
 ]
 optional-dependencies.resample = [
-    "cmomy>=0.10.0",
+    "cmomy>=0.11.0",
 ]
 optional-dependencies.test = [
     "pytest",
