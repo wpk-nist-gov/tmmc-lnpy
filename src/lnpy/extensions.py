@@ -53,7 +53,8 @@ class _CachedAccessorSingle(Generic[S, R]):
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError("error initializing %r accessor." % self._name) from err
+            msg = f"error initializing {self._name!r} accessor."
+            raise RuntimeError(msg) from err
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on

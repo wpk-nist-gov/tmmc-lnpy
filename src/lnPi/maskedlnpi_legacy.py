@@ -71,7 +71,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
             lnz = np.zeros(obj.ndim)
         lnz = np.atleast_1d(lnz).astype(obj.dtype)
         if len(lnz) != obj.ndim:
-            raise ValueError("bad len on lnz %s" % lnz)
+            msg = f"bad len on lnz {lnz}"
+            raise ValueError(msg)
 
         if state_kws is None:
             state_kws = {}
@@ -176,7 +177,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         return np.unravel_index(self.argmax(*args, **kwargs), self.shape)
 
     # @cached.meth
-    def local_max(self, *args, **kwargs):  # noqa: FURB118
+    def local_max(self, *args, **kwargs):
         return self[self.local_argmax(*args, **kwargs)]
 
     # @cached.meth
