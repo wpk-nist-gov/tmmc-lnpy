@@ -8,9 +8,9 @@
 # Instead edit the corresponding pyproject.toml file.
 #
 bottleneck
-importlib_resources;python_version<"3.10"
+importlib-resources;python_version<"3.10"
 joblib
-lazy_loader
+lazy-loader
 module-utilities>=0.9.0
 numpy
 pytest

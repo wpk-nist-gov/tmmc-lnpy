@@ -236,7 +236,7 @@ def _concat_windows_xarray(
         )
     else:
         out = xr.concat(tables, dim=index_name)  # pyright: ignore[reportCallIssue, reportArgumentType]
-    return out
+    return out  # type: ignore[no-any-return]
 
 
 @overload

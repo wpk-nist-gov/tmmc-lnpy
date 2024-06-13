@@ -9,10 +9,10 @@
 #
 autodocsumm
 bottleneck
-importlib_resources;python_version<"3.10"
+importlib-resources;python_version<"3.10"
 ipywidgets
 joblib
-lazy_loader
+lazy-loader
 matplotlib
 module-utilities>=0.9.0
 myst-nb

@@ -61,7 +61,7 @@ optional-dependencies.dev-extras = [
     "ipykernel",
     "ipython",
     "nbclient>=0.10.0",
-    "nox>=2024.3.2",
+    "nox>=2024.4.15",
     "pytest-accept",
 ]
 optional-dependencies.docs = [
@@ -76,7 +76,7 @@ optional-dependencies.docs = [
     "tmmc-lnpy[viz]",
 ]
 optional-dependencies.mypy = [
-    "mypy>=1.9.0",
+    "mypy>=1.10.0",
 ]
 optional-dependencies.nbval = [
     "nbval",
@@ -90,7 +90,7 @@ optional-dependencies.pipxrun-tools = [
     "conda-lock>=2.5.5",
     "grayskull>=2.5.3",
     "nbqa>=1.8.4",
-    "pyright>=1.1.359",
+    "pyright>=1.1.367",
     "tmmc-lnpy[mypy]",
     "twine>=5.0.0",
 ]
@@ -475,6 +475,7 @@ default_envs = [
 pytest-accept = { pip = true }
 scriv = { pip = true }
 matplotlib = { skip = true, packages = "matplotlib-base" }
+lazy-loader = { skip = true, packages = "lazy_loader" }
 
 [tool.pyproject2conda.envs.build]
 extras = "build-system.requires"
