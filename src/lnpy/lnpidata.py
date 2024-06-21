@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from module_utilities import cached
 
+from ._compat import copy_if_needed
 from .docstrings import docfiller
 from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
@@ -90,7 +91,7 @@ class lnPiArray:  # noqa: N801
         state_kws: dict[str, Any] | None = None,
         extra_kws: dict[str, Any] | None = None,
         fill_value: float | None = None,
-        copy: bool = False,
+        copy: bool | None = None,
     ) -> None:
         """
         Parameters
@@ -104,7 +105,7 @@ class lnPiArray:  # noqa: N801
         """
 
         lnz = np.atleast_1d(lnz).astype(np.float64)
-        data = np.array(data, copy=copy)
+        data = np.array(data, copy=copy_if_needed(copy))
         # assert data.ndim == len(lnz)
         if data.ndim != len(lnz):
             msg = f"Length of {lnz=} must be {data.ndim}"
@@ -135,7 +136,7 @@ class lnPiArray:  # noqa: N801
         self,
         lnz: float | ArrayLike | None = None,
         data: MyNDArray | None = None,
-        copy: bool = False,
+        copy: bool | None = None,
     ) -> Self:
         """
         Create new object with optional replacements.
@@ -271,7 +272,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         lnz: float | ArrayLike,
         base: lnPiArray,
         mask: MyNDArray | None = None,
-        copy: bool = False,
+        copy: bool | None = None,
     ) -> None:
         lnz = np.atleast_1d(lnz).astype(np.float64)
 
@@ -283,7 +284,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         if mask is None:
             mask = np.full(base.data.shape, fill_value=False, dtype=bool)
         else:
-            mask = np.array(mask, copy=copy, dtype=bool)
+            mask = np.array(mask, copy=copy_if_needed(copy), dtype=bool)
         # assert mask.shape == base.data.shape
         if mask.shape != base.data.shape:
             msg = f"{mask.shape=} must be {base.data.shape}."
@@ -308,7 +309,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         state_kws: dict[str, Any] | None = None,
         extra_kws: dict[str, Any] | None = None,
         fill_value: float | None = None,
-        copy: bool = False,
+        copy: bool | None = None,
     ) -> Self:
         """
         Create :class:`lnPiMasked` object from raw data.
@@ -532,7 +533,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         lnz: float | ArrayLike | None = None,
         base: lnPiArray | None = None,
         mask: MyNDArray | None = None,
-        copy: bool = False,
+        copy: bool | None = None,
     ) -> Self:
         """
         Create new object with optional parameters

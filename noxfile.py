@@ -19,11 +19,7 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
-    Callable,
-    Iterable,
-    Iterator,
     Literal,
-    Sequence,
     TypeAlias,
     TypedDict,
 )
@@ -57,6 +53,8 @@ import nox  # type: ignore[unused-ignore,import]
 # fmt: on
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator, Sequence
+
     from nox import Session
     from nox.virtualenv import CondaEnv
 
@@ -933,6 +931,7 @@ def typing(
     session.env["MYPY_CACHE_DIR"] = str(Path(session.create_tmp()) / ".mypy_cache")
 
     if "clean" in cmd:
+        cmd = list(cmd)
         cmd.remove("clean")
 
         for name in [".mypy_cache", ".pytype"]:

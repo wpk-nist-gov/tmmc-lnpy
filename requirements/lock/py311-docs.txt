@@ -9,7 +9,7 @@ attrs==23.2.0             # via jsonschema, jupyter-cache, referencing
 autodocsumm==0.2.12       # via -r requirements/docs.txt
 babel==2.15.0             # via pydata-sphinx-theme, sphinx
 beautifulsoup4==4.12.3    # via pydata-sphinx-theme
-bottleneck==1.3.8         # via -r requirements/docs.txt
+bottleneck==1.4.0         # via -r requirements/docs.txt
 certifi==2024.6.2         # via requests
 charset-normalizer==3.3.2  # via requests
 click==8.1.7              # via jupyter-cache, uvicorn
@@ -21,14 +21,14 @@ debugpy==1.8.1            # via ipykernel
 decorator==5.1.1          # via ipython
 docutils==0.21.2          # via myst-parser, pydata-sphinx-theme, sphinx
 executing==2.0.1          # via stack-data
-fastjsonschema==2.19.1    # via nbformat
+fastjsonschema==2.20.0    # via nbformat
 fonttools==4.53.0         # via matplotlib
 greenlet==3.0.3           # via sqlalchemy
 h11==0.14.0               # via uvicorn
 idna==3.7                 # via anyio, requests
 imageio==2.34.1           # via scikit-image
 imagesize==1.4.1          # via sphinx
-importlib-metadata==7.1.0  # via jupyter-cache, myst-nb
+importlib-metadata==7.2.0  # via jupyter-cache, myst-nb
 ipykernel==6.29.4         # via myst-nb
 ipython==8.25.0           # via ipykernel, ipywidgets, myst-nb
 ipywidgets==8.1.3         # via -r requirements/docs.txt
@@ -56,7 +56,7 @@ nbclient==0.10.0          # via jupyter-cache, myst-nb
 nbformat==5.10.4          # via jupyter-cache, myst-nb, nbclient
 nest-asyncio==1.6.0       # via ipykernel
 networkx==3.3             # via scikit-image
-numpy==1.26.4             # via bottleneck, contourpy, imageio, matplotlib, pandas, scikit-image, scipy, tifffile, xarray, -r requirements/docs.txt
+numpy==2.0.0              # via bottleneck, contourpy, imageio, matplotlib, pandas, scikit-image, scipy, tifffile, xarray, -r requirements/docs.txt
 packaging==24.1           # via ipykernel, lazy-loader, matplotlib, pydata-sphinx-theme, scikit-image, sphinx, xarray
 pandas==2.2.2             # via xarray
 parso==0.8.4              # via jedi
@@ -64,7 +64,7 @@ pexpect==4.9.0            # via ipython
 pillow==10.3.0            # via imageio, matplotlib, scikit-image
 platformdirs==4.2.2       # via jupyter-core
 prompt-toolkit==3.0.47    # via ipython
-psutil==5.9.8             # via ipykernel
+psutil==6.0.0             # via ipykernel
 ptyprocess==0.7.0         # via pexpect
 pure-eval==0.2.2          # via stack-data
 pydata-sphinx-theme==0.15.3  # via sphinx-book-theme
@@ -78,7 +78,7 @@ pyzmq==26.0.3             # via ipykernel, jupyter-client
 referencing==0.35.1       # via jsonschema, jsonschema-specifications
 requests==2.32.3          # via sphinx
 rpds-py==0.18.1           # via jsonschema, referencing
-scikit-image==0.23.2      # via -r requirements/docs.txt
+scikit-image==0.24.0      # via -r requirements/docs.txt
 scipy==1.13.1             # via scikit-image, -r requirements/docs.txt
 six==1.16.0               # via asttokens, python-dateutil
 sniffio==1.3.1            # via anyio
@@ -95,17 +95,17 @@ sphinxcontrib-jsmath==1.0.1  # via sphinx
 sphinxcontrib-qthelp==1.0.7  # via sphinx
 sphinxcontrib-serializinghtml==1.1.10  # via sphinx
 sphinxcontrib-spelling==8.0.0  # via -r requirements/docs.txt
-sqlalchemy==2.0.30        # via jupyter-cache
+sqlalchemy==2.0.31        # via jupyter-cache
 stack-data==0.6.3         # via ipython
 starlette==0.37.2         # via sphinx-autobuild
 tabulate==0.9.0           # via jupyter-cache
-tifffile==2024.5.22       # via scikit-image
+tifffile==2024.6.18       # via scikit-image
 tornado==6.4.1            # via ipykernel, jupyter-client
 tqdm==4.66.4              # via -r requirements/docs.txt
 traitlets==5.14.3         # via comm, ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, matplotlib-inline, nbclient, nbformat
 typing-extensions==4.12.2  # via ipython, module-utilities, myst-nb, pydata-sphinx-theme, sqlalchemy
 tzdata==2024.1            # via pandas
-urllib3==2.2.1            # via requests
+urllib3==2.2.2            # via requests
 uvicorn==0.30.1           # via sphinx-autobuild
 watchfiles==0.22.0        # via sphinx-autobuild
 wcwidth==0.2.13           # via prompt-toolkit

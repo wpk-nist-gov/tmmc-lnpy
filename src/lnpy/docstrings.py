@@ -6,7 +6,7 @@ _docstrings = """
 Parameters
 ----------
 copy : bool, optional
-    If True, copy the data.  If False, attempt to use view.
+    If True, copy the data.  If None or False, attempt to use view.
 copy_kws : mapping, optional
     extra arguments to copy
 lnz : float or sequence of float

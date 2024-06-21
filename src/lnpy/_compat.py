@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from typing import Any, Hashable, Iterable
 
@@ -17,6 +19,18 @@ if sys.version_info < (3, 10):
     import importlib_resources as resources
 else:
     from importlib import resources
+
+
+_COPY_IF_NEEDED = None if np.lib.NumpyVersion(np.__version__) >= "2.0.0" else False
+
+
+def copy_if_needed(
+    copy: bool | None,
+) -> bool:  # Lie here so can support both versions...
+    """Callable to return copy if needed convention..."""
+    if not copy:
+        return _COPY_IF_NEEDED  # type: ignore[return-value]
+    return copy
 
 
 __all__ = ["resources", "rootresults", "xr_dot"]
