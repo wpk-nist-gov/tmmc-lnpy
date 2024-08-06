@@ -10,7 +10,7 @@ import lnpy
 path_data = Path(__file__).parent / "../examples/archived/LJ_mix"
 
 
-@pytest.fixture()
+@pytest.fixture
 def ref():
     path = path_data / "ljmix4_full.t080.v512.r1.lnpi_o.dat.gz"
     temp = 0.8
@@ -22,7 +22,7 @@ def ref():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def phase_creator(ref):
     return lnpy.segment.PhaseCreator(
         nmax=2, nmax_peak=4, ref=ref, merge_kws={"efac": 0.8}

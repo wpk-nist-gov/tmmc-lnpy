@@ -76,7 +76,7 @@ optional-dependencies.docs = [
     "tmmc-lnpy[viz]",
 ]
 optional-dependencies.mypy = [
-    "mypy>=1.10.0",
+    "mypy>=1.11.1",
 ]
 optional-dependencies.nbval = [
     "nbval",
@@ -90,7 +90,7 @@ optional-dependencies.pipxrun-tools = [
     "conda-lock>=2.5.5",
     "grayskull>=2.5.3",
     "nbqa>=1.8.4",
-    "pyright>=1.1.368",
+    "pyright>=1.1.374",
     "tmmc-lnpy[mypy]",
     "twine>=5.0.0",
 ]
@@ -215,6 +215,9 @@ lint.extend-ignore = [
     "D102",   # - Missing docstring in public method
     "D103",   # - Missing docstring in public function
     "D202",   # - blank line after docstring
+    "DOC201",
+    "DOC202",
+    "DOC501",
     "PLR091",
     # "PD",        # - not using pandas?
     # "NPY",       # - not using numpy?
@@ -227,6 +230,7 @@ lint.per-file-ignores."**/*.ipynb" = [
     "INP001",
 ]
 lint.per-file-ignores."docs/conf.py" = [
+    "ERA",
     "INP001",
 ]
 lint.per-file-ignores."noxfile.py" = [
@@ -286,6 +290,7 @@ lint.extend-per-file-ignores."tests/*.py" = [
 ]
 # fixable = ["ALL"]
 lint.unfixable = [
+    "ERA",
     "PLR6104",
     "T",
 ]

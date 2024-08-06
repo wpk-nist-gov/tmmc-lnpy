@@ -27,7 +27,7 @@ def tag_phases2(x: Sequence[lnPiMasked]) -> np.ndarray[Any, np.dtype[Any]]:
     return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
 
 
-@pytest.fixture()
+@pytest.fixture
 def ref():
     return (
         lnpy.lnPiMasked.from_table(
@@ -40,7 +40,7 @@ def ref():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def phase_creator(ref):
     return lnpy.segment.PhaseCreator(
         nmax=2,
@@ -63,17 +63,17 @@ def obj(request, ref, phase_creator):
     return lnpy.examples.hsmix_example()
 
 
-@pytest.fixture()
+@pytest.fixture
 def lnz2() -> float:
     return 0.5
 
 
-@pytest.fixture()
+@pytest.fixture
 def lnzs():
     return np.linspace(-8, 8, 20)
 
 
-@pytest.fixture()
+@pytest.fixture
 def build_phases(obj, lnz2):
     return obj.phase_creator.build_phases_mu([None, lnz2])
 

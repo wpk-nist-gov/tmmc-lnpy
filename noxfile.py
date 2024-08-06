@@ -964,8 +964,6 @@ def typing(
     for cmds in combine_list_list_str(opts.typing_run_internal or []):
         run(*cmds)
 
-    # runner.run_commands(opts.typing_run_internal, external=False)
-
 
 nox.session(name="typing", **ALL_KWS)(typing)
 nox.session(name="typing-conda", **CONDA_ALL_KWS)(typing)
@@ -1134,33 +1132,11 @@ def conda_recipe(
                     "-o",
                     str(d),
                 )
-                # session.run(
-                #     sys.executable,
-                #     "tools/pipxrun.py",
-                #     PIPXRUN_REQUIREMENTS,
-                #     "-v",
-                #     "-c",
-                #     " ".join(
-                #         [
-                #             "grayskull",
-                #             "pypi",
-                #             sdist_path,
-                #             "-o",
-                #             str(d),
-                #         ]
-                #     ),
-                # )
                 path = Path(d) / PACKAGE_NAME / "meta.yaml"
                 session.log(f"cat {path}:")
                 with path.open() as f:
                     for line in f:
                         print(line, end="")  # noqa: T201
-
-                # # session.run(
-                # #     "cat",
-                #     str(Path(d) / PACKAGE_NAME / "meta.yaml"),
-                #     external=True,
-                # )
 
 
 @nox.session(name="conda-build", **CONDA_DEFAULT_KWS)

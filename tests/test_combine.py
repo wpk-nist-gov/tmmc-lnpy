@@ -8,7 +8,7 @@ import xarray as xr
 from lnpy import combine
 
 
-@pytest.fixture()
+@pytest.fixture
 def rng() -> np.random.Generator:
     return np.random.default_rng(123)
 
@@ -103,12 +103,12 @@ def table_sequence(
     return table_sequence
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_dataset(table: pd.DataFrame) -> xr.Dataset:
     return table.set_index("x").to_xarray()
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_dataset_sequence(table_sequence: list[pd.DataFrame]) -> list[xr.Dataset]:
     return [x.set_index("x").to_xarray() for x in table_sequence]
 
@@ -536,7 +536,7 @@ def test_updown_from_collectionmatrix(rng: np.random.Generator) -> None:
     pd.testing.assert_frame_equal(table, out[table.columns])
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_updown(rng: np.random.Generator) -> pd.DataFrame:
     return pd.DataFrame(rng.random((10, 3)), columns=["n_trials", "P_down", "P_up"])
 
