@@ -483,8 +483,8 @@ def test_updown_mean(
             "window": np.repeat(range(nwindow), nstate),
             "state": np.tile(range(nstate), nwindow),
             "n_trials": weight.reshape(-1),
-            "P_down": down.reshape(-1),
-            "P_up": up.reshape(-1),
+            "prob_down": down.reshape(-1),
+            "prob_up": up.reshape(-1),
         }
     )
 
@@ -495,8 +495,8 @@ def test_updown_mean(
                 "window": nwindow,
                 "state": nstate,
                 "n_trials": rng.random(),
-                "P_down": rng.random(),
-                "P_up": rng.random(),
+                "prob_down": rng.random(),
+                "prob_up": rng.random(),
             }
         ]
     )
@@ -509,12 +509,14 @@ def test_updown_mean(
     out_head = out.iloc[:-1]
     np.testing.assert_allclose(out_head["n_trials"], weight.sum(0))
     np.testing.assert_allclose(
-        out_head["P_down"], np.average(down, axis=0, weights=weight)
+        out_head["prob_down"], np.average(down, axis=0, weights=weight)
     )
-    np.testing.assert_allclose(out_head["P_up"], np.average(up, axis=0, weights=weight))
+    np.testing.assert_allclose(
+        out_head["prob_up"], np.average(up, axis=0, weights=weight)
+    )
 
     out_tail = out.iloc[-1]
-    for k in ["n_trials", "P_down", "P_up"]:
+    for k in ["n_trials", "prob_down", "prob_up"]:
         np.testing.assert_allclose(out_tail[k], df_add.iloc[-1][k])
 
 
@@ -524,8 +526,8 @@ def test_updown_from_collectionmatrix(rng: np.random.Generator) -> None:
     table = pd.DataFrame(
         {
             "n_trials": c.sum(-1),
-            "P_down": c[:, 0] / c.sum(-1),
-            "P_up": c[:, -1] / c.sum(-1),
+            "prob_down": c[:, 0] / c.sum(-1),
+            "prob_up": c[:, -1] / c.sum(-1),
         }
     )
 
@@ -536,14 +538,65 @@ def test_updown_from_collectionmatrix(rng: np.random.Generator) -> None:
     pd.testing.assert_frame_equal(table, out[table.columns])
 
 
+@pytest.mark.parametrize(
+    ("shape", "axis"), [((10, 2), 0), ((2, 10, 2), 1), ((1, 2, 3, 10), -1), ((10,), -1)]
+)
+@pytest.mark.parametrize("norm", [True, False])
+def test_lnpi_from_updown_axis(rng, shape, axis, norm) -> None:
+    def _idx(index):
+        axes = [slice(None)] * len(shape)
+        axes[axis] = index
+        return tuple(axes)
+
+    up = rng.random(shape)
+    down = rng.random(shape)
+
+    expected = np.zeros(shape)
+    expected[_idx(0)] = 0.0
+    expected[_idx(slice(1, None))] = np.log(
+        up[_idx(slice(None, -1))] / down[_idx(slice(1, None))]
+    )
+
+    expected = expected.cumsum(axis=axis)
+    expected -= expected.max(axis=axis, keepdims=True)
+
+    if norm:
+        expected = combine.normalize_lnpi(expected, axis=axis)
+
+    # numpy
+    np.testing.assert_allclose(
+        expected, combine.lnpi_from_updown(down=down, up=up, axis=axis, norm=norm)
+    )
+
+    # xarray
+    xup = xr.DataArray(up)
+    xdown = xr.DataArray(down)
+
+    dim = xdown.dims[axis]
+    np.testing.assert_allclose(
+        expected, combine.lnpi_from_updown(down=xdown, up=xup, dim=dim, norm=norm)
+    )
+
+    # series?
+    if len(shape) == 1:
+        sup = pd.Series(up)
+        sdown = pd.Series(down)
+
+        np.testing.assert_allclose(
+            expected, combine.lnpi_from_updown(down=sdown, up=sup, norm=norm)
+        )
+
+
 @pytest.fixture
 def table_updown(rng: np.random.Generator) -> pd.DataFrame:
-    return pd.DataFrame(rng.random((10, 3)), columns=["n_trials", "P_down", "P_up"])
+    return pd.DataFrame(
+        rng.random((10, 3)), columns=["n_trials", "prob_down", "prob_up"]
+    )
 
 
 def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     delta_lnpi = (
-        np.log(table_updown["P_up"].shift(1) / table_updown["P_down"]).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
+        np.log(table_updown["prob_up"].shift(1) / table_updown["prob_down"]).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
     )
 
     out = combine.assign_delta_lnpi_from_updown(table_updown)
@@ -556,7 +609,7 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
 
     # Series with name
     out_series = combine.delta_lnpi_from_updown(
-        down=table_updown["P_down"], up=table_updown["P_up"], name="my_delta"
+        down=table_updown["prob_down"], up=table_updown["prob_up"], name="my_delta"
     )
     assert isinstance(out_series, pd.Series)
     assert out_series.name == "my_delta"
@@ -564,8 +617,8 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
 
     # xarray
     out_dataarray = combine.delta_lnpi_from_updown(
-        down=table_updown["P_down"].to_xarray(),
-        up=table_updown["P_up"].to_xarray(),
+        down=table_updown["prob_down"].to_xarray(),
+        up=table_updown["prob_up"].to_xarray(),
         name="my_delta",
     )
     assert isinstance(out_dataarray, xr.DataArray)
@@ -574,8 +627,8 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
 
     # numpy
     delta = combine.delta_lnpi_from_updown(
-        down=table_updown["P_down"].to_numpy(),
-        up=table_updown["P_up"].to_numpy(),
+        down=table_updown["prob_down"].to_numpy(),
+        up=table_updown["prob_up"].to_numpy(),
     )
     np.testing.assert_allclose(delta_lnpi, delta)
 

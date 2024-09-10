@@ -5,7 +5,17 @@ Typing definitions for :mod:`lnpy`
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Hashable,
+    Literal,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import xarray as xr
 from numpy.typing import ArrayLike, NDArray
@@ -77,6 +87,11 @@ Scalar: TypeAlias = IndexIterScalar
 PeakStyle = Literal["indices", "mask", "marker"]
 PeakError = Literal["ignore", "raise", "warn"]
 
+# reduction dimensions/axes
+AxisReduce: TypeAlias = int
+DimsReduce: TypeAlias = Union[Hashable, Collection[Hashable]]
+
+NDArrayAny: TypeAlias = NDArray[Any]
 
 TagPhasesSignature = Callable[
     [Sequence["lnpy.lnpidata.lnPiMasked"]], Union[Sequence[int], MyNDArray]

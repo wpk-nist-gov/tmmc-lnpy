@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
+    from ._typing import AxisReduce, DimsReduce, NDArrayAny
+
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
     T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
@@ -165,7 +167,7 @@ def check_windows_overlap(
         .drop_duplicates()
     )
 
-    graph = _build_graph(nodes=windows, edges=x.to_numpy())
+    graph = _build_graph(nodes=windows, edges=x.to_numpy())  # to_numpy())
 
     components = list(_connected_components(graph))
 
@@ -173,7 +175,7 @@ def check_windows_overlap(
         msg = "Disconnected graph."
         if verbose:
             for subgraph in components:
-                msg = f"{msg}\ngraph: {subgraph}"
+                msg = f"{msg}\ngraph: {set(map(int, subgraph))}"
         raise OverlapError(msg)
 
 
@@ -247,8 +249,6 @@ def concat_windows(
     index_name: str = ...,
     overwrite_window: bool = ...,
 ) -> xr.Dataset: ...
-
-
 @overload
 def concat_windows(
     tables: Iterable[xr.DataArray],
@@ -257,8 +257,6 @@ def concat_windows(
     index_name: str = ...,
     overwrite_window: bool = ...,
 ) -> xr.DataArray: ...
-
-
 @overload
 def concat_windows(
     tables: Iterable[pd.DataFrame],
@@ -1050,7 +1048,9 @@ def keep_first(
 # combine on mean
 @lru_cache
 def _factory_average_updown(
-    weight_name: str = "n_trials", down_name: str = "P_down", up_name: str = "P_up"
+    weight_name: str = "n_trials",
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
 ) -> Callable[[pd.DataFrame], pd.Series[Any]]:
     """Return callable to be used with groupby.apply"""
 
@@ -1078,8 +1078,8 @@ def updown_mean(
     by: str | Sequence[str] = "state",
     as_index: bool = False,
     weight_name: str = "n_trials",
-    down_name: str = "P_down",
-    up_name: str = "P_up",
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
     use_running: bool = False,
     **kwargs: Any,
 ) -> pd.DataFrame:
@@ -1142,12 +1142,86 @@ def updown_mean(
 
 
 @docfiller_local
+def stack_updown(
+    weight: NDArrayAny | pd.Series[Any] | xr.DataArray,
+    down: NDArrayAny | xr.DataArray,
+    up: NDArrayAny | xr.DataArray,
+    *,
+    direction_dim: str = "direction",
+    direction_coords: Iterable[str] | None = None,
+    moment_dim: str = "moment",
+) -> NDArrayAny | xr.DataArray:
+    """
+    Stack up/down probabilities arrays to moments array.
+
+    This array can then be used in cmomy for example.
+    """
+
+    # if passed in pandas series, convert to xarray objects
+    weight, up, down = (
+        x.to_xarray() if isinstance(x, pd.Series) else x for x in (weight, up, down)
+    )
+
+    if isinstance(weight, xr.DataArray):
+        xout: xr.DataArray = xr.apply_ufunc(
+            stack_updown,
+            weight,
+            down,
+            up,
+            input_core_dims=[weight.dims] * 3,
+            output_core_dims=[[direction_dim, *weight.dims, moment_dim]],
+        )
+
+        if direction_coords is None:
+            coords = [
+                getattr(x, "name", None) or default
+                for x, default in zip((down, up), ("down", "up"))
+            ]
+        else:
+            coords = list(direction_coords)
+
+        return xout.assign_coords({direction_dim: coords})
+
+    out = np.zeros((2, *weight.shape, 2))
+
+    # weights
+    out[:, ..., 0] = weight
+    # "averages"
+    out[0, ..., 1] = np.asarray(down)
+    out[1, ..., 1] = np.asarray(up)
+
+    return out
+
+
+@docfiller_local
+def unstack_updown(
+    data: NDArrayAny | xr.DataArray,
+) -> (
+    tuple[NDArrayAny, NDArrayAny, NDArrayAny]
+    | tuple[xr.DataArray, xr.DataArray, xr.DataArray]
+):
+    """Inverse of stack_updown"""
+
+    out = (
+        data[0, ..., 0],
+        data[0, ..., 1],
+        data[1, ..., 1],
+    )
+
+    if isinstance(data, xr.DataArray):
+        drop = [data.dims[0], data.dims[-1]]
+        out = tuple(a.drop_vars(drop, errors="ignore") for a in out)
+
+    return out
+
+
+@docfiller_local
 def updown_from_collectionmatrix(
     table: pd.DataFrame,
     matrix_names: Iterable[str] = ["c0", "c1", "c2"],
     weight_name: str = "n_trials",
-    down_name: str = "P_down",
-    up_name: str = "P_up",
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
 ) -> pd.DataFrame:
     """
     Add up/down probabilities from collection matrix.
@@ -1177,11 +1251,14 @@ def updown_from_collectionmatrix(
     )
 
 
-def _get_delta_lnpi(*, down: NDArray[Any], up: NDArray[Any]) -> NDArray[Any]:
-    delta = np.empty_like(down)
-    delta[0] = 0.0
-    delta[1:] = np.log(up[:-1] / down[1:])
-    return delta
+def _select_axis_dim(
+    target: xr.DataArray, axis: AxisReduce, dim: DimsReduce | None
+) -> tuple[int, DimsReduce]:
+    if dim is not None:
+        axis = target.get_axis_num(dim)
+    else:
+        dim = target.dims[axis]
+    return axis, dim
 
 
 @docfiller_local
@@ -1189,9 +1266,11 @@ def delta_lnpi_from_updown(
     down: T_Array,
     up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
     name: str | None = None,
+    axis: int = -1,
+    dim: DimsReduce | None = None,
 ) -> T_Array:
     r"""
-    Calculate :math:`\Delta \ln \Pi(N)` from up/down probabilities.
+    Calculate :math:`\Delta \ln \Pi(N)` from down/up probabilities.
 
     This assumes ``table`` is sorted by ``state`` value. This function is
     useful if the simulation windows use extended ensemble sampling and have
@@ -1201,37 +1280,54 @@ def delta_lnpi_from_updown(
 
     Parameters
     ----------
-    {down}
     {up}
+    {down}
     {array_name}
 
     Returns
     -------
     Series or DataArray or ndarray
-        Calculated value of same type as ``down``.
+        Calculated value of same type as ``up``.
     """
 
-    up_ = (
-        up.to_numpy()
-        if isinstance(up, (pd.Series, xr.DataArray))
-        else cast("NDArray[Any]", up)
-    )
+    if isinstance(down, np.ndarray):  # pragma: no branch
+        up_ = (
+            up.to_numpy()
+            if isinstance(up, (pd.Series, xr.DataArray))
+            else cast("NDArray[Any]", up)
+        )
+
+        delta = np.empty_like(up)
+        up_, down_, delta = (np.moveaxis(x, axis, -1) for x in (up_, down, delta))
+
+        delta[..., 0] = 0.0
+        delta[..., 1:] = np.log(up_[..., :-1] / down_[..., 1:])
+        return np.moveaxis(delta, -1, axis)
+
+    if isinstance(down, xr.DataArray):
+        axis, dim = _select_axis_dim(down, axis, dim)
+
+        out = xr.apply_ufunc(
+            delta_lnpi_from_updown,
+            down,
+            # if down is an array, move axis to end
+            np.moveaxis(up, axis, -1) if isinstance(up, np.ndarray) else up,
+            input_core_dims=[[dim], [dim]],
+            output_core_dims=[[dim]],
+            kwargs={"axis": -1},
+            keep_attrs=True,
+        ).transpose(*down.dims)
+
+        return out.rename(name)
 
     if isinstance(down, pd.Series):
         return pd.Series(
-            _get_delta_lnpi(down=down.to_numpy(), up=up_), name=name, index=down.index
+            delta_lnpi_from_updown(down=down.to_numpy(), up=up),
+            name=name,
+            index=down.index,
         )
 
-    if isinstance(down, xr.DataArray):
-        out = down.copy(data=_get_delta_lnpi(down=down.to_numpy(), up=up_))
-        if name:
-            out = out.rename(name)
-        return out
-
-    if isinstance(down, np.ndarray):  # pragma: no branch
-        return _get_delta_lnpi(down=down, up=up_)
-
-    msg = f"Unknown type {type(down)}"  # pragma: no cover
+    msg = f"Unknown {type(up)=}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
 
@@ -1239,12 +1335,14 @@ def delta_lnpi_from_updown(
 def lnpi_from_updown(
     down: T_Array,
     up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
-    # up: T_Array,
+    # down: T_Array,
     name: str | None = None,
     norm: bool = False,
+    axis: int = -1,
+    dim: DimsReduce | None = None,
 ) -> T_Array:
     r"""
-    Calculate :math:`\ln \Pi(N)` from up/down sorted probabilities.
+    Calculate :math:`\ln \Pi(N)` from down/up sorted probabilities.
 
     This assumes ``table`` is sorted by ``state`` value.
 
@@ -1259,26 +1357,64 @@ def lnpi_from_updown(
     Returns
     -------
     Series or DataArray or ndarray
-        Calculated value of same type as ``down``.
+        Calculated value of same type as ``up``.
     """
 
-    ln_prob: T_Array = delta_lnpi_from_updown(down=down, up=up, name=name).cumsum()
-    ln_prob -= ln_prob.max()  # pyright: ignore[reportAssignmentType]
-    return normalize_lnpi(ln_prob) if norm else ln_prob
+    if isinstance(down, np.ndarray):
+        ln_prob = delta_lnpi_from_updown(down=down, up=up, axis=axis).cumsum(axis=axis)
+        # subtract maximum
+        ln_prob -= ln_prob.max(axis=axis, keepdims=True)
+        return normalize_lnpi(ln_prob, axis=axis) if norm else ln_prob
+
+    if isinstance(down, xr.DataArray):
+        axis, dim = _select_axis_dim(down, axis, dim)
+
+        out = xr.apply_ufunc(
+            lnpi_from_updown,
+            down,
+            np.moveaxis(up, axis, -1) if isinstance(up, np.ndarray) else up,
+            input_core_dims=[[dim], [dim]],
+            output_core_dims=[[dim]],
+            kwargs={"axis": -1, "norm": norm},
+            keep_attrs=True,
+        ).transpose(*down.dims)
+
+        return out.rename(name)
+
+    if isinstance(down, pd.Series):
+        return pd.Series(
+            lnpi_from_updown(down=down.to_numpy(), up=up, norm=norm),
+            name=name,
+            index=down.index,
+        )
+
+    msg = f"Unknown {type(up)=}"
+    raise ValueError(msg)
 
 
-def normalize_lnpi(lnpi: T_Array) -> T_Array:
+def normalize_lnpi(
+    lnpi: T_Array, axis: AxisReduce = -1, dim: DimsReduce | None = None
+) -> T_Array:
     r"""Normalize :math:`\ln\Pi` series or array."""
-    offset: float = np.log(np.exp(lnpi).sum())
-    return lnpi - offset
+    if isinstance(lnpi, np.ndarray):
+        kws = {"axis": axis, "keepdims": True}
+
+    elif isinstance(lnpi, xr.DataArray):
+        axis, dim = _select_axis_dim(lnpi, axis, dim)
+        kws = {"dim": dim}
+    else:
+        kws = {}
+    return lnpi - np.log(np.exp(lnpi).sum(**kws))
 
 
 @docfiller_local
 def assign_delta_lnpi_from_updown(
     table: T_Frame,
-    up_name: str = "P_up",
-    down_name: str = "P_down",
+    up_name: str = "prob_up",
+    down_name: str = "prob_down",
     delta_lnpi_name: str = "delta_lnpi",
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
 ) -> T_Frame:
     r"""
     Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
@@ -1302,7 +1438,9 @@ def assign_delta_lnpi_from_updown(
         Table with ``delta_lnpi_name`` column.
     """
 
-    delta = delta_lnpi_from_updown(up=table[up_name], down=table[down_name])  # type: ignore[arg-type]
+    delta = delta_lnpi_from_updown(
+        up=table[up_name], down=table[down_name], axis=axis, dim=dim
+    )  # type: ignore[arg-type]
 
     if isinstance(table, pd.DataFrame):
         return table.assign(**{delta_lnpi_name: delta})
@@ -1313,9 +1451,11 @@ def assign_delta_lnpi_from_updown(
 def assign_lnpi_from_updown(
     table: T_Frame,
     lnpi_name: str = "ln_prob",
-    down_name: str = "P_down",
-    up_name: str = "P_up",
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
     norm: bool = True,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
 ) -> T_Frame:
     r"""
     Assign :math:`\ln \Pi(N)` from up/down sorted probabilities.
@@ -1345,6 +1485,8 @@ def assign_lnpi_from_updown(
         up=table[up_name],
         norm=norm,
         name=lnpi_name,
+        axis=axis,
+        dim=dim,
     )
 
     if isinstance(table, pd.DataFrame):
