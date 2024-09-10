@@ -20,14 +20,13 @@ dependencies:
   - lazy_loader
   - matplotlib-base
   - module-utilities>=0.9.0
-  - mypy>=1.11.1
+  - mypy>=1.11.2
   - nbclient>=0.10.0
   - nbval
   - nox>=2024.4.15
   - numpy
   - packaging
   - pandas-stubs
-  - pipx
   - pre-commit
   - pytest
   - pytest-cov

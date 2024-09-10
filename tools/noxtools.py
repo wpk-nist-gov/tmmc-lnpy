@@ -706,7 +706,7 @@ class Installer:
 
         if venv._clean_location():  # pyright: ignore[reportPrivateUsage]
             # Also clean out session tmp directory
-            # shutil.rmtree(self.session.create_tmp())
+            # shutil.rmtree(self.session.create_tmp())  # noqa: ERA001
             cmd = "create"
         elif self.changed or update or self.update:
             cmd = "update"

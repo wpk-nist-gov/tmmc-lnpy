@@ -82,7 +82,6 @@ def _initial_bracket_spinodal_right(
     efac: float = 1.0,
     dlnz: float = 0.5,
     dfac: float = 1.0,
-    # vmax: float = 1e5,
     ntry: int = 20,
     step: int = +1,
     ref: lnPiMasked | None = None,
@@ -241,13 +240,10 @@ def _refine_bracket_spinodal_right(
         close_kws = {}
 
     for i in range(nmax):
-        # if idx in left.index and idx_nebr in left.index:
-        # dw = _get_dw(left, idx, idx_nebr)
         dw = left.wfe_phases.get_dw(idx, idx_nebr)
         if dw < vmax and dw > efac:
             left_done = True
 
-        # dw = _get_dw(right, idx, idx_nebr)
         dw = right.wfe_phases.get_dw(idx, idx_nebr)
         if dw > vmin and dw < efac:
             right_done = True
@@ -462,7 +458,6 @@ def get_spinodal(
         efac=efac,
         dlnz=dlnz,
         dfac=dfac,
-        # vmax=vmax,
         ntry=ntry,
         step=step,
         ref=ref,
@@ -654,9 +649,6 @@ class StabilityBase:
 
         concat_kws = dict(names=[self._NAME], **concat_kws)
         kwargs = dict(self.access_kws, **kwargs)
-        # return self._parent.concat_like(items, **concat_kws)
-        # s = pd.concat({k:v._series for k,v in items}, **concat_kws)
-        # return self._parent.new_like(s)
 
         return self._parent.concat(items, concat_kws=concat_kws, **kwargs)  # type: ignore[arg-type]
 
@@ -859,9 +851,6 @@ class Spinodals(StabilityBase):
         if inplace:
             self._items = out
             self._info = info
-            # if append:
-            #     return self._append_to_parent()
-            # else:
             return self
 
         # total convergence:
@@ -1062,61 +1051,3 @@ class Binodals(StabilityBase):
         if not as_dict and converged:
             return self._get_access(out), info
         return out, info
-
-
-# @lnPiCollection.decorate_accessor("stability_append", single_create=False)
-# def _stability_append(self):
-#     """
-#     Add stability from a collection to this collection
-
-#     Parameters
-#     ----------
-#     other : optional, optional
-#         if passed, copy stability from this collection to self, otherwise
-#         use `self`
-#     append: bool, default=True
-#         if True, append results to new frame
-#     sort: bool, default=True
-#         if True, sort appended results
-#     copy_stability
-#     """
-#     # Duplicate docstring so show up in docs
-
-#     def func(other=None, append=True, sort=True, copy_stability=True):
-#         """
-#         Add stability from collection to this collection
-
-#         Parameters
-#         ----------
-#         other : optional, optional
-#             if passed, copy stability from this collection to self, otherwise
-#             use `self`
-#         append: bool, default=True
-#             if True, append results to new frame
-#         sort: bool, default=True
-#             if True, sort appended results
-#         copy_stability
-#         """
-
-#         if (not append) and (not copy_stability):
-#             raise ValueError("one of append or copy_stability must be True")
-
-#         if other is None:
-#             other = self
-#         spin = other.spinodal
-#         bino = other.binodal
-#         if append:
-#             new = self.append(spin.appender).append(bino.appender)
-#             if sort:
-#                 new = new.sort_index()
-#         else:
-#             new = self.copy()
-#         if copy_stability:
-#             # TODO(wpk): fix this hack
-#             new._cache["spinodal"] = spin
-#             new._cache["binodal"] = bino
-#             # new.spinodal = spin
-#             # new.binodal = bino
-#         return new
-
-#     return func

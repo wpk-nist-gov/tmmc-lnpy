@@ -29,7 +29,6 @@ def phase_creator(ref):
         # MaskedlnPi objects, and should return
         # a list of phaseid
         tag_phases=None,
-        # tag_phases=tag_phases2
     )
 
 

@@ -13,8 +13,6 @@ import numpy as np
 import xarray as xr
 
 from ._compat import resources
-
-# from .lnpiseries import lnPiCollection
 from .segment import BuildPhasesBase, PhaseCreator
 from .utils import dataset_to_lnpimasked
 
@@ -50,10 +48,6 @@ def json_to_dict(basename: str) -> dict[str, Any]:
         fopen = gzip.open
     else:
         fopen = open  # type: ignore[assignment]
-
-    # path = Path(resources.files("lnpy.data").joinpath(basename))
-    # with fopen(path, "r") as f:  # pyright: ignore[reportCallIssue,reportArgumentType]
-    #     return json.load(f)  # type: ignore[no-any-return]
 
     with resources.as_file(
         resources.files("lnpy.data").joinpath(basename)
@@ -213,20 +207,3 @@ def hsmix_example() -> Example:
     )
 
     return Example(ref=ref, phase_creator=phase_creator, build_phases=None)
-
-
-# def watermof_example():
-#     def tag_phases(x):
-#         if len(x) > 2:
-#             raise ValueError("bad tag function")
-#         argmax0 = np.array([xx.local_argmax()[0] for xx in x])
-#         return np.where(argmax0 <= x[0].shape[0] / 2, 0, 1)
-
-#     ref = load_example_lnpimasked('watermof')
-
-#     phase_creator = PhaseCreator(
-#         nmax=2,
-#         nmax_peak=10,
-#         merge_kws={'efac': 0.8}
-
-#     )

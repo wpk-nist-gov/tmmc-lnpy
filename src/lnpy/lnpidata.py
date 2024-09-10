@@ -106,7 +106,6 @@ class lnPiArray:  # noqa: N801
 
         lnz = np.atleast_1d(lnz).astype(np.float64)
         data = np.array(data, copy=copy_if_needed(copy))
-        # assert data.ndim == len(lnz)
         if data.ndim != len(lnz):
             msg = f"Length of {lnz=} must be {data.ndim}"
             raise ValueError(msg)
@@ -276,7 +275,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
     ) -> None:
         lnz = np.atleast_1d(lnz).astype(np.float64)
 
-        # assert lnz.shape == base.lnz.shape
         if lnz.shape != base.lnz.shape:
             msg = f"{lnz.shape=} must be {base.lnz.shape}"
             raise ValueError(msg)
@@ -285,7 +283,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
             mask = np.full(base.data.shape, fill_value=False, dtype=bool)
         else:
             mask = np.array(mask, copy=copy_if_needed(copy), dtype=bool)
-        # assert mask.shape == base.data.shape
         if mask.shape != base.data.shape:
             msg = f"{mask.shape=} must be {base.data.shape}."
             raise ValueError(msg)
@@ -427,7 +424,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         out = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
         if phase is not None:
             out["phase"] = phase
-        # out.update(**self.state_kws)
         return out
 
     # Parameters for xlnPi
@@ -805,12 +801,3 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         from .ensembles import xCanonical
 
         return xCanonical(self)
-
-
-# --- Register accessors ---------------------------------------------------------------
-# lnPiMasked.register_accessor("xge", xge_accessor)
-# lnPiMasked.register_accessor("xce", xce_accessor)
-
-
-# reveal_type(lnPiMasked.list_from_labels)
-# reveal_type(lnPiMasked.xge)

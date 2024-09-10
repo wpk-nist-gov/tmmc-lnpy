@@ -31,7 +31,6 @@ def phase_creator(ref):
         # MaskedlnPi objects, and should return
         # a list of phaseid
         tag_phases=None,
-        # tag_phases=tag_phases2
     )
 
 
@@ -146,9 +145,3 @@ def test_nice_grid(obj, path_data) -> None:
     pd.testing.assert_frame_equal(other_course, test_course)
 
     pd.testing.assert_frame_equal(other_fine, test_fine)
-
-
-# def test_deprecation():
-#     from numpy import VisibleDeprecationWarning
-#     with pytest.warns(VisibleDeprecationWarning):
-#         import lnPi

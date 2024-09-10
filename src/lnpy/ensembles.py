@@ -27,10 +27,6 @@ if TYPE_CHECKING:
     from ._typing import MyNDArray, P, R, xArrayLike
     from ._typing_compat import IndexAny
 
-# from lnpy.lnpidata import lnPiMasked
-# from lnpy.lnpiseries import lnPiCollection
-
-
 # always check_use_cache here.
 cached_prop = cached.prop(check_use_cache=True)
 cached_meth = cached.meth(check_use_cache=True)
@@ -173,39 +169,32 @@ class xlnPiWrapper:  # noqa: N801
 
 
 # def xr_name(
-#     long_name: str | None = None,
-#     name: str | None = None,
-#     unstack: bool = True,
+#     long_name: str | None = None,  # noqa: ERA001
+#     name: str | None = None,  # noqa: ERA001
+#     unstack: bool = True,  # noqa: ERA001
 #     **kws: Any,
 # ) -> Callable[
-#     [C_Ensemble[T_Ensemble, P, xr.DataArray]], C_Ensemble[T_Ensemble, P, xr.DataArray]
+#     [C_Ensemble[T_Ensemble, P, xr.DataArray]], C_Ensemble[T_Ensemble, P, xr.DataArray]  # noqa: ERA001
 # ]:
 #     """Decorator to add name, longname to xarray output"""
-
 #     def decorator(
 #         func: C_Ensemble[T_Ensemble, P, xr.DataArray],
 #     ) -> C_Ensemble[T_Ensemble, P, xr.DataArray]:
-#         _name = func.__name__.lstrip("_") if name is None else name
-
+#         _name = func.__name__.lstrip("_") if name is None else name  # noqa: ERA001
 #         @wraps(func)
 #         def wrapper(
 #             self: T_Ensemble, /, *args: P.args, **kwargs: P.kwargs
 #         ) -> xr.DataArray:
-#             out = func(self, *args, **kwargs).rename(_name)
-#             attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
-
+#             out = func(self, *args, **kwargs).rename(_name)  # noqa: ERA001
+#             attrs = dict(getattr(self, "_standard_attrs", {}), **kws)  # noqa: ERA001
 #             if long_name is not None:
-#                 attrs["long_name"] = long_name
-#             out = out.assign_attrs(**attrs)
+#                 attrs["long_name"] = long_name  # noqa: ERA001
+#             out = out.assign_attrs(**attrs)  # noqa: ERA001
 #             if unstack and self._xarray_unstack:
-#                 out = out.unstack()
-
-#             return out
-
-#         return wrapper
-
-
-#     return decorator
+#                 out = out.unstack()  # noqa: ERA001
+#             return out  # noqa: ERA001
+#         return wrapper  # noqa: ERA001
+#     return decorator  # noqa: ERA001
 # Go with the below because if issues with above and pyright
 def xr_name(
     long_name: str | None = None,
@@ -418,11 +407,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
 
             prop = p.extra_kws[prop]
 
-        # if not isinstance(prop, (np.ndarray, xr.DataArray)):
-        #     raise ValueError(
-        #         f"prop must be np.ndarray or xr.DataArray, not {type(prop)}"
-        #     )
-
         return prop
 
     def _array_or_callable_to_xarray(
@@ -436,7 +420,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         elif allow_extra_kws:
             x = self._get_prop_from_extra_kws(func_or_array)
         else:
-            # assert not isinstance(func_or_array, str)
             if isinstance(func_or_array, str):
                 raise TypeError
             x = func_or_array
@@ -486,11 +469,11 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     # def _central_moment_bar(
     #     self,
     #     x,
-    #     y=None,
-    #     xmom=2,
-    #     ymom=None,
-    #     xmom_dim="xmom",
-    #     ymom_dim="ymom",
+    #     y=None,  # noqa: ERA001
+    #     xmom=2,  # noqa: ERA001
+    #     ymom=None,  # noqa: ERA001
+    #     xmom_dim="xmom",  # noqa: ERA001
+    #     ymom_dim="ymom",  # noqa: ERA001
     #     *args,
     #     **kwargs,
     # ):
@@ -502,24 +485,18 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     #         \sum_N \Pi(N)  (\bar{x}(N) - \langle \bar{x}(N) \rangle))^n
 
     #     """
-
     #     def _get_dx(xx, mom, mom_dim):
-    #         xx = self._array_or_callable_to_xarray(xx, *args, **kwargs)
+    #         xx = self._array_or_callable_to_xarray(xx, *args, **kwargs)  # noqa: ERA001
     #         if isinstance(mom, int):
-    #             mom = [mom]
+    #             mom = [mom]  # noqa: ERA001
+    #         mom = xr.DataArray(mom, dims=mom_dim, coords={mom_dim: mom})  # noqa: ERA001
+    #         return (xx - self._mean_pi(xx)) ** mom  # noqa: ERA001
 
-    #         mom = xr.DataArray(mom, dims=mom_dim, coords={mom_dim: mom})
-
-    #         return (xx - self._mean_pi(xx)) ** mom
-
-    #     dx = _get_dx(x, xmom, xmom_dim)
-
+    #     dx = _get_dx(x, xmom, xmom_dim)  # noqa: ERA001
     #     if y is not None:
-    #         dy = _get_dx(y, ymom, ymom_dim)
-
-    #         dx = dx * dy
-
-    #     return self._mean_pi(dx)
+    #         dy = _get_dx(y, ymom, ymom_dim)  # noqa: ERA001
+    #         dx = dx * dy  # noqa: ERA001
+    #     return self._mean_pi(dx)  # noqa: ERA001
 
     def var_pi(
         self,
@@ -579,7 +556,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         r"""Average molfrac for each components :math:`{\bf x} = \overline{{\bf N}} / N`"""
         x = self.nvec
         return x / x.sum(self.dims_comp)
-        # return self.nvec.pipe(lambda x: x / x.sum(self.dims_comp))
 
     @cached_prop
     @xr_name(r"$var[{\bf n}(\mu,V,T)]$")
@@ -598,31 +574,17 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     def dens(self) -> xr.DataArray:
         r"""Density of each component :math:`{\bf \rho} = \overline{{\bf N}} / V`"""
         # NOTE: keep this here because of some internal calculations
-        # return self.nvec.pipe(lambda x: x / x["volume"])
         return self.nvec / self.volume
 
     @property
     @xr_name(r"$\rho(\mu,V,T)$", standard_name="total_density")
     def dens_tot(self) -> xr.DataArray:
         r"""Total density :math:`\overline{N} / V`"""
-        # return self.ntot.pipe(lambda x: x / x["volume"])
         return self.ntot / self.volume
 
     def max(self) -> xr.DataArray:
         r""":math:`\max_N \ln \Pi(N)`"""
         return self.lnpi().max(self.dims_n)
-
-    # def argmax(self, *args, **kwargs):
-    #     return np.array(
-    #         [x.local_argmax(*args, **kwargs) for x in self._parent])
-
-    # @xr_name('distance from upper edge')
-    # def edge_distance(self, ref, *args, **kwargs):
-    #     """distance from endpoint"""
-
-    #     return xr.DataArray([x.edge_distance(ref) for x in self._parent],
-    #                         dims=self.dims_rec,
-    #                         coords=self._rec_coords)
 
     @cached_meth
     def _argmax_indexer(self) -> tuple[MyNDArray, ...]:
@@ -666,7 +628,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
 
         # NOTE : This assumes each n value corresponds to index
         # alternatively, could put through filter like
-        # coords = {k : out[k].isel(**{k : v}) for k, v in self._argmax_index_dict.items()}
+        # coords = {k : out[k].isel(**{k : v}) for k, v in self._argmax_index_dict.items()}  # noqa: ERA001
 
         if add_n_coords:
             out = out.assign_coords(self._argmax_indexer_dict)  # pyright: ignore[reportUnknownMemberType]
@@ -750,18 +712,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     @xr_name(r"${\rm PE}(\mu,V,T)$", standard_name="potential_energy")
     def PE(self) -> xr.DataArray:
         r"""Potential energy :math:`\overline{PE}`"""
-
-        # if betaPE available, use that:
-
         return self.mean_pi("PE", allow_extra_kws=True)
-
-        # PE = self.first.extra_kws.get("PE", None)
-
-        # if PE is None:
-        #     raise AttributeError('must set "PE" in "extra_kws" of lnPiMasked')
-        # else:
-        #     PE = xr.DataArray(PE, dims=self.dims_n)
-        # return self._mean_pi(PE)
 
     @xr_name(r"$\beta F(\mu,V,T)$", standard_name="helmholtz_free_energy")
     def betaF_alt(
@@ -785,7 +736,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         """
         if correction:
             betaF_can = betaF_can + self.lnpi_norm  # noqa: PLR6104
-        # return (self.pi_norm * betaF_can).sum(self.dims_n)
         return self._mean_pi(betaF_can)
 
     ################################################################################
@@ -931,8 +881,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
     @xr_name(r"$\beta G(\mu,V,T)$", standard_name="Gibbs_free_energy")
     def betaG(self) -> xr.DataArray:
         r"""Scaled Gibbs free energy :math:`\beta G = \sum_i \beta \mu_i \overline{N}_i`."""
-        # return self.betamu.pipe(lambda betamu: (betamu * self.nvec).sum(betamu.dims_comp))
-        # return (self.betamu * self.nvec).sum(self.dims_comp)
         return xr_dot(  # type: ignore[no-any-return]
             self.betamu, self.nvec, dim=self.dims_comp, **self._xarray_dot_kws
         )
@@ -975,12 +923,6 @@ class xGrandCanonical:  # noqa: PLR0904,N801
         r"""Scaled entropy per particle :math:`S / (N k_{\rm B})`."""
 
         return self.S(lnpi_zero, ndim) / self.ntot
-
-
-# NOTE: Using function accessor to override the docstring
-# def xce_accessor(parent: HasCache) -> xCanonical:
-#     """Accessor to :class:`~lnpy.ensembles.xCanonical`"""
-#     return xCanonical(parent)
 
 
 class xCanonical:  # noqa: N801
@@ -1041,11 +983,10 @@ class xCanonical:  # noqa: N801
         if lnpi_zero is None:
             # TODO(wpk): Take another look at this...
             lnpi_zero = self._parent.data.ravel()[0]
-            # lnpi_zero = x.lnpi_zero
 
         return (
             (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
-            # pyright: ignore[reportUnknownMemberType]
+              # pyright: ignore[reportOperatorIssue]
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)

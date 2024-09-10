@@ -141,7 +141,6 @@ def get_lnz_min(
         left = collection.mloc[ss.index[[-1]]]
     else:
         # TODO(wpk): Need to make collection work better.  Might need to just have a single class for everything...
-        # reveal_type(collection.mloc[s.index[[0]]])
         new_lnz = collection.mloc[s.index[[0]]]._get_lnz(lnz_idx)
         dlnz_left = dlnz
         for _i in range(ntry):
@@ -423,7 +422,6 @@ def limited_collection(
     lnz_max_kws: Mapping[str, Any] | None = None,
     ref: lnPiMasked | None = None,
     build_kws: Mapping[str, Any] | None = None,
-    # build_stability_kws: Mapping[str, Any] | None = None,
     nmax: int | None = None,
     xarray_output: bool = True,
     collection_kws: Mapping[str, Any] | None = None,

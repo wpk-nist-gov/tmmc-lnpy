@@ -295,10 +295,6 @@ def test_combine_keep_first_single_table(table: pd.DataFrame) -> None:
     )
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
 
-    (_ for _ in [ds_expand])
-    # reveal_type(ya)
-    # reveal_type(combine.keep_first(ya))
-
     ds_stack = ds.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
     ds_out = combine.keep_first(ds_stack, state_name="x")
     xr.testing.assert_allclose(ds, ds_out.drop_vars("window"))
@@ -319,8 +315,6 @@ def test_combine_keep_first_single_table(table: pd.DataFrame) -> None:
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_expanded = da.expand_dims("window")
-    # reveal_type(da_expanded)
-    # reveal_type(combine.keep_first(da_expanded, state_name="x"))
     da_out = combine.keep_first(da_expanded, state_name="x")
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
@@ -328,8 +322,6 @@ def test_combine_keep_first_single_table(table: pd.DataFrame) -> None:
         combine.concat_windows([da_expanded], coord_names="x"), state_name="x"
     )
     (_ for _ in [da_expanded])
-    # reveal_type(yy)
-    # reveal_type(combine.keep_first(yy, state_name="x"))
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013

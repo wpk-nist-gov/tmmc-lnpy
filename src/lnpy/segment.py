@@ -257,24 +257,6 @@ def peak_local_max_adaptive(
     return cast("MyNDArray", out)
 
 
-# TODO(wpk): create these for below
-# class Peak_Kws(TypedDict, total=False):
-#     min_distance: Sequence[int]
-#     style: PeakStyle
-#     threshold_rel: float
-#     threshold_abs: float
-#     num_peaks_max: int
-#     connectivity: int
-#     errors: PeakError
-#     # peak_local_max options:
-#     exclude_border: int | tuple[int, ...] | bool
-#     num_peaks: int
-#     footprint: MyNDArray
-#     p_norm: float
-
-# class Watershed_Kws(TypedDict, total=False):
-
-
 @docfiller_local
 class Segmenter:
     """
@@ -911,7 +893,6 @@ class BuildPhasesBase:
         return self._phase_creator
 
     def _set_x(self, x: list[float | None]) -> None:
-        # assert sum([x is None for x in x]) == 1
         if sum(x is None for x in x) != 1:
             msg = f"{x=} must have a single element which is None.  This will be the dimension varied."
             raise ValueError(msg)
@@ -929,7 +910,6 @@ class BuildPhasesBase:
         pass
 
     def _get_lnz(self, lnz_index: float) -> MyNDArray:
-        # to be implemented in child class
         raise NotImplementedError
 
     @overload
@@ -993,7 +973,6 @@ class BuildPhasesBase:
         )
 
 
-# from .utils import get_lnz_iter
 @docfiller_local
 class BuildPhases_mu(BuildPhasesBase):  # noqa: N801
     """

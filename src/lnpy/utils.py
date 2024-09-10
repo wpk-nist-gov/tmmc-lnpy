@@ -114,21 +114,6 @@ def get_tqdm_build(
     return get_tqdm(seq, len_min="tqdm_len_build", leave=leave, **kwargs)
 
 
-# get_tqdm_calc = partial(get_tqdm, len_min="tqdm_len_calc")
-# get_tqdm_build = partial(get_tqdm, len_min="tqdm_len_build")
-
-# def get_tqdm_calc(seq, len_min=None, leave=None, **kwargs):
-#     if len_min is None:
-#         len_min = OPTIONS['tqdm_len_calc']
-#     return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
-
-
-# def get_tqdm_build(seq, len_min=None, leave=None, **kwargs):
-#     if len_min is None:
-#         len_min = OPTIONS['tqdm_len_build']
-#     return _get_tqdm(seq, len_min=len_min, leave=leave, **kwargs)
-
-
 # --------------------------------------------------
 # JOBLIB stuff
 @lru_cache
@@ -339,16 +324,6 @@ def mask_change_convention(
     if convention_in != convention_out:
         mask = ~mask
     return mask
-
-
-# m0: list[MyNDArray]
-# reveal_type(masks_change_convention(m0))
-
-# m1: list[None]
-# reveal_type(masks_change_convention(m1))
-
-# m2: list[MyNDArray | None]
-# reveal_type(masks_change_convention(m2))
 
 
 @overload
@@ -583,34 +558,6 @@ def get_lnz_iter(lnz: Iterable[float | None], x: ArrayLike) -> MyNDArray:
 ##################################################
 # utilities
 ##################################################
-
-
-# def sort_lnPis(values: Sequence[lnPiMasked], comp=0) -> list[lnPiMasked]:
-#     """
-#     Sort list of lnPi  that component `comp` mole fraction increases
-
-#     Parameters
-#     ----------
-#     values : list of lnPiMasked
-
-#     comp : int, default=0
-#      component to sort along
-
-#     Returns
-#     -------
-#     output : list of lnPiMasked
-#         Objects in sorted order.
-#     """
-
-#     molfrac_comp = np.array([x.molfrac[comp] for x in values])
-
-#     order = np.argsort(molfrac_comp)
-
-#     output = [values[i] for i in order]
-
-#     return output
-
-
 def distance_matrix(
     mask: ArrayLike, convention: MaskConvention = "image"
 ) -> NDArray[np.float64]:

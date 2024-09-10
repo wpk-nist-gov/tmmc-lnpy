@@ -57,11 +57,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
             kwargs.setdefault("fill_value", np.nan)
 
         obj = np.ma.array(data, **kwargs).view(cls)
-        # fv = kwargs.get('fill_value', None) or getattr(data, 'fill_value', None)
-        # if fv is None:
-        #     fv = np.nan
-        # obj.set_fill_value(fv)
-
         # make sure to broadcast mask if it is just False
         if obj.mask is False:
             obj.mask = False
@@ -116,7 +111,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         out = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
         if phase is not None:
             out["phase"] = phase
-        # out.update(**self.state_kws)
         return out
 
     def _lnpi_tot(self, fill_value=None):
@@ -193,27 +187,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
 
     def edge_distance(self, ref, *args, **kwargs):
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]
-
-    # make these top level
-    # @cached.prop
-    # @property
-    # def pi(self):
-    #     """
-    #     basic pi = exp(lnpi)
-    #     """
-    #     pi = np.exp(self - self.local_max())
-    #     return pi
-
-    # @cached.prop
-    # def pi_sum(self):
-    #     return self.pi.sum()
-
-    # @cached.meth
-    # def betaOmega(self, lnpi_zero=None):
-    #     if lnpi_zero is None:
-    #         lnpi_zero = self.data.ravel()[0]
-    #     zval = lnpi_zero - self.local_max()
-    #     return  (zval - np.log(self.pi_sum))
 
     def __setitem__(self, index, value) -> None:
         self._clear_cache()
@@ -321,24 +294,9 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
 
         dlnz = new.lnz - self.lnz
 
-        # s = _get_shift(self.shape,dmu)*self.beta
-        # get shift
-        # i.e., N * (mu_1 - mu_0)
-        # note that this is (for some reason)
-        # faster than doing the (more natural) options:
-        # N = self.ncoords.values
-        # shift = 0
-        # for i, m in enumerate(dmu):
-        #     shift += N[i,...] * m
-        # or
-        # shift = (self.ncoords.values.T * dmu).sum(-1).T
-
         shift = np.zeros([], dtype=float)
         for _i, (s, m) in enumerate(zip(self.shape, dlnz)):
             shift = np.add.outer(shift, np.arange(s) * m)
-
-        # scale by beta
-        # shift *= self.beta
 
         new.data[...] += shift
         new.adjust(zeromax=zeromax, pad=pad, inplace=True)
@@ -420,16 +378,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         ma, opt = state
         super().__setstate__(ma)
         self._optinfo.update(opt)  # type: ignore
-
-    #        opt = self._optinfo
-    #        return ma, opt
-    #         # ma = self.view(np.ma.MaskedArray)
-    #         # info = self._optinfo
-    #         # return ma, info
-    # self._optinfo.update(opt)
-    # ma, info = state
-    #         # super(MaskedlnPi, self).__setstate__(ma)
-    #         # self._optinfo.update(info)
 
     @classmethod
     def from_table(
@@ -560,8 +508,3 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     @cached.prop
     def xce(self) -> xCanonical:
         return xCanonical(self)  # type: ignore
-
-
-# --- register accessors ---------------------------------------------------------------
-# MaskedlnPiLegacy.register_accessor("xge", xge_accessor)
-# MaskedlnPiLegacy.register_accessor("xce", xce_accessor)

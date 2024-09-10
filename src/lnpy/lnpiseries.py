@@ -283,8 +283,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             self._xarray_output = xarray_output
         if unstack is not None:
             self._xarray_unstack = unstack
-        # update index name:
-        # self._series.index.name = self._concat_dim
 
         if isinstance(data, self.__class__):
             x = data
@@ -322,7 +320,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         first = series.iloc[0]
         state_kws = first.state_kws
         shape = first.shape
-        # _base  = first._base
 
         for lnpi in series:
             if lnpi.state_kws != state_kws or lnpi.shape != shape:
@@ -562,7 +559,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         as_index: bool = True,
         sort: bool = True,
         group_keys: bool = True,
-        # squeeze=False,
         observed: bool = False,
         dropna: bool = True,
         wrap: bool = False,
@@ -586,7 +582,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             as_index=as_index,
             sort=sort,
             group_keys=group_keys,
-            # squeeze=squeeze,
             observed=observed,
             dropna=dropna,
         )
@@ -815,9 +810,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return len(self._series)
 
     def _lnpi_tot(self, fill_value: float | None = None) -> MyNDArray:
-        # old method
-        # return np.stack([x.filled() for x in self])
-
         # new method
         # this is no faster than the original
         # but makes clear where the time is being spent
@@ -828,10 +820,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         for i, x in enumerate(seq):
             out[i, ...] = x
         return out
-
-    # @property
-    # def _lnpi_0_tot(self):
-    #     return np.array([x.data.ravel()[0] for x in self])
 
     @property
     def _lnz_tot(self) -> MyNDArray:
@@ -912,7 +900,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         ref: lnPiMasked | None = None,
         build_kws: Mapping[str, Any] | None = None,
         nmax: int | None = None,
-        # concat_kws: Mapping[str, Any] |None=None,
         base_class: str | type = "first",
         **kwargs: Any,
     ) -> Self:
@@ -1206,15 +1193,4 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             # TODO(wpk): fix this hack
             new._cache["spinodal"] = spin
             new._cache["binodal"] = bino
-            # new.spinodal = spin
-            # new.binodal = bino
         return new
-
-
-################################################################################
-# Accessors for ColleectionlnPi
-# lnPiCollection.register_accessor("xge", xge_accessor)
-# lnPiCollection.register_accessor("wfe", wfe_accessor)
-# lnPiCollection.register_accessor("wfe_phases", wfe_phases_accessor)
-# lnPiCollection.register_accessor("wlnPi", wlnPi_accessor)
-# lnPiCollection.register_accessor("wlnPi_single", wlnPi_single_accessor)

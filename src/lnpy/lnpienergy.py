@@ -97,18 +97,6 @@ def find_boundaries_overlap(
 ) -> dict[tuple[int, int], MyNDArray | None]: ...
 
 
-# @overload
-# def find_boundaries_overlap(
-#     masks: list[MyNDArray],
-#     *,
-#     boundaries: None=...,
-#     flag_none: bool=...,
-#     mode: str=...,
-#     connectivity: int | None = ...,
-#     method: str = ...,
-# ) -> dict[tuple[int, int] | tuple[int, int, int], MyNDArray | None ]: ...
-
-
 @docfiller.decorate
 def find_boundaries_overlap(
     masks: Sequence[MyNDArray],
@@ -159,7 +147,6 @@ def find_boundaries_overlap(
     if boundaries is None:
         boundaries = find_boundaries(masks, mode=mode, connectivity=connectivity)
 
-    # assert n == len(boundaries)
     if n != len(boundaries):
         msg = f"{boundaries=} must have length {n}."
         raise ValueError(msg)
@@ -840,38 +827,3 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
         if len(nebrs) == 0:
             return np.inf
         return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").to_numpy()
-
-
-# @lnPiCollection.decorate_accessor("wfe")
-# def wfe_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
-#     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wfe`."""
-#     return wFreeEnergyCollection(parent)
-
-
-# @lnPiCollection.decorate_accessor("wfe_phases")
-# def wfe_phases_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
-#     """Accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wfe_phases`."""
-#     return wFreeEnergyPhases(parent)
-
-
-# create alias accessors
-# @lnPiCollection.decorate_accessor("wlnPi")
-# def wlnPi_accessor(parent: lnPiCollection) -> wFreeEnergyCollection:
-#     """
-#     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyCollection` from `self.wlnPi`.
-
-#     Alias to `self.wfe`
-#     """
-#     warn("Using `wlnPi` accessor is deprecated.  Please use `wfe` accessor instead")
-#     return parent.wfe
-
-
-# @lnPiCollection.decorate_accessor("wlnPi_single")
-# def wlnPi_single_accessor(parent: lnPiCollection) -> wFreeEnergyPhases:
-#     """
-#     Deprecated accessor to :class:`~lnpy.lnpienergy.wFreeEnergyPhases` from `self.wlnPi_single`.
-
-#     Alias to `self.wfe_single`
-#     """
-#     warn("Using `wlnPi_single is deprecated.  Please use `self.wfe_phases` instead")
-#     return parent.wfe_phases

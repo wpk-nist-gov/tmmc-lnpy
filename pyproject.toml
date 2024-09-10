@@ -52,7 +52,7 @@ dependencies = [
     "xarray",
 ]
 optional-dependencies.dev = [
-    "tmmc-lnpy[dev-extras,test,typing,pipxrun,mypy,viz,resample,nbval]",
+    "tmmc-lnpy[dev-extras,test,typing,uvxrun,mypy,viz,resample,nbval]",
 ]
 optional-dependencies.dev-complete = [
     "tmmc-lnpy[dev,tools]",
@@ -76,23 +76,10 @@ optional-dependencies.docs = [
     "tmmc-lnpy[viz]",
 ]
 optional-dependencies.mypy = [
-    "mypy>=1.11.1",
+    "mypy>=1.11.2",
 ]
 optional-dependencies.nbval = [
     "nbval",
-]
-optional-dependencies.pipxrun = [
-    # Anything needed to run tools/pipxrun.py
-    "packaging",
-]
-optional-dependencies.pipxrun-tools = [
-    # these used solely for specking tools to be used with tools/pipxrun.py
-    "conda-lock>=2.5.5",
-    "grayskull>=2.5.3",
-    "nbqa>=1.8.4",
-    "pyright>=1.1.374",
-    "tmmc-lnpy[mypy]",
-    "twine>=5.0.0",
 ]
 optional-dependencies.resample = [
     "cmomy>=0.16.0",
@@ -104,15 +91,27 @@ optional-dependencies.test = [
     "pytest-xdist",
 ]
 optional-dependencies.tools = [
-    "pipx",
     "pre-commit",
     "scriv",
 ]
 optional-dependencies.typing = [
     "pandas-stubs",
     "pytest",
-    "tmmc-lnpy[pipxrun]",
+    "tmmc-lnpy[uvxrun]",
     "types-tqdm",
+]
+optional-dependencies.uvxrun = [
+    # Anything needed to run tools/uvxrun.py
+    "packaging",
+]
+optional-dependencies.uvxrun-tools = [
+    # these used solely for specking tools to be used with tools/uvxrun.py
+    "conda-lock>=2.5.5",
+    "grayskull>=2.5.3",
+    "nbqa>=1.8.4",
+    "pyright>=1.1.379",
+    "tmmc-lnpy[mypy]",
+    "twine>=5.0.0",
 ]
 optional-dependencies.viz = [
     "ipywidgets",
@@ -195,7 +194,6 @@ lint.ignore = [
     # * Other
     "E501", # - line too long - let formatter fix this
     "E731", # - do not assign a lambda expression, use a def
-    "ERA",  # - eradicate (want to keep some stuff)
     "FBT",  # - bools are ok
     "ISC",  # - flake8-implicit-str-concat
     # * Allow non top level imports
@@ -206,6 +204,7 @@ lint.ignore = [
 lint.extend-ignore = [
     # * ignore complexity for now
     "C901",
+    # "ERA",     # - eradicate (want to keep some stuff)
     # "ANN",     # - Annotations (just use mypy/pyright)
     # * pylint
     # "PLR2004", # - numbers in comparison sometimes ok
@@ -243,6 +242,7 @@ lint.per-file-ignores."tests/*.py" = [
 lint.per-file-ignores."tools/*.py" = [
     "A",
     "D102",
+    "DOC402",
     "S",
     "SLF001",
 ]
@@ -490,8 +490,8 @@ reqs = [
 base = false
 style = "requirements"
 
-[tool.pyproject2conda.envs.pipxrun-tools]
-extras = "pipxrun-tools"
+[tool.pyproject2conda.envs.uvxrun-tools]
+extras = "uvxrun-tools"
 base = false
 style = "requirements"
 
@@ -534,9 +534,19 @@ python = [
     "3.12",
 ]
 
+# * pip-tools (keeping for legacy) ---------------------------------------------
+
 [tool.pip-tools]
 allow-unsafe = true
 strip-extras = true
+
+# * uv -------------------------------------------------------------------------
+
+[tool.uv]
+managed = false
+
+[tool.uv.pip]
+annotation-style = "line"
 
 # * Other tools ----------------------------------------------------------------
 
