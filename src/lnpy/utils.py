@@ -15,8 +15,9 @@ from .docstrings import docfiller
 from .options import OPTIONS
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import Any, Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+    from typing import Any, Callable
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray

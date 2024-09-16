@@ -10,7 +10,8 @@ from .lnpiseries import lnPiCollection
 from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
-    from typing import Any, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
+    from typing import Any
 
     import xarray as xr
     from numpy.typing import ArrayLike

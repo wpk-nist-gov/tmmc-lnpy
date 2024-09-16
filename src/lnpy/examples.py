@@ -17,7 +17,8 @@ from .segment import BuildPhasesBase, PhaseCreator
 from .utils import dataset_to_lnpimasked
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator, Literal, Sequence
+    from collections.abc import Iterator, Sequence
+    from typing import Any, Literal
 
     from ._typing import MyNDArray
     from .lnpidata import lnPiMasked
@@ -49,9 +50,10 @@ def json_to_dict(basename: str) -> dict[str, Any]:
     else:
         fopen = open  # type: ignore[assignment]
 
-    with resources.as_file(
-        resources.files("lnpy.data").joinpath(basename)
-    ) as path, fopen(path, "r") as f:
+    with (
+        resources.as_file(resources.files("lnpy.data").joinpath(basename)) as path,
+        fopen(path, "r") as f,
+    ):
         return json.load(f)  # type: ignore[no-any-return]
 
 

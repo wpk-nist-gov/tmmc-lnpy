@@ -19,7 +19,8 @@ from .utils import get_tqdm_calc as get_tqdm
 from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable, Literal, Sequence, Union
+    from collections.abc import Iterable, Sequence
+    from typing import Any, Literal, Union
 
     from ._typing import MaskConvention, MyNDArray
     from ._typing_compat import IndexAny, Self

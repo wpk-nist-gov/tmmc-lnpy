@@ -19,7 +19,8 @@ from .lnpiseries import lnPiCollection
 from .utils import dim_to_suffix_dataset
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Hashable, Mapping, Sequence
+    from collections.abc import Hashable, Mapping, Sequence
+    from typing import Any, Callable
 
     import pandas as pd
     from numpy.typing import ArrayLike
@@ -986,7 +987,7 @@ class xCanonical:  # noqa: N801
 
         return (
             (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
-              # pyright: ignore[reportOperatorIssue]
+            # pyright: ignore[reportOperatorIssue]
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)

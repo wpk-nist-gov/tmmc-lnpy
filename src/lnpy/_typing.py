@@ -5,14 +5,12 @@ Typing definitions for :mod:`lnpy`
 
 from __future__ import annotations
 
+from collections.abc import Collection, Hashable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Hashable,
     Literal,
-    Sequence,
     TypeVar,
     Union,
 )

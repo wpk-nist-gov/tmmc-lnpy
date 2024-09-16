@@ -25,7 +25,8 @@ from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
+    from typing import Any, Literal
 
     from numpy.typing import ArrayLike
 

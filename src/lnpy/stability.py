@@ -17,7 +17,8 @@ from ._compat import rootresults
 from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable, Literal, Mapping
+    from collections.abc import Iterable, Mapping
+    from typing import Any, Literal
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 

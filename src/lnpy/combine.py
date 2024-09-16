@@ -8,7 +8,7 @@ Routines to combine :math:`\ln \Pi` data (:mod:`~lnpy.combine`)
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Iterator, TypeVar, cast, overload
+from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,8 @@ from .docstrings import docfiller
 from .utils import peek_at
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Iterable, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
+    from typing import Any, Callable
 
     from numpy.typing import NDArray
 

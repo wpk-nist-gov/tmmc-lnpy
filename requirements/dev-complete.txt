@@ -8,7 +8,7 @@
 # Instead edit the corresponding pyproject.toml file.
 #
 bottleneck
-cmomy>=0.16.0
+cmomy>=0.17.0
 importlib-resources;python_version<"3.10"
 ipykernel
 ipython

@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from typing import Any, Hashable, Iterable
+    from collections.abc import Hashable, Iterable
+    from typing import Any
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 

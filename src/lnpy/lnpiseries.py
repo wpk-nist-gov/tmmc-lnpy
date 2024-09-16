@@ -23,16 +23,12 @@ from .utils import labels_to_masks, masks_to_labels
 from .utils import parallel_map_build as parallel_map
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from typing import (
         Any,
         Callable,
         Final,
-        Hashable,
-        Iterable,
-        Iterator,
         Literal,
-        Mapping,
-        Sequence,
     )
 
     from numpy.typing import ArrayLike, DTypeLike

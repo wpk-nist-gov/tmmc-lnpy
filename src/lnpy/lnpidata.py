@@ -8,7 +8,7 @@ lnPi data classes and routines (:mod:`~lnpy.lnpidata`)
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -20,8 +20,9 @@ from .extensions import AccessorMixin
 from .utils import labels_to_masks, masks_change_convention
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from pathlib import Path
-    from typing import Any, Mapping, Sequence
+    from typing import Any
 
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike, NDArray

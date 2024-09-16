@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ import lnpy
 import lnpy.stability
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from lnpy.lnpidata import lnPiMasked
 
 path_data = Path(__file__).parent / "../examples/archived/HS_mix"
