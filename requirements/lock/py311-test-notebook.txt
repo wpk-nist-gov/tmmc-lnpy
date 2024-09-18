@@ -3,73 +3,74 @@
 appnope==0.1.4            # via ipykernel
 asttokens==2.4.1          # via stack-data
 attrs==24.2.0             # via jsonschema, referencing
-bottleneck==1.4.0         # via -r requirements/test-notebook.txt
+bottleneck==1.4.2         # via -r requirements/test-notebook.txt
 comm==0.2.2               # via ipykernel, ipywidgets
 contourpy==1.3.0          # via matplotlib
-coverage==7.6.1           # via nbval, pytest-cov
+coverage==7.6.4           # via nbval, pytest-cov
 cycler==0.12.1            # via matplotlib
-debugpy==1.8.5            # via ipykernel
+debugpy==1.8.7            # via ipykernel
 decorator==5.1.1          # via ipython
 execnet==2.1.1            # via pytest-xdist
 executing==2.1.0          # via stack-data
 fastjsonschema==2.20.0    # via nbformat
-fonttools==4.53.1         # via matplotlib
-imageio==2.35.1           # via scikit-image
+fonttools==4.54.1         # via matplotlib
+imageio==2.36.0           # via scikit-image
 iniconfig==2.0.0          # via pytest
 ipykernel==6.29.5         # via nbval
-ipython==8.27.0           # via ipykernel, ipywidgets
+ipython==8.29.0           # via ipykernel, ipywidgets
 ipywidgets==8.1.5         # via -r requirements/test-notebook.txt
 jedi==0.19.1              # via ipython
 joblib==1.4.2             # via -r requirements/test-notebook.txt
 jsonschema==4.23.0        # via nbformat
-jsonschema-specifications==2023.12.1  # via jsonschema
-jupyter-client==8.6.2     # via ipykernel, nbval
-jupyter-core==5.7.2       # via ipykernel, jupyter-client, nbformat
+jsonschema-specifications==2024.10.1  # via jsonschema
+jupyter-client==8.6.3     # via ipykernel, nbclient, nbval
+jupyter-core==5.7.2       # via ipykernel, jupyter-client, nbclient, nbformat
 jupyterlab-widgets==3.0.13  # via ipywidgets
 kiwisolver==1.4.7         # via matplotlib
 lazy-loader==0.4          # via scikit-image, -r requirements/test-notebook.txt
 matplotlib==3.9.2         # via -r requirements/test-notebook.txt
 matplotlib-inline==0.1.7  # via ipykernel, ipython
 module-utilities==0.9.0   # via -r requirements/test-notebook.txt
-nbformat==5.10.4          # via nbval
+nbclient==0.10.0          # via -r requirements/test-notebook.txt
+nbformat==5.10.4          # via nbclient, nbval
 nbval==0.11.0             # via -r requirements/test-notebook.txt
 nest-asyncio==1.6.0       # via ipykernel
-networkx==3.3             # via scikit-image
-numpy==2.1.1              # via bottleneck, contourpy, imageio, matplotlib, pandas, scikit-image, scipy, tifffile, xarray, -r requirements/test-notebook.txt
+networkx==3.4.2           # via scikit-image
+numpy==2.1.3              # via bottleneck, contourpy, imageio, matplotlib, pandas, scikit-image, scipy, tifffile, xarray, -r requirements/test-notebook.txt
 packaging==24.1           # via ipykernel, lazy-loader, matplotlib, pytest, pytest-sugar, scikit-image, xarray
-pandas==2.2.2             # via xarray
+pandas==2.2.3             # via xarray
 parso==0.8.4              # via jedi
 pexpect==4.9.0            # via ipython
-pillow==10.4.0            # via imageio, matplotlib, scikit-image
-platformdirs==4.3.3       # via jupyter-core
+pillow==11.0.0            # via imageio, matplotlib, scikit-image
+platformdirs==4.3.6       # via jupyter-core
 pluggy==1.5.0             # via pytest
-prompt-toolkit==3.0.47    # via ipython
-psutil==6.0.0             # via ipykernel
+prompt-toolkit==3.0.48    # via ipython
+psutil==6.1.0             # via ipykernel
 ptyprocess==0.7.0         # via pexpect
 pure-eval==0.2.3          # via stack-data
 pygments==2.18.0          # via ipython
-pyparsing==3.1.4          # via matplotlib
+pyparsing==3.2.0          # via matplotlib
 pytest==8.3.3             # via nbval, pytest-cov, pytest-sugar, pytest-xdist, -r requirements/test-notebook.txt
-pytest-cov==5.0.0         # via -r requirements/test-notebook.txt
+pytest-cov==6.0.0         # via -r requirements/test-notebook.txt
 pytest-sugar==1.0.0       # via -r requirements/test-notebook.txt
 pytest-xdist==3.6.1       # via -r requirements/test-notebook.txt
 python-dateutil==2.9.0.post0  # via jupyter-client, matplotlib, pandas
 pytz==2024.2              # via pandas
 pyzmq==26.2.0             # via ipykernel, jupyter-client
 referencing==0.35.1       # via jsonschema, jsonschema-specifications
-rpds-py==0.20.0           # via jsonschema, referencing
+rpds-py==0.20.1           # via jsonschema, referencing
 scikit-image==0.24.0      # via -r requirements/test-notebook.txt
 scipy==1.14.1             # via scikit-image, -r requirements/test-notebook.txt
 six==1.16.0               # via asttokens, python-dateutil
 stack-data==0.6.3         # via ipython
-termcolor==2.4.0          # via pytest-sugar
-tifffile==2024.8.30       # via scikit-image
-tomli==2.0.1              # via coverage
+termcolor==2.5.0          # via pytest-sugar
+tifffile==2024.9.20       # via scikit-image
+tomli==2.0.2              # via coverage
 tornado==6.4.1            # via ipykernel, jupyter-client
-tqdm==4.66.5              # via -r requirements/test-notebook.txt
-traitlets==5.14.3         # via comm, ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, matplotlib-inline, nbformat
+tqdm==4.66.6              # via -r requirements/test-notebook.txt
+traitlets==5.14.3         # via comm, ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, matplotlib-inline, nbclient, nbformat
 typing-extensions==4.12.2  # via ipython, module-utilities
-tzdata==2024.1            # via pandas
+tzdata==2024.2            # via pandas
 wcwidth==0.2.13           # via prompt-toolkit
 widgetsnbextension==4.0.13  # via ipywidgets
-xarray==2024.9.0          # via -r requirements/test-notebook.txt
+xarray==2024.10.0         # via -r requirements/test-notebook.txt

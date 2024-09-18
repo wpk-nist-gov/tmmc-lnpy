@@ -17,7 +17,7 @@ joblib
 lazy-loader
 matplotlib
 module-utilities>=0.9.0
-mypy>=1.11.2
+mypy>=1.13.0
 nbclient>=0.10.0
 nbval
 nox>=2024.4.15

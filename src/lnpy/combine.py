@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from ._typing import AxisReduce, DimsReduce, NDArrayAny
 
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
+    T_ArrayOrDataArray = TypeVar("T_ArrayOrDataArray", NDArray[Any], xr.DataArray)
     T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
     T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
 
@@ -1196,14 +1197,11 @@ def stack_updown(
 
 @docfiller_local
 def unstack_updown(
-    data: NDArrayAny | xr.DataArray,
-) -> (
-    tuple[NDArrayAny, NDArrayAny, NDArrayAny]
-    | tuple[xr.DataArray, xr.DataArray, xr.DataArray]
-):
+    data: T_ArrayOrDataArray,
+) -> tuple[T_ArrayOrDataArray, T_ArrayOrDataArray, T_ArrayOrDataArray]:
     """Inverse of stack_updown"""
 
-    out = (
+    out: tuple[T_ArrayOrDataArray, T_ArrayOrDataArray, T_ArrayOrDataArray] = (
         data[0, ..., 0],
         data[0, ..., 1],
         data[1, ..., 1],
@@ -1211,7 +1209,7 @@ def unstack_updown(
 
     if isinstance(data, xr.DataArray):
         drop = [data.dims[0], data.dims[-1]]
-        out = tuple(a.drop_vars(drop, errors="ignore") for a in out)
+        out = tuple(a.drop_vars(drop, errors="ignore") for a in out)  # type: ignore[assignment]
 
     return out
 
@@ -1256,7 +1254,7 @@ def _select_axis_dim(
     target: xr.DataArray, axis: AxisReduce, dim: DimsReduce | None
 ) -> tuple[int, DimsReduce]:
     if dim is not None:
-        axis = target.get_axis_num(dim)
+        axis = target.get_axis_num(dim)  # type: ignore[assignment]
     else:
         dim = target.dims[axis]
     return axis, dim
@@ -1308,7 +1306,7 @@ def delta_lnpi_from_updown(
     if isinstance(down, xr.DataArray):
         axis, dim = _select_axis_dim(down, axis, dim)
 
-        out = xr.apply_ufunc(
+        out: xr.DataArray = xr.apply_ufunc(
             delta_lnpi_from_updown,
             down,
             # if down is an array, move axis to end
@@ -1323,7 +1321,7 @@ def delta_lnpi_from_updown(
 
     if isinstance(down, pd.Series):
         return pd.Series(
-            delta_lnpi_from_updown(down=down.to_numpy(), up=up),
+            delta_lnpi_from_updown(down=down.to_numpy(), up=up),  # type: ignore[arg-type]
             name=name,
             index=down.index,
         )
@@ -1370,7 +1368,7 @@ def lnpi_from_updown(
     if isinstance(down, xr.DataArray):
         axis, dim = _select_axis_dim(down, axis, dim)
 
-        out = xr.apply_ufunc(
+        out: xr.DataArray = xr.apply_ufunc(
             lnpi_from_updown,
             down,
             np.moveaxis(up, axis, -1) if isinstance(up, np.ndarray) else up,
@@ -1384,7 +1382,7 @@ def lnpi_from_updown(
 
     if isinstance(down, pd.Series):
         return pd.Series(
-            lnpi_from_updown(down=down.to_numpy(), up=up, norm=norm),
+            lnpi_from_updown(down=down.to_numpy(), up=up, norm=norm),  # type: ignore[arg-type]
             name=name,
             index=down.index,
         )
@@ -1397,6 +1395,7 @@ def normalize_lnpi(
     lnpi: T_Array, axis: AxisReduce = -1, dim: DimsReduce | None = None
 ) -> T_Array:
     r"""Normalize :math:`\ln\Pi` series or array."""
+    kws: dict[str, Any]
     if isinstance(lnpi, np.ndarray):
         kws = {"axis": axis, "keepdims": True}
 
@@ -1405,7 +1404,7 @@ def normalize_lnpi(
         kws = {"dim": dim}
     else:
         kws = {}
-    return lnpi - np.log(np.exp(lnpi).sum(**kws))
+    return lnpi - np.log(np.exp(lnpi).sum(**kws))  # type: ignore[no-any-return]
 
 
 @docfiller_local
@@ -1441,7 +1440,7 @@ def assign_delta_lnpi_from_updown(
 
     delta = delta_lnpi_from_updown(
         up=table[up_name], down=table[down_name], axis=axis, dim=dim
-    )  # type: ignore[arg-type]
+    )
 
     if isinstance(table, pd.DataFrame):
         return table.assign(**{delta_lnpi_name: delta})
@@ -1482,7 +1481,7 @@ def assign_lnpi_from_updown(
     """
 
     ln_prob = lnpi_from_updown(
-        down=table[down_name],  # type: ignore[arg-type]
+        down=table[down_name],
         up=table[up_name],
         norm=norm,
         name=lnpi_name,

@@ -14,6 +14,7 @@ joblib
 lazy-loader
 matplotlib
 module-utilities>=0.9.0
+nbclient>=0.10.0
 nbval
 numpy
 pytest

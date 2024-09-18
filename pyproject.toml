@@ -13,13 +13,11 @@ keywords = [
     "tmmc-lnpy",
 ]
 license = { text = "NIST-PD" }
-license-files = { paths = [
-    "LICENSE",
-] }
+license-files = { paths = [ "LICENSE" ] }
 authors = [
     { name = "William P. Krekelberg", email = "wpk@nist.gov" },
 ]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<3.14"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
@@ -31,6 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dynamic = [
@@ -50,20 +49,33 @@ dependencies = [
     "typing-extensions; python_version<'3.11'",
     "xarray",
 ]
-optional-dependencies.dev = [
-    "tmmc-lnpy[dev-extras,test,typing,uvxrun,mypy,viz,resample,nbval]",
+optional-dependencies.all = [ "tmmc-lnpy[viz,resample]" ]
+optional-dependencies.resample = [
+    "cmomy>=0.17.0",
 ]
-optional-dependencies.dev-complete = [
-    "tmmc-lnpy[dev,tools]",
+optional-dependencies.viz = [
+    "ipywidgets",
+    "matplotlib",
 ]
-optional-dependencies.dev-extras = [
-    "ipykernel",
-    "ipython",
-    "nbclient>=0.10.0",
-    "nox>=2024.4.15",
-    "pytest-accept",
+urls.Documentation = "https://pages.nist.gov/tmmc-lnpy/"
+urls.Homepage = "https://github.com/usnistgov/tmmc-lnpy"
+
+[dependency-groups]
+dev = [
+    { include-group = "dev-extras" },
+    { include-group = "mypy" },
+    { include-group = "nbval" },
+    { include-group = "test" },
+    { include-group = "typing" },
+    { include-group = "uvxrun" },
 ]
-optional-dependencies.docs = [
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-sugar",
+    "pytest-xdist",
+]
+docs = [
     "autodocsumm",
     "myst-nb",
     "pyenchant",
@@ -72,52 +84,41 @@ optional-dependencies.docs = [
     "sphinx-book-theme",
     "sphinx-copybutton",
     "sphinxcontrib-spelling",
-    "tmmc-lnpy[viz]",
 ]
-optional-dependencies.mypy = [
-    "mypy>=1.11.2",
+dev-complete = [
+    { include-group = "dev" },
+    { include-group = "tools" },
 ]
-optional-dependencies.nbval = [
-    "nbval",
+dev-extras = [
+    "ipykernel",
+    "ipython",
+    "nox>=2024.4.15",
+    "pytest-accept",
 ]
-optional-dependencies.resample = [
-    "cmomy>=0.17.0",
-]
-optional-dependencies.test = [
-    "pytest",
-    "pytest-cov",
-    "pytest-sugar",
-    "pytest-xdist",
-]
-optional-dependencies.tools = [
+mypy = [ "mypy>=1.13.0" ]
+nbval = [ "nbclient>=0.10.0", "nbval" ]
+tools = [
     "pre-commit",
     "scriv",
 ]
-optional-dependencies.typing = [
+typing = [
     "pandas-stubs",
     "pytest",
-    "tmmc-lnpy[uvxrun]",
     "types-tqdm",
+    { include-group = "uvxrun" },
 ]
-optional-dependencies.uvxrun = [
-    # Anything needed to run tools/uvxrun.py
-    "packaging",
-]
-optional-dependencies.uvxrun-tools = [
+# Anything needed to run tools/uvxrun.py
+uvxrun = [ "packaging" ]
+uvxrun-tools = [
     # these used solely for specking tools to be used with tools/uvxrun.py
     "conda-lock>=2.5.5",
     "grayskull>=2.5.3",
     "nbqa>=1.8.4",
-    "pyright>=1.1.379",
-    "tmmc-lnpy[mypy]",
+    "pyproject2conda>=0.13.0",
+    "pyright>=1.1.388",
     "twine>=5.0.0",
+    { include-group = "mypy" },
 ]
-optional-dependencies.viz = [
-    "ipywidgets",
-    "matplotlib",
-]
-urls.Documentation = "https://pages.nist.gov/tmmc-lnpy/"
-urls.Homepage = "https://github.com/usnistgov/tmmc-lnpy"
 
 [tool.hatch.version]
 source = "vcs"
@@ -473,6 +474,7 @@ default_envs = [
     "docs",
     "dev",
     "dev-complete",
+    "uvxrun-tools",
 ]
 
 [tool.pyproject2conda.dependencies]
@@ -481,31 +483,30 @@ scriv = { pip = true }
 matplotlib = { skip = true, packages = "matplotlib-base" }
 lazy-loader = { skip = true, packages = "lazy_loader" }
 
-[tool.pyproject2conda.envs.build]
-extras = "build-system.requires"
-reqs = [
-    "build",
-]
-base = false
-style = "requirements"
-
-[tool.pyproject2conda.envs.uvxrun-tools]
-extras = "uvxrun-tools"
-base = false
-style = "requirements"
-
 [tool.pyproject2conda.envs.test-extras]
-extras = [
-    "test",
-]
-base = false
+groups = [ "test" ]
+skip_package = true
 
 [tool.pyproject2conda.envs.test-notebook]
-extras = [
-    "test",
-    "nbval",
-    "viz",
+groups = [ "test", "nbval" ]
+
+[[tool.pyproject2conda.overrides]]
+envs = [
+    "docs",
+    "test-notebook",
 ]
+extras = [ "viz" ]
+
+[[tool.pyproject2conda.overrides]]
+envs = [ "dev", "dev-complete" ]
+extras = [ "all" ]
+
+[[tool.pyproject2conda.overrides]]
+envs = [
+    "uvxrun-tools",
+]
+skip_package = true
+style = "requirements"
 
 [[tool.pyproject2conda.overrides]]
 # Ensure these have pip in yaml file
@@ -515,9 +516,7 @@ envs = [
     "dev",
     "dev-complete",
 ]
-deps = [
-    "pip",
-]
+deps = [ "pip" ]
 
 [[tool.pyproject2conda.overrides]]
 envs = [
@@ -530,6 +529,7 @@ python = [
     "3.10",
     "3.11",
     "3.12",
+    "3.13",
 ]
 
 # * pip-tools (keeping for legacy) ---------------------------------------------

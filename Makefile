@@ -234,7 +234,11 @@ typecheck-notebook: _NBQA = -c mypy -c pyright
 typecheck-notebook: ## run nbqa mypy/pyright
 	$(NBQA)
 test-notebook:  ## run pytest --nbval
-	pytest --nbval --nbval-current-env --nbval-sanitize-with=config/nbval.ini --dist loadscope -x $(NOTEBOOKS)
+	nox -s test-notebook
+# pytest --nbval --nbval-current-env --nbval-sanitize-with=config/nbval.ini --dist loadscope -x $(NOTEBOOKS)
+execute-notebook:  # execute notebook (in same environment as test-notebook)
+	nox -s test-notebook -- ++test-run jupyter execute --inplace --allow-error examples/usage/*.ipynb
+
 
 .PHONY: clean-kernelspec
 clean-kernelspec: ## cleanup unused kernels (assuming notebooks handled by conda environment notebook)

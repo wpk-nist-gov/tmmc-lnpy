@@ -849,7 +849,7 @@ class xGrandCanonical:  # noqa: PLR0904,N801
                 if v is not None:
                     if callable(v):
                         v = v()
-                    out.append(v)
+                    out.append(v)  # pyright: ignore[reportArgumentType]
             except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 
@@ -987,7 +987,7 @@ class xCanonical:  # noqa: N801
 
         return (
             (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
-            # pyright: ignore[reportOperatorIssue]
+              # pyright: ignore[reportOperatorIssue]
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)
@@ -1141,7 +1141,7 @@ class xCanonical:  # noqa: N801
                 v = getattr(self, key)
                 if callable(v):
                     v = v()
-                out.append(v)
+                out.append(v)  # pyright: ignore[reportArgumentType]
             except Exception:  # noqa: PERF203, BLE001, S110
                 pass
 

@@ -130,7 +130,7 @@ class lnPiArray:  # noqa: N801
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return self.data.shape
+        return self.data.shape  # type: ignore[no-any-return, unused-ignore]
 
     def new_like(
         self,
@@ -386,10 +386,10 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
     @property
     def shape(self) -> tuple[int, ...]:
         """Shape of lnPiArray"""
-        return self._data.shape
+        return self._data.shape  # type: ignore[no-any-return,unused-ignore]
 
     def __len__(self) -> int:
-        return len(self._data)
+        return len(self._data)  # type: ignore[no-any-return, unused-ignore]
 
     @property
     def ndim(self) -> int:

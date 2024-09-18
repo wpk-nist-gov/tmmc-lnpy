@@ -1087,7 +1087,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         labels = []
         lnzs = []
 
-        for _, g in da.groupby(grouper):
+        for _, g in da.groupby(grouper):  # type: ignore[arg-type, unused-ignore]
             lnzs.append(np.array([g.coords[k] for k in da.attrs["dims_lnz"]]))
             labels.append(g.values)
 
