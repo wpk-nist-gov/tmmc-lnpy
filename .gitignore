@@ -114,6 +114,9 @@ ENV/
 # PDF output
 README.pdf
 
+# Numba cache
+.numba_cache
+
 # IDE settings
 .vscode/
 pyrightconfig.json

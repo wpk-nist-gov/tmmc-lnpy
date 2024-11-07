@@ -524,7 +524,7 @@ def test_updown_from_collectionmatrix(rng: np.random.Generator) -> None:
         }
     )
 
-    out = combine.updown_from_collectionmatrix(
+    out = combine.assign_updown_from_collectionmatrix(
         pd.DataFrame(c, columns=["c0", "c1", "c2"])
     )
 
@@ -592,12 +592,14 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
         np.log(table_updown["prob_up"].shift(1) / table_updown["prob_down"]).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
     )
 
-    out = combine.assign_delta_lnpi_from_updown(table_updown)
+    out = combine.assign_delta_lnpi_from_updown_indexed(table_updown)
     np.testing.assert_allclose(delta_lnpi, out["delta_lnpi"])
 
     # test dataset
     ds = table_updown.to_xarray()
-    out_ds = combine.assign_delta_lnpi_from_updown(ds, delta_lnpi_name="my_delta")
+    out_ds = combine.assign_delta_lnpi_from_updown_indexed(
+        ds, delta_lnpi_name="my_delta"
+    )
     np.testing.assert_allclose(delta_lnpi, out_ds["my_delta"])
 
     # Series with name
@@ -628,7 +630,7 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
 
 def test_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     table = (
-        combine.assign_delta_lnpi_from_updown(table_updown)
+        combine.assign_delta_lnpi_from_updown_indexed(table_updown)
         .assign(ln_prob=lambda x: x["delta_lnpi"].cumsum())
         .assign(ln_prob=lambda x: x["ln_prob"] - x["ln_prob"].max())
     )

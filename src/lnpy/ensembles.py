@@ -986,8 +986,10 @@ class xCanonical:  # noqa: N801
             lnpi_zero = self._parent.data.ravel()[0]
 
         return (
-            (-(x.lnpi(np.nan) - lnpi_zero) + (x.ncoords * x.betamu).sum(x.dims_comp))
-              # pyright: ignore[reportOperatorIssue]
+            (
+                -(x.lnpi(np.nan) - lnpi_zero)  # pyright: ignore[reportOperatorIssue]
+                + (x.ncoords * x.betamu).sum(x.dims_comp)
+            )
             .assign_coords(x._wrapper.coords_n)
             .drop_vars(x.dims_lnz)
             .assign_attrs(x._standard_attrs)

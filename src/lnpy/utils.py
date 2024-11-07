@@ -82,7 +82,7 @@ def tqdm(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
 def get_tqdm(
     seq: Iterable[T], len_min: str | int, leave: bool | None = None, **kwargs: Any
 ) -> Iterable[T]:
-    n = kwargs.get("total", None)
+    n = kwargs.get("total")
     _tqdm = _get_tqdm()
 
     if isinstance(len_min, str):

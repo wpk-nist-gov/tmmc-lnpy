@@ -83,6 +83,37 @@ energy_idx | idx : int
 energy_idx_nebr | idx_nebr : int or list, optional
     if supplied, consider transition from idx to idx_nebr or minimum of all element in idx_nebr.
     Default behavior is to return minimum transition from idx to all other neighboring regions
+
+
+casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+    Controls what kind of data casting may occur.
+
+    - 'no' means the data types should not be cast at all.
+    - 'equiv' means only byte-order changes are allowed.
+    - 'safe' means only casts which can preserve values are allowed.
+    - 'same_kind' means only safe casts or casts within a kind, like float64 to float32, are allowed.
+    - 'unsafe' (default) means any data conversions may be done.
+
+parallel : bool, optional
+    Apply parallel computation if ``True``. Perform serial computation if
+    ``False``. Default is to perform parallel computation for sufficiently
+    large array, and serial otherwise.
+
+keep_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or bool, optional
+    - 'drop' or False: empty attrs on returned xarray object.
+    - 'identical': all attrs must be the same on every object.
+    - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+    - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
+    - 'override' or True: skip comparing and copy attrs from the first object to the result.
+
+
+apply_ufunc_kwargs : dict-like
+    Extra parameters to :func:`xarray.apply_ufunc`. One useful option is
+    ``on_missing_core_dim``, which can take the value ``"copy"`` (the
+    default), ``"raise"``, or ``"drop"`` and controls what to do with
+    variables of a :class:`~xarray.Dataset` missing core dimensions. Other
+    options are ``join``, ``dataset_join``, ``dataset_fill_value``, and
+    ``dask_gufunc_kwargs``. Unlisted options are handled internally.
 """
 
 

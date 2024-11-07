@@ -19,6 +19,7 @@ dependencies:
   - module-utilities>=0.9.0
   - nbclient>=0.10.0
   - nbval
+  - numba
   - numpy
   - pytest
   - pytest-cov
@@ -27,4 +28,5 @@ dependencies:
   - scikit-image>=0.21
   - scipy
   - tqdm
+  - typing-extensions>=4.10.0
   - xarray

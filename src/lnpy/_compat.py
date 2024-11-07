@@ -16,10 +16,10 @@ if TYPE_CHECKING:
     from ._typing import MyNDArray
 
 
-if sys.version_info < (3, 10):
-    import importlib_resources as resources
-else:
+if sys.version_info >= (3, 10):
     from importlib import resources
+else:
+    import importlib_resources as resources
 
 
 _COPY_IF_NEEDED = None if np.lib.NumpyVersion(np.__version__) >= "2.0.0" else False

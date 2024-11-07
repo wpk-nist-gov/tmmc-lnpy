@@ -12,7 +12,8 @@ channels:
 dependencies:
   - python=3.11
   - bottleneck
-  - cmomy>=0.17.0
+  - cmomy>=0.23.4
+  - dask
   - ipykernel
   - ipython
   - ipywidgets
@@ -23,7 +24,9 @@ dependencies:
   - mypy>=1.13.0
   - nbclient>=0.10.0
   - nbval
+  - netcdf4
   - nox>=2024.4.15
+  - numba
   - numpy
   - packaging
   - pandas-stubs
@@ -35,6 +38,7 @@ dependencies:
   - scipy
   - tqdm
   - types-tqdm
+  - typing-extensions>=4.10.0
   - xarray
   - pip
   - pip:

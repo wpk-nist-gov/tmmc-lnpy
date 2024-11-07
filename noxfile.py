@@ -87,7 +87,7 @@ add_uv_pythons_to_path()
 
 LOCK = True
 
-PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
 PYTHON_DEFAULT_VERSION = "3.11"
 
 
@@ -332,12 +332,12 @@ def dev(
 
 
 nox.session(
-    name="dev-venv",
+    name="dev",
     python=PYTHON_DEFAULT_VERSION,
     venv_backend=factory_virtualenv_backend(location="./.venv"),
 )(dev)
 nox.session(
-    name="dev",
+    name="dev-conda",
     python=PYTHON_DEFAULT_VERSION,
     venv_backend=factory_conda_backend(backend=CONDA_BACKEND, location="./.venv"),
 )(dev)

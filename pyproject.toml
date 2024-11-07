@@ -17,7 +17,7 @@ license-files = { paths = [ "LICENSE" ] }
 authors = [
     { name = "William P. Krekelberg", email = "wpk@nist.gov" },
 ]
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.9,<3.13"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
@@ -29,7 +29,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dynamic = [
@@ -42,16 +41,19 @@ dependencies = [
     "joblib",
     "lazy-loader",
     "module-utilities>=0.9.0",
+    "numba",
     "numpy",
     "scikit-image>=0.21",
     "scipy",
     "tqdm",
-    "typing-extensions; python_version<'3.11'",
+    "typing-extensions>=4.10.0; python_version<'3.13'",
     "xarray",
 ]
 optional-dependencies.all = [ "tmmc-lnpy[viz,resample]" ]
 optional-dependencies.resample = [
-    "cmomy>=0.17.0",
+    "cmomy>=0.23.4",
+    "dask[diagnostics]",
+    "netcdf4",
 ]
 optional-dependencies.viz = [
     "ipywidgets",
@@ -275,6 +277,9 @@ lint.extend-per-file-ignores."**/ensembles.py" = [
     "N803",
     "N806",
 ]
+lint.extend-per-file-ignores."**/factory.py" = [
+    "D101",
+]
 lint.extend-per-file-ignores."**/lnPi/*.py" = [
     "ANN",
     "B",
@@ -397,6 +402,7 @@ module = [
     "lnPi.*",
     "IPython.*",
     "matplotlib.*",
+    "numba.*",
 ]
 
 [[tool.mypy.overrides]]
@@ -529,7 +535,6 @@ python = [
     "3.10",
     "3.11",
     "3.12",
-    "3.13",
 ]
 
 # * pip-tools (keeping for legacy) ---------------------------------------------

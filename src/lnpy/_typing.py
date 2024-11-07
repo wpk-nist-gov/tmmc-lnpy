@@ -5,29 +5,26 @@ Typing definitions for :mod:`lnpy`
 
 from __future__ import annotations
 
-from collections.abc import Collection, Hashable, Sequence
+from collections.abc import Callable, Collection, Hashable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
-    TypeVar,
     Union,
 )
 
+import numpy as np
 import xarray as xr
 from numpy.typing import ArrayLike, NDArray
 
-from ._typing_compat import Concatenate, ParamSpec, TypeAlias
+from ._typing_compat import Concatenate, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    import numpy as np
-
     # Note: use fully qualified names
     import lnpy.lnpidata
     import lnpy.lnpiseries
 
-    from .ensembles import xCanonical, xGrandCanonical
+    from .ensembles import xCanonical, xGrandCanonical  # noqa: F401
 
 
 __all__ = [
@@ -47,6 +44,10 @@ __all__ = [
     "TagPhasesSignature",
     "xArrayLike",
 ]
+
+
+FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[misc]
+NDArrayInt = NDArray[np.int64]
 
 
 T_Ensemble = TypeVar("T_Ensemble", "xGrandCanonical", "xCanonical")
@@ -102,3 +103,17 @@ PhasesFactorySignature = Callable[..., "lnpy.lnpiseries.lnPiCollection"]
 
 MaskConvention = Literal["image", "masked", True, False]
 """Convention for boolean masks."""
+
+
+# new stuff:
+Casting = Literal["no", "equiv", "safe", "same_kind", "unsafe"]
+
+ApplyUFuncKwargs: TypeAlias = Mapping[str, Any]
+
+MissingCoreDimOptions = Literal["raise", "copy", "drop"]
+
+KeepAttrs: TypeAlias = Union[
+    Literal["drop", "identical", "no_conflicts", "drop_conflicts", "override"],
+    bool,
+    None,
+]

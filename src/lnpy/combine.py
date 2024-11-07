@@ -8,7 +8,7 @@ Routines to combine :math:`\ln \Pi` data (:mod:`~lnpy.combine`)
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, TypeVar, cast, overload
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,22 @@ import xarray as xr
 from module_utilities.docfiller import DocFiller
 from scipy.sparse import coo_array
 
+from lnpy.core.xr_utils import factory_apply_ufunc_kwargs
+
+from ._lib.factory import (
+    factory_delta_lnpi_from_updown,
+    factory_lnpi_from_delta_lnpi,
+    factory_normalize_lnpi,
+    parallel_heuristic,
+)
+from .core.array_utils import asarray_maybe_recast, select_dtype
+from .core.validate import (
+    is_dataarray,
+    is_dataframe,
+    is_dataset,
+    is_ndarray,
+    is_series,
+)
 from .docstrings import docfiller
 from .utils import peek_at
 
@@ -23,9 +39,17 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from typing import Any, Callable
 
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-    from ._typing import AxisReduce, DimsReduce, NDArrayAny
+    from ._typing import (
+        ApplyUFuncKwargs,
+        AxisReduce,
+        Casting,
+        DimsReduce,
+        KeepAttrs,
+        NDArrayAny,
+    )
+    from ._typing_compat import TypeVar
 
     T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
     T_ArrayOrDataArray = TypeVar("T_ArrayOrDataArray", NDArray[Any], xr.DataArray)
@@ -36,12 +60,23 @@ if TYPE_CHECKING:
 
     T_Frame_Array = TypeVar("T_Frame_Array", pd.DataFrame, xr.DataArray, xr.Dataset)
 
+    T_Array_Frame_Any = TypeVar(
+        "T_Array_Frame_Any",
+        NDArray[Any],
+        pd.Series[Any],
+        pd.DataFrame,
+        xr.DataArray,
+        xr.Dataset,
+    )
+
 
 _docstrings_local = r"""
 Parameters
 ----------
-lnpi_name :
-    Column name corresponding to :math:`\ln \Pi`.
+lnpi_name : str
+    Column/variable name corresponding to :math:`\ln \Pi(N)`.
+delta_lnpi_name : str
+    Column/variable name corresponding to :math:`\Delta \ln \Pi(N)`.
 window_name :
     Column name corresponding to "window", i.e., an individual simulation.
     Note that this is only used if passing in a single dataframe with multiple windows.
@@ -72,8 +107,26 @@ down :
     Probability of moving from ``state[i]`` to ``state[i-1]``.
 norm :
     If True, normalize :math:`\ln \Pi(N)`.
+normalize : bool
+    If ``True``, normalize probability.
 array_name | name:
     Optional name to assign to the output :class:`pandas.Series` or `xarray.DataArray`.
+
+index : array-like, optional
+    Index into `axis` of `data`.  Defaults to range(len(down))
+groups | group_start, group_end : array-like, optional
+    Start, end of index for a group.
+    ``index[group_start[group]:group_end[group]]`` are the indices for
+    group ``group``.  Defaults to single group
+
+axis : int, optional
+    Axis to calculate along.
+dim : str, optional
+    Dimension to calculate along.  Overrides `axis` if specified.
+out : ndarray, optional
+    Output array.
+dtype : dtype, optional
+    Optional :class:`~numpy.dtype` for output data.
 
 
 Raises
@@ -93,7 +146,7 @@ class OverlapError(ValueError):
     """Specific error for missing overlaps."""
 
 
-def _str_or_iterable(x: str | Iterable[str]) -> list[str]:
+def _str_or_iterable_to_list(x: str | Iterable[str]) -> list[str]:
     if isinstance(x, str):
         return [x]
     return list(x)
@@ -157,7 +210,7 @@ def check_windows_overlap(
     OverlapError
         If the overlaps do not form a connected graph, then raise a ``OverlapError``.
     """
-    macrostate_names = _str_or_iterable(macrostate_names)
+    macrostate_names = _str_or_iterable_to_list(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
     x: pd.DataFrame = (
@@ -231,7 +284,12 @@ def _concat_windows_xarray(
             (
                 (
                     _process_object(ds, window).stack(  # noqa: PD013
-                        {index_name: [window_name, *_str_or_iterable(coord_names)]}
+                        {
+                            index_name: [
+                                window_name,
+                                *_str_or_iterable_to_list(coord_names),
+                            ]
+                        }
                     )  # pyright: ignore[reportArgumentType]
                 )
                 for window, ds in enumerate(tables)
@@ -459,7 +517,7 @@ def concat_windows(
 
     first, tables_iter = peek_at(tables)
 
-    if isinstance(first, xr.Dataset):
+    if is_dataset(first):
         return _concat_windows_xarray(
             first=first,
             tables=cast("Iterator[xr.Dataset]", tables_iter),
@@ -469,7 +527,7 @@ def concat_windows(
             overwrite_window=overwrite_window,
         )
 
-    if isinstance(first, xr.DataArray):
+    if is_dataarray(first):
         return _concat_windows_xarray(
             first=first,
             tables=cast("Iterator[xr.DataArray]", tables_iter),
@@ -479,7 +537,7 @@ def concat_windows(
             overwrite_window=overwrite_window,
         )
 
-    if isinstance(first, pd.DataFrame):  # progma: no branch
+    if is_dataframe(first):  # progma: no branch
         return _concat_windows_dataframe(
             first=first,
             tables=cast("Iterator[pd.DataFrame]", tables_iter),
@@ -729,7 +787,7 @@ def shift_lnpi_windows(
     if window_max == 0:
         return table
 
-    macrostate_names = _str_or_iterable(macrostate_names)
+    macrostate_names = _str_or_iterable_to_list(macrostate_names)
     overlap_total_table = _create_overlap_total_table(
         overlap_table=_create_overlap_table(
             table,
@@ -889,8 +947,11 @@ def keep_first(
 
     Note
     ----
-    If there is not expanded ensemble sampling (i.e., non-integer ``state``
+    - If there is not expanded ensemble sampling (i.e., non-integer ``state``
     values) in windows, you should prefer using :func:`updown_mean`.
+    - If ``table`` is a DataFrame with multiple records, you can still use ``keep_first``
+    directly, as long as the windows/states are consistent across records.  If not, first
+    use a groupby (e.g. ``tables.groupby("rec").apply(keep_first, as_index=False))``
 
     See Also
     --------
@@ -1042,7 +1103,7 @@ def keep_first(
         return data
 
     # Do calculation
-    if isinstance(table, pd.DataFrame):
+    if is_dataframe(table):
         return _process_dataframe(table)
     return _process_xarray(table)
 
@@ -1143,85 +1204,80 @@ def updown_mean(
     )
 
 
-@docfiller_local
-def stack_updown(
-    weight: NDArrayAny | pd.Series[Any] | xr.DataArray,
-    down: NDArrayAny | xr.DataArray,
-    up: NDArrayAny | xr.DataArray,
+@overload
+def stack_weight_and_average(
+    weight: pd.Series[Any] | xr.DataArray,
+    average: NDArrayAny | xr.DataArray,
     *,
-    direction_dim: str = "direction",
-    direction_coords: Iterable[str] | None = None,
+    moment_dim: str = ...,
+    keep_attrs: KeepAttrs = ...,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = ...,
+) -> xr.DataArray: ...
+@overload
+def stack_weight_and_average(
+    weight: NDArrayAny,
+    average: NDArrayAny,
+    *,
+    moment_dim: str = ...,
+    keep_attrs: KeepAttrs = ...,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = ...,
+) -> NDArrayAny: ...
+
+
+@docfiller_local
+def stack_weight_and_average(
+    weight: NDArrayAny | pd.Series[Any] | xr.DataArray,
+    average: NDArrayAny | xr.DataArray,
+    *,
     moment_dim: str = "moment",
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> NDArrayAny | xr.DataArray:
     """
-    Stack up/down probabilities arrays to moments array.
+    Convert weight and average to a moments array
 
-    This array can then be used in cmomy for example.
+    Output to be used with cmomy for example
     """
 
-    # if passed in pandas series, convert to xarray objects
-    weight, up, down = (
-        x.to_xarray() if isinstance(x, pd.Series) else x for x in (weight, up, down)
-    )
+    weight, average = (x.to_xarray() if is_series(x) else x for x in (weight, average))
 
-    if isinstance(weight, xr.DataArray):
+    if is_dataarray(weight):
         xout: xr.DataArray = xr.apply_ufunc(
-            stack_updown,
+            stack_weight_and_average,
             weight,
-            down,
-            up,
-            input_core_dims=[weight.dims] * 3,
-            output_core_dims=[[direction_dim, *weight.dims, moment_dim]],
+            average,
+            input_core_dims=[weight.dims] * 2,
+            output_core_dims=[[*weight.dims, moment_dim]],
+            keep_attrs=keep_attrs,
+            **factory_apply_ufunc_kwargs(
+                apply_ufunc_kwargs=apply_ufunc_kwargs,
+            ),
         )
+        return xout
 
-        if direction_coords is None:
-            coords = [
-                getattr(x, "name", None) or default
-                for x, default in zip((down, up), ("down", "up"))
-            ]
-        else:
-            coords = list(direction_coords)
-
-        return xout.assign_coords({direction_dim: coords})
-
-    out = np.zeros((2, *weight.shape, 2))
-
-    # weights
-    out[:, ..., 0] = weight
-    # "averages"
-    out[0, ..., 1] = np.asarray(down)
-    out[1, ..., 1] = np.asarray(up)
-
-    return out
-
-
-@docfiller_local
-def unstack_updown(
-    data: T_ArrayOrDataArray,
-) -> tuple[T_ArrayOrDataArray, T_ArrayOrDataArray, T_ArrayOrDataArray]:
-    """Inverse of stack_updown"""
-
-    out: tuple[T_ArrayOrDataArray, T_ArrayOrDataArray, T_ArrayOrDataArray] = (
-        data[0, ..., 0],
-        data[0, ..., 1],
-        data[1, ..., 1],
-    )
-
-    if isinstance(data, xr.DataArray):
-        drop = [data.dims[0], data.dims[-1]]
-        out = tuple(a.drop_vars(drop, errors="ignore") for a in out)  # type: ignore[assignment]
-
-    return out
+    return np.stack((weight, average), axis=-1)
 
 
 @docfiller_local
 def updown_from_collectionmatrix(
-    table: pd.DataFrame,
+    c0: T_Array_Frame_Any,
+    c1: T_Array_Frame_Any,
+    c2: T_Array_Frame_Any,
+) -> tuple[T_Array_Frame_Any, T_Array_Frame_Any, T_Array_Frame_Any]:
+    weight = c0 + c1 + c2
+    down = c0 / weight
+    up = c2 / weight
+    return weight, down, up  # type: ignore[no-any-return]
+
+
+@docfiller_local
+def assign_updown_from_collectionmatrix(
+    table: T_Frame,
     matrix_names: Iterable[str] = ["c0", "c1", "c2"],
     weight_name: str = "n_trials",
     down_name: str = "prob_down",
     up_name: str = "prob_up",
-) -> pd.DataFrame:
+) -> T_Frame:
     """
     Add up/down probabilities from collection matrix.
 
@@ -1239,14 +1295,13 @@ def updown_from_collectionmatrix(
     DataFrame
         New dataframe with assigned columns.
     """
-    matrix_names = list(matrix_names)
-    count = table[matrix_names].sum(axis=1)
     return table.assign(
-        **{
-            weight_name: count,
-            down_name: lambda x: x[matrix_names[0]] / count,
-            up_name: lambda x: x[matrix_names[-1]] / count,
-        }
+        **dict(  # type: ignore[arg-type]
+            zip(
+                [weight_name, down_name, up_name],
+                updown_from_collectionmatrix(*(table[c] for c in matrix_names)),
+            )
+        )
     )
 
 
@@ -1267,6 +1322,8 @@ def delta_lnpi_from_updown(
     name: str | None = None,
     axis: int = -1,
     dim: DimsReduce | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> T_Array:
     r"""
     Calculate :math:`\Delta \ln \Pi(N)` from down/up probabilities.
@@ -1289,7 +1346,7 @@ def delta_lnpi_from_updown(
         Calculated value of same type as ``up``.
     """
 
-    if isinstance(down, np.ndarray):  # pragma: no branch
+    if is_ndarray(down):  # pragma: no branch
         up_ = (
             up.to_numpy()
             if isinstance(up, (pd.Series, xr.DataArray))
@@ -1301,25 +1358,28 @@ def delta_lnpi_from_updown(
 
         delta[..., 0] = 0.0
         delta[..., 1:] = np.log(up_[..., :-1] / down_[..., 1:])
-        return np.moveaxis(delta, -1, axis)
+        return np.moveaxis(delta, -1, axis)  # pyright: ignore[reportReturnType]
 
-    if isinstance(down, xr.DataArray):
+    if is_dataarray(down):
         axis, dim = _select_axis_dim(down, axis, dim)
 
         out: xr.DataArray = xr.apply_ufunc(
             delta_lnpi_from_updown,
             down,
             # if down is an array, move axis to end
-            np.moveaxis(up, axis, -1) if isinstance(up, np.ndarray) else up,
+            np.moveaxis(up, axis, -1) if is_ndarray(up) else up,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
             kwargs={"axis": -1},
-            keep_attrs=True,
+            keep_attrs=keep_attrs,
+            **factory_apply_ufunc_kwargs(
+                apply_ufunc_kwargs=apply_ufunc_kwargs,
+            ),
         ).transpose(*down.dims)
 
-        return out.rename(name)
+        return out.rename(name)  # pyright: ignore[reportReturnType]
 
-    if isinstance(down, pd.Series):
+    if is_series(down):
         return pd.Series(
             delta_lnpi_from_updown(down=down.to_numpy(), up=up),  # type: ignore[arg-type]
             name=name,
@@ -1359,28 +1419,28 @@ def lnpi_from_updown(
         Calculated value of same type as ``up``.
     """
 
-    if isinstance(down, np.ndarray):
+    if is_ndarray(down):
         ln_prob = delta_lnpi_from_updown(down=down, up=up, axis=axis).cumsum(axis=axis)
         # subtract maximum
         ln_prob -= ln_prob.max(axis=axis, keepdims=True)
         return normalize_lnpi(ln_prob, axis=axis) if norm else ln_prob
 
-    if isinstance(down, xr.DataArray):
+    if is_dataarray(down):
         axis, dim = _select_axis_dim(down, axis, dim)
 
         out: xr.DataArray = xr.apply_ufunc(
             lnpi_from_updown,
             down,
-            np.moveaxis(up, axis, -1) if isinstance(up, np.ndarray) else up,
+            np.moveaxis(up, axis, -1) if is_ndarray(up) else up,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
             kwargs={"axis": -1, "norm": norm},
             keep_attrs=True,
         ).transpose(*down.dims)
 
-        return out.rename(name)
+        return out.rename(name)  # pyright: ignore[reportReturnType]
 
-    if isinstance(down, pd.Series):
+    if is_series(down):
         return pd.Series(
             lnpi_from_updown(down=down.to_numpy(), up=up, norm=norm),  # type: ignore[arg-type]
             name=name,
@@ -1396,55 +1456,15 @@ def normalize_lnpi(
 ) -> T_Array:
     r"""Normalize :math:`\ln\Pi` series or array."""
     kws: dict[str, Any]
-    if isinstance(lnpi, np.ndarray):
+    if is_ndarray(lnpi):
         kws = {"axis": axis, "keepdims": True}
 
-    elif isinstance(lnpi, xr.DataArray):
+    elif is_dataarray(lnpi):
         axis, dim = _select_axis_dim(lnpi, axis, dim)
         kws = {"dim": dim}
     else:
         kws = {}
     return lnpi - np.log(np.exp(lnpi).sum(**kws))  # type: ignore[no-any-return]
-
-
-@docfiller_local
-def assign_delta_lnpi_from_updown(
-    table: T_Frame,
-    up_name: str = "prob_up",
-    down_name: str = "prob_down",
-    delta_lnpi_name: str = "delta_lnpi",
-    axis: AxisReduce = -1,
-    dim: DimsReduce | None = None,
-) -> T_Frame:
-    r"""
-    Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
-
-    This assumes ``table`` is sorted by ``state`` value. This function is
-    useful if the simulation windows use extended ensemble sampling and have
-    non-integer steps in the ``state`` variable. The deltas can be combined
-    with :func:`keep_first`, cumalitively summed, then non integer
-    states dropped.
-
-    Parameters
-    ----------
-    {up_name}
-    {down_name}
-    delta_lnpi_name :
-        Name of output column.
-
-    Returns
-    -------
-    DataFrame
-        Table with ``delta_lnpi_name`` column.
-    """
-
-    delta = delta_lnpi_from_updown(
-        up=table[up_name], down=table[down_name], axis=axis, dim=dim
-    )
-
-    if isinstance(table, pd.DataFrame):
-        return table.assign(**{delta_lnpi_name: delta})
-    return table.assign({delta_lnpi_name: table[down_name].copy(data=delta)})
 
 
 @docfiller_local
@@ -1489,6 +1509,535 @@ def assign_lnpi_from_updown(
         dim=dim,
     )
 
-    if isinstance(table, pd.DataFrame):
+    if is_dataframe(table):
         return table.assign(**{lnpi_name: ln_prob})
     return table.assign({lnpi_name: table[down_name].copy(data=ln_prob)})
+
+
+# * Indexed routines ----------------------------------------------------------
+def _apply_indexed_function(
+    *args: T_Array,
+    factory_gufunc: Callable[[bool], Callable[..., NDArrayAny]],
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Array:
+    """Generic indexed routine"""
+    first = args[0]
+
+    if is_series(first):
+        return pd.Series(
+            _apply_indexed_function(
+                *(a.to_numpy() for a in args),  # type: ignore[arg-type]
+                factory_gufunc=factory_gufunc,
+                axis=-1,
+                index=index,
+                group_start=group_start,
+                group_end=group_end,
+                out=out,
+                dtype=dtype,
+                casting=casting,
+                parallel=parallel,
+            ),
+            index=first.index,
+        )
+
+    if is_dataarray(first):
+        dtype = select_dtype(first, out=out, dtype=dtype)
+        axis, dim = _select_axis_dim(first, axis, dim)
+
+        xout: xr.DataArray = xr.apply_ufunc(
+            _apply_indexed_function,
+            *args,
+            input_core_dims=[[dim]] * len(args),
+            output_core_dims=[[dim]],
+            kwargs={
+                "factory_gufunc": factory_gufunc,
+                "axis": -1,
+                "index": index,
+                "group_start": group_start,
+                "group_end": group_end,
+                "out": out,
+                "dtype": dtype,
+                "casting": casting,
+            },
+            keep_attrs=keep_attrs,
+            **factory_apply_ufunc_kwargs(
+                apply_ufunc_kwargs=apply_ufunc_kwargs,
+                output_dtypes=dtype or np.float64,
+            ),
+        ).transpose(*first.dims)
+        return xout  # pyright: ignore[reportReturnType]
+
+    dtype = select_dtype(first, out=out, dtype=dtype)
+    first = asarray_maybe_recast(first, dtype)
+    if group_start is None or group_end is None:
+        group_start, group_end = [0], [first.shape[axis]]
+
+    if index is None:
+        index = range(first.shape[axis])
+
+    axes = [axis] * len(args) + [-1] * 3 + [axis]
+    signature = [dtype] * len(args) + [np.int64] * 3 + [dtype]
+
+    return factory_gufunc(  # type: ignore[no-any-return]
+        parallel_heuristic(parallel, size=first.size)
+    )(
+        *args,
+        index,
+        group_start,
+        group_end,
+        out=out,
+        axes=axes,
+        casting=casting,
+        signature=tuple(signature),
+    )
+
+
+@docfiller_local
+def delta_lnpi_from_updown_indexed(
+    down: T_Array,
+    up: T_Array,
+    *,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Array:
+    r"""
+    Calculate :math:`\Delta \ln \Pi(N)` from down/up probabilities by group.
+
+    Parameters
+    ----------
+    {down}
+    {up}
+    {axis}
+    {dim}
+    {index}
+    {groups}
+    {casting}
+    {parallel}
+    {keep_attrs}
+    {apply_ufunc_kwargs}
+
+
+    Returns
+    -------
+    ndarray or Series or DataArray
+        Same type as `down`.
+    """
+    return _apply_indexed_function(
+        down,
+        up,
+        factory_gufunc=factory_delta_lnpi_from_updown,
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+    )
+
+
+@docfiller_local
+def normalize_lnpi_indexed(
+    lnpi: T_Array,
+    *,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Array:
+    r"""Normalize :math:`\ln \Pi(N)` with optional groups."""
+
+    return _apply_indexed_function(
+        lnpi,
+        factory_gufunc=factory_normalize_lnpi,
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+    )
+
+
+@docfiller_local
+def lnpi_from_delta_lnpi_indexed(
+    delta_lnpi: T_Array,
+    *,
+    normalize: bool = False,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Array:
+    r"""
+    Calculate :math:`\ln \Pi(N)` from :math:`\Delta \ln \Pi(N)`.
+
+    Parameters
+    ----------
+    delta_lnpi : ndarray or Series or DataArray
+    {axis}
+    {dim}
+    {index}
+    {groups}
+    {casting}
+    {parallel}
+    {keep_attrs}
+    {apply_ufunc_kwargs}
+
+
+    Returns
+    -------
+    ndarray or Series or DataArray
+        Same type as ``delta_lnpi``.
+    """
+
+    if normalize:
+
+        def factory_gufunc(parallel: bool) -> Callable[..., NDArrayAny]:
+            def wrapped(delta_lnpi: ArrayLike, *args: Any, **kwargs: Any) -> NDArrayAny:
+                lnpi = factory_lnpi_from_delta_lnpi(parallel)(
+                    delta_lnpi, *args, **kwargs
+                )
+                return factory_normalize_lnpi(parallel)(lnpi, *args, **kwargs)
+
+            return wrapped
+
+    else:
+        factory_gufunc = factory_lnpi_from_delta_lnpi
+
+    return _apply_indexed_function(
+        delta_lnpi,
+        factory_gufunc=factory_gufunc,
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+    )
+
+
+@docfiller_local
+def lnpi_from_updown_indexed(
+    down: T_Array,
+    up: T_Array,
+    *,
+    normalize: bool = False,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Array:
+    r"""
+    Calculate :math:`\ln \Pi(N)` from down/up probabilities by group.
+
+    This is simply a combination of :func:`delta_lnpi_from_updown_indexed` and
+    :func:`lnpi_from_delta_lnpi`.
+
+    Parameters
+    ----------
+    {down}
+    {up}
+    {axis}
+    {dim}
+    {index}
+    {groups}
+    {casting}
+    {parallel}
+    {keep_attrs}
+    {apply_ufunc_kwargs}
+
+
+    Returns
+    -------
+    ndarray or Series or DataArray
+        Same type as `down`.
+    """
+    kws = {
+        "axis": axis,
+        "dim": dim,
+        "index": index,
+        "group_start": group_start,
+        "group_end": group_end,
+        "out": out,
+        "dtype": dtype,
+        "casting": casting,
+        "parallel": parallel,
+        "keep_attrs": keep_attrs,
+        "apply_ufunc_kwargs": apply_ufunc_kwargs,
+    }
+
+    delta_lnpi: T_Array = delta_lnpi_from_updown_indexed(down, up, **kws)  # type: ignore[arg-type]
+    return lnpi_from_delta_lnpi_indexed(delta_lnpi, normalize=normalize, **kws)  # type: ignore[arg-type]
+
+
+# ** Assignment
+def _assign_indexed_function_result(
+    table: T_Frame,
+    *,
+    name: str,
+    func: Callable[..., Any],
+    keys: Iterable[str],
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+    **kwargs: Any,
+) -> T_Frame:
+    if is_dataframe(table):
+        args = (table[key].to_numpy() for key in keys)
+    else:
+        args = (table[key] for key in keys)
+
+    result = func(
+        *args,
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+        **kwargs,
+    )
+    return table.assign(**{name: result})
+
+
+@docfiller_local
+def assign_delta_lnpi_from_updown_indexed(
+    table: T_Frame,
+    *,
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
+    delta_lnpi_name: str = "delta_lnpi",
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Frame:
+    r"""
+    Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
+
+    This assumes ``table`` is sorted by ``state`` value. This function is
+    useful if the simulation windows use extended ensemble sampling and have
+    non-integer steps in the ``state`` variable. The deltas can be combined
+    with :func:`keep_first`, cumalitively summed, then non integer
+    states dropped.
+
+    Parameters
+    ----------
+    {table_assign}
+    {up_name}
+    {down_name}
+    {delta_lnpi_name}
+    {axis}
+    {dim}
+    {index}
+    {groups}
+    {out}
+    {casting}
+    {keep_attrs}
+    {apply_ufunc_kwargs}
+
+    Returns
+    -------
+    Dataframe or Dataset
+        Same type as ``table``, with ``delta_lnpi_name`` column/variable.
+    """
+
+    return _assign_indexed_function_result(
+        table,
+        name=delta_lnpi_name,
+        func=delta_lnpi_from_updown_indexed,
+        keys=(down_name, up_name),
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+    )
+
+
+@docfiller_local
+def assign_lnpi_from_delta_lnpi_indexed(
+    table: T_Frame,
+    *,
+    delta_lnpi_name: str = "delta_lnpi",
+    lnpi_name: str = "ln_prob",
+    normalize: bool = False,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Frame:
+    r"""
+    Add :math:`\ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from :math:`\Delta \ln \Pi(N)`.
+
+    This assumes ``table`` is sorted by ``state`` value. This function is
+    useful if the simulation windows use extended ensemble sampling and have
+    non-integer steps in the ``state`` variable. The deltas can be combined
+    with :func:`keep_first`, cumalitively summed, then non integer
+    states dropped.
+
+    Parameters
+    ----------
+    {table_assign}
+    {delta_lnpi_name}
+    {lnpi_name}
+    {normalize}
+    {axis}
+    {dim}
+    {index}
+    {groups}
+    {out}
+    {casting}
+    {keep_attrs}
+    {apply_ufunc_kwargs}
+
+    Returns
+    -------
+    DataFrame or Dataset
+        Same type as ``table``, with ``lnpi_name`` column/variable.
+    """
+    return _assign_indexed_function_result(
+        table,
+        name=lnpi_name,
+        func=lnpi_from_delta_lnpi_indexed,
+        keys=(delta_lnpi_name,),
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+        normalize=normalize,
+    )
+
+
+@docfiller_local
+def assign_lnpi_from_updown_indexed(
+    table: T_Frame,
+    down_name: str = "prob_down",
+    up_name: str = "prob_up",
+    lnpi_name: str = "ln_prob",
+    normalize: bool = False,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+    index: ArrayLike | None = None,
+    group_start: ArrayLike | None = None,
+    group_end: ArrayLike | None = None,
+    out: NDArrayAny | None = None,
+    dtype: DTypeLike | None = None,
+    casting: Casting = "same_kind",
+    parallel: bool | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> T_Frame:
+    return _assign_indexed_function_result(
+        table,
+        name=lnpi_name,
+        func=lnpi_from_updown_indexed,
+        keys=(down_name, up_name),
+        axis=axis,
+        dim=dim,
+        index=index,
+        group_start=group_start,
+        group_end=group_end,
+        out=out,
+        dtype=dtype,
+        casting=casting,
+        parallel=parallel,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+        normalize=normalize,
+    )
