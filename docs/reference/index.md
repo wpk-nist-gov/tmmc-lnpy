@@ -25,7 +25,7 @@ api-legacy
     lnpy.segment
     lnpy.ensembles
     lnpy.stability
-    lnpy.utils
+    lnpy.core.utils
     lnpy.examples
 
 

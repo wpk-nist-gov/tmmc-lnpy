@@ -17,14 +17,13 @@ import numpy as np
 import xarray as xr
 from numpy.typing import ArrayLike, NDArray
 
-from ._typing_compat import Concatenate, ParamSpec, TypeAlias, TypeVar
+from .typing_compat import Concatenate, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     # Note: use fully qualified names
     import lnpy.lnpidata
     import lnpy.lnpiseries
-
-    from .ensembles import xCanonical, xGrandCanonical  # noqa: F401
+    from lnpy.ensembles import xCanonical, xGrandCanonical  # noqa: F401
 
 
 __all__ = [

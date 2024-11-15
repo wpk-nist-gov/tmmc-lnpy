@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 from module_utilities import cached
 
-from ._compat import copy_if_needed
-from .docstrings import docfiller
+from .core.compat import copy_if_needed
+from .core.docstrings import docfiller
+from .core.utils import labels_to_masks, masks_change_convention
 from .extensions import AccessorMixin
-from .utils import labels_to_masks, masks_change_convention
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from . import ensembles
-    from ._typing import MaskConvention, MyNDArray
-    from ._typing_compat import Self
+    from .core.typing import MaskConvention, MyNDArray
+    from .core.typing_compat import Self
 
 
 @lru_cache(maxsize=20)
@@ -194,7 +194,7 @@ class lnPiArray:  # noqa: N801
 
         import bottleneck
 
-        from . import utils
+        from .core import utils
 
         if axes is None:
             axes = range(self.data.ndim)
@@ -502,9 +502,9 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
 
         See Also
         --------
-        lnpy.utils.distance_matrix
+        lnpy.core.utils.distance_matrix
         """
-        from .utils import distance_matrix
+        from .core.utils import distance_matrix
 
         return distance_matrix(~self.mask)
 
@@ -520,7 +520,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         See Also
         --------
         edge_distance_matrix
-        lnpy.utils.distance_matrix
+        lnpy.core.utils.distance_matrix
         """
         return ref.edge_distance_matrix[self.local_argmax(*args, **kwargs)]  # type: ignore[no-any-return]
 
@@ -739,7 +739,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
 
         See Also
         --------
-        lnpy.utils.masks_change_convention
+        lnpy.core.utils.masks_change_convention
         """
 
         return [
@@ -765,7 +765,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         {include_boundary}
         {check_features}
         **kwargs
-            Extra arguments to to :func:`~lnpy.utils.labels_to_masks`
+            Extra arguments to to :func:`~lnpy.core.utils.labels_to_masks`
 
         Returns
         -------
@@ -774,7 +774,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         See Also
         --------
         lnPiMasked.list_from_masks
-        lnpy.utils.labels_to_masks
+        lnpy.core.utils.labels_to_masks
         """
 
         masks, features = labels_to_masks(

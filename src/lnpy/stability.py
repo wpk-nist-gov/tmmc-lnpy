@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, overload
 import numpy as np
 from module_utilities import cached
 
-from ._compat import rootresults
-from .utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
+from .core.compat import rootresults
+from .core.utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
-    from ._typing import MyNDArray
-    from ._typing_compat import Self
+    from .core.typing import MyNDArray
+    from .core.typing_compat import Self
     from .lnpidata import lnPiMasked
     from .lnpiseries import lnPiCollection
     from .segment import BuildPhasesBase

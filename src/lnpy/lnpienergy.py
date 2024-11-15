@@ -14,16 +14,20 @@ import pandas as pd
 import xarray as xr
 from module_utilities import cached
 
-from .docstrings import docfiller
-from .utils import get_tqdm_calc as get_tqdm
-from .utils import labels_to_masks, masks_change_convention, parallel_map_func_starargs
+from .core.docstrings import docfiller
+from .core.utils import get_tqdm_calc as get_tqdm
+from .core.utils import (
+    labels_to_masks,
+    masks_change_convention,
+    parallel_map_func_starargs,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import Any, Literal, Union
 
-    from ._typing import MaskConvention, MyNDArray
-    from ._typing_compat import IndexAny, Self
+    from .core.typing import MaskConvention, MyNDArray
+    from .core.typing_compat import IndexAny, Self
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
@@ -451,7 +455,7 @@ class wFreeEnergy:  # noqa: N801
         {features}
         {include_boundary}
         **kwargs
-            Extra arguments to :func:`~lnpy.utils.labels_to_masks`
+            Extra arguments to :func:`~lnpy.core.utils.labels_to_masks`
 
         Returns
         -------
@@ -459,7 +463,7 @@ class wFreeEnergy:  # noqa: N801
 
         See Also
         --------
-        lnpy.utils.labels_to_masks
+        lnpy.core.utils.labels_to_masks
         """
         masks, features = labels_to_masks(
             labels,

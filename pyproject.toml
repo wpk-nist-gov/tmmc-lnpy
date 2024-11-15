@@ -272,6 +272,9 @@ lint.extend-per-file-ignores."**/conftest.py" = [
     "ANN",
     "PT",
 ]
+lint.extend-per-file-ignores."**/core/typing.py" = [
+    "A005",
+]
 lint.extend-per-file-ignores."**/ensembles.py" = [
     "N802",
     "N803",
@@ -352,7 +355,7 @@ exclude_also = [
 ]
 omit = [
     "*/vendored/*",
-    "*/_typing.py",
+    "*/core/typing.py",
 ]
 include = [
     "src/*",

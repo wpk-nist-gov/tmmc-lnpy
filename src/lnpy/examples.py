@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING, TypedDict
 import numpy as np
 import xarray as xr
 
-from ._compat import resources
+from .core.compat import resources
+from .core.utils import dataset_to_lnpimasked
 from .segment import BuildPhasesBase, PhaseCreator
-from .utils import dataset_to_lnpimasked
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from typing import Any, Literal
 
-    from ._typing import MyNDArray
+    from .core.typing import MyNDArray
     from .lnpidata import lnPiMasked
 
     _ExampleNames = Literal["lj_sub", "lj_sup", "ljmix_sup", "hsmix", "watermof"]

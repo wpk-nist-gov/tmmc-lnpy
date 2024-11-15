@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, cast, overload  # , TypedDict
 import numpy as np
 from module_utilities.docfiller import DocFiller
 
-from .docstrings import docfiller
+from .core.docstrings import docfiller
 from .lnpienergy import wFreeEnergy
 from .lnpiseries import lnPiCollection
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike
 
-    from ._typing import (
+    from .core.typing import (
         MyNDArray,
         PeakError,
         PeakStyle,

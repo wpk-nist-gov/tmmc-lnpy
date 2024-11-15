@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
-    from ._typing import MyNDArray
+    from .typing import MyNDArray
 
 
 if sys.version_info >= (3, 10):

@@ -11,6 +11,6 @@ Base classes and other methods
 
 
 
-.. automodule:: lnpy._typing
+.. automodule:: lnpy.core.typing
    :autosummary:
    :members:

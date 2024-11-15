@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from lnpy._typing_compat import TypeIs
+    from .typing_compat import TypeIs
 
 
 # * TypeGuards ----------------------------------------------------------------

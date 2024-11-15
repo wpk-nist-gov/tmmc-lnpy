@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 from module_utilities import cached
 
+from lnpy.core.utils import labels_to_masks, masks_change_convention
 from lnpy.ensembles import xCanonical, xGrandCanonical
 from lnpy.extensions import AccessorMixin
-from lnpy.utils import labels_to_masks, masks_change_convention
 
 # NOTE : This is a rework of core.
 # [ ] : split xarray functionality into wrapper(s)
@@ -181,7 +181,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     @cached.prop
     def edge_distance_matrix(self):
         """Matrix of distance from upper bound"""
-        from lnpy.utils import distance_matrix
+        from lnpy.core.utils import distance_matrix
 
         return distance_matrix(~self.mask)
 
@@ -216,7 +216,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """
         import bottleneck
 
-        from lnpy.utils import bfill, ffill
+        from lnpy.core.utils import bfill, ffill
 
         if axes is None:
             axes = range(self.ndim)

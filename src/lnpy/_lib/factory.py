@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike
 
-    from lnpy._typing import NDArrayAny
+    from lnpy.core.typing import NDArrayAny
 
     class DeltalnPiFromUpDown(Protocol):
         def __call__(

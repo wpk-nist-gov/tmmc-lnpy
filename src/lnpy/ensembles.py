@@ -13,10 +13,10 @@ import numpy as np
 import xarray as xr
 from module_utilities import cached
 
-from ._compat import xr_dot
+from .core.compat import xr_dot
+from .core.utils import dim_to_suffix_dataset
 from .lnpidata import lnPiMasked
 from .lnpiseries import lnPiCollection
-from .utils import dim_to_suffix_dataset
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping, Sequence
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike
 
-    from ._typing import MyNDArray, P, R, xArrayLike
-    from ._typing_compat import IndexAny
+    from .core.typing import MyNDArray, P, R, xArrayLike
+    from .core.typing_compat import IndexAny
 
 # always check_use_cache here.
 cached_prop = cached.prop(check_use_cache=True)

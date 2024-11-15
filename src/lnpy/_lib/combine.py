@@ -13,7 +13,7 @@ from .decorators import myguvectorize
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from lnpy._typing import FloatT, NDArrayInt
+    from lnpy.core.typing import FloatT, NDArrayInt
 
 
 _PARALLEL = False

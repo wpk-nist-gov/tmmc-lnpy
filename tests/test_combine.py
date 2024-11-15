@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from lnpy import combine
+from lnpy.combine import combine
 
 
 @pytest.fixture

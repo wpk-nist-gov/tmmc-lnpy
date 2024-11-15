@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping
     from typing import Any
 
-    from lnpy._typing import ApplyUFuncKwargs, MissingCoreDimOptions
+    from .typing import ApplyUFuncKwargs, MissingCoreDimOptions
 
 
 # * apply_ufunc_kws

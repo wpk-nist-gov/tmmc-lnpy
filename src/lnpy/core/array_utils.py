@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import xarray as xr
     from numpy.typing import ArrayLike, DTypeLike
 
-    from lnpy._typing import NDArrayAny
+    from .typing import NDArrayAny
 
 
 _ALLOWED_FLOAT_DTYPES = {np.dtype(np.float32), np.dtype(np.float64)}

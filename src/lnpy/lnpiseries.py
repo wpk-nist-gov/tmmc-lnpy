@@ -14,13 +14,13 @@ import pandas as pd
 import xarray as xr
 from module_utilities import cached
 
-from .docstrings import docfiller
-from .extensions import AccessorMixin
+from .core.docstrings import docfiller
 
 # lazy loads
-from .utils import get_tqdm_build as get_tqdm
-from .utils import labels_to_masks, masks_to_labels
-from .utils import parallel_map_build as parallel_map
+from .core.utils import get_tqdm_build as get_tqdm
+from .core.utils import labels_to_masks, masks_to_labels
+from .core.utils import parallel_map_build as parallel_map
+from .extensions import AccessorMixin
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
@@ -35,8 +35,8 @@ if TYPE_CHECKING:
     from pandas.core.groupby.generic import SeriesGroupBy
 
     from . import ensembles, lnpienergy, stability
-    from ._typing import IndexingInt, MyNDArray, Scalar
-    from ._typing_compat import IndexAny, Self
+    from .core.typing import IndexingInt, MyNDArray, Scalar
+    from .core.typing_compat import IndexAny, Self
     from .lnpidata import lnPiMasked
 
 
@@ -621,7 +621,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         **kwargs: Any,
     ) -> SeriesGroupBy[Any, Any] | _Groupby:
         """Groupby all but columns in drop"""
-        from .utils import allbut
+        from .core.utils import allbut
 
         if isinstance(drop, list):
             drop = tuple(drop)
@@ -1022,7 +1022,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
         See Also
         --------
-        ~lnpy.utils.labels_to_masks
+        ~lnpy.core.utils.labels_to_masks
         from_list
         """
 

@@ -16,24 +16,23 @@ import xarray as xr
 from module_utilities.docfiller import DocFiller
 from scipy.sparse import coo_array
 
-from lnpy.core.xr_utils import factory_apply_ufunc_kwargs
-
-from ._lib.factory import (
+from lnpy._lib.factory import (
     factory_delta_lnpi_from_updown,
     factory_lnpi_from_delta_lnpi,
     factory_normalize_lnpi,
     parallel_heuristic,
 )
-from .core.array_utils import asarray_maybe_recast, select_dtype
-from .core.validate import (
+from lnpy.core.array_utils import asarray_maybe_recast, select_dtype
+from lnpy.core.docstrings import docfiller
+from lnpy.core.utils import peek_at
+from lnpy.core.validate import (
     is_dataarray,
     is_dataframe,
     is_dataset,
     is_ndarray,
     is_series,
 )
-from .docstrings import docfiller
-from .utils import peek_at
+from lnpy.core.xr_utils import factory_apply_ufunc_kwargs
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -41,7 +40,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-    from ._typing import (
+    from lnpy.core.typing import (
         ApplyUFuncKwargs,
         AxisReduce,
         Casting,
@@ -49,19 +48,21 @@ if TYPE_CHECKING:
         KeepAttrs,
         NDArrayAny,
     )
-    from ._typing_compat import TypeVar
+    from lnpy.core.typing_compat import TypeVar
 
-    T_Array = TypeVar("T_Array", pd.Series[Any], NDArray[Any], xr.DataArray)
-    T_ArrayOrDataArray = TypeVar("T_ArrayOrDataArray", NDArray[Any], xr.DataArray)
-    T_Series = TypeVar("T_Series", pd.Series[Any], xr.DataArray)
-    T_Frame = TypeVar("T_Frame", pd.DataFrame, xr.Dataset)
+    GenArrayT = TypeVar("GenArrayT", NDArray[Any], xr.DataArray)
+    GenArrayOrSeriesT = TypeVar(
+        "GenArrayOrSeriesT", NDArray[Any], xr.DataArray, pd.Series[Any]
+    )
+    SeriesOrDataArrayT = TypeVar("SeriesOrDataArrayT", pd.Series[Any], xr.DataArray)
+    FrameOrDatasetT = TypeVar("FrameOrDatasetT", pd.DataFrame, xr.Dataset)
 
-    T_Dataset_Array = TypeVar("T_Dataset_Array", xr.DataArray, xr.Dataset)
+    DataT = TypeVar("DataT", xr.DataArray, xr.Dataset)
 
-    T_Frame_Array = TypeVar("T_Frame_Array", pd.DataFrame, xr.DataArray, xr.Dataset)
+    FrameOrDataT = TypeVar("FrameOrDataT", pd.DataFrame, xr.DataArray, xr.Dataset)
 
-    T_Array_Frame_Any = TypeVar(
-        "T_Array_Frame_Any",
+    DataAnyT = TypeVar(
+        "DataAnyT",
         NDArray[Any],
         pd.Series[Any],
         pd.DataFrame,
@@ -259,17 +260,17 @@ def _concat_windows_dataframe(
 
 
 def _concat_windows_xarray(
-    first: T_Dataset_Array,
-    tables: Iterator[T_Dataset_Array],
+    first: DataT,
+    tables: Iterator[DataT],
     window_name: str,
     coord_names: str | Iterable[str],
     index_name: str,
     overwrite_window: bool = True,
-) -> T_Dataset_Array:
+) -> DataT:
     if index_name not in first.coords:
         # stack each object
         # if wait until end, dtype might change because of missing values during concat and stack...
-        def _process_object(obj: T_Dataset_Array, window: int) -> T_Dataset_Array:
+        def _process_object(obj: DataT, window: int) -> DataT:
             if window_name not in obj.dims:
                 return obj.expand_dims(window_name).assign_coords(
                     {window_name: (window_name, [window])}
@@ -902,13 +903,13 @@ def _filter_min_max_keep_first(
 # * Collection matrix
 @docfiller_local
 def keep_first(
-    table: T_Frame_Array,
+    table: FrameOrDataT,
     window_name: str = "window",
     state_name: str = "state",
     check_connected: bool = False,
     index_name: str = "index",
     reset_window: bool = True,
-) -> T_Frame_Array:
+) -> FrameOrDataT:
     """
     Keep overlaps in the "first" window and drop in subsequent windows.
 
@@ -1064,7 +1065,7 @@ def keep_first(
             check_connected=check_connected,
         )
 
-    def _process_xarray(data: T_Dataset_Array) -> T_Dataset_Array:
+    def _process_xarray(data: DataT) -> DataT:
         # make sure correct
         if index_name in data.coords:
             names = data.indexes[index_name].names
@@ -1260,24 +1261,24 @@ def stack_weight_and_average(
 
 @docfiller_local
 def updown_from_collectionmatrix(
-    c0: T_Array_Frame_Any,
-    c1: T_Array_Frame_Any,
-    c2: T_Array_Frame_Any,
-) -> tuple[T_Array_Frame_Any, T_Array_Frame_Any, T_Array_Frame_Any]:
+    c0: DataAnyT,
+    c1: DataAnyT,
+    c2: DataAnyT,
+) -> tuple[DataAnyT, DataAnyT, DataAnyT]:
     weight = c0 + c1 + c2
     down = c0 / weight
     up = c2 / weight
-    return weight, down, up  # type: ignore[no-any-return]
+    return weight, down, up  # pyright: ignore[reportReturnType]
 
 
 @docfiller_local
 def assign_updown_from_collectionmatrix(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     matrix_names: Iterable[str] = ["c0", "c1", "c2"],
     weight_name: str = "n_trials",
     down_name: str = "prob_down",
     up_name: str = "prob_up",
-) -> T_Frame:
+) -> FrameOrDatasetT:
     """
     Add up/down probabilities from collection matrix.
 
@@ -1317,14 +1318,14 @@ def _select_axis_dim(
 
 @docfiller_local
 def delta_lnpi_from_updown(
-    down: T_Array,
+    down: GenArrayOrSeriesT,
     up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
     name: str | None = None,
     axis: int = -1,
     dim: DimsReduce | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""
     Calculate :math:`\Delta \ln \Pi(N)` from down/up probabilities.
 
@@ -1392,14 +1393,14 @@ def delta_lnpi_from_updown(
 
 @docfiller_local
 def lnpi_from_updown(
-    down: T_Array,
+    down: GenArrayOrSeriesT,
     up: NDArray[Any] | pd.Series[Any] | xr.DataArray,
-    # down: T_Array,
+    # down: GenArrayOrSeriesT,
     name: str | None = None,
     norm: bool = False,
     axis: int = -1,
     dim: DimsReduce | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""
     Calculate :math:`\ln \Pi(N)` from down/up sorted probabilities.
 
@@ -1452,8 +1453,8 @@ def lnpi_from_updown(
 
 
 def normalize_lnpi(
-    lnpi: T_Array, axis: AxisReduce = -1, dim: DimsReduce | None = None
-) -> T_Array:
+    lnpi: GenArrayOrSeriesT, axis: AxisReduce = -1, dim: DimsReduce | None = None
+) -> GenArrayOrSeriesT:
     r"""Normalize :math:`\ln\Pi` series or array."""
     kws: dict[str, Any]
     if is_ndarray(lnpi):
@@ -1469,14 +1470,14 @@ def normalize_lnpi(
 
 @docfiller_local
 def assign_lnpi_from_updown(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     lnpi_name: str = "ln_prob",
     down_name: str = "prob_down",
     up_name: str = "prob_up",
     norm: bool = True,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-) -> T_Frame:
+) -> FrameOrDatasetT:
     r"""
     Assign :math:`\ln \Pi(N)` from up/down sorted probabilities.
 
@@ -1516,7 +1517,7 @@ def assign_lnpi_from_updown(
 
 # * Indexed routines ----------------------------------------------------------
 def _apply_indexed_function(
-    *args: T_Array,
+    *args: GenArrayOrSeriesT,
     factory_gufunc: Callable[[bool], Callable[..., NDArrayAny]],
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
@@ -1529,14 +1530,14 @@ def _apply_indexed_function(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     """Generic indexed routine"""
     first = args[0]
 
     if is_series(first):
-        return pd.Series(
+        return pd.Series(  # pyright: ignore[reportReturnType]
             _apply_indexed_function(
-                *(a.to_numpy() for a in args),  # type: ignore[arg-type]
+                *(a.to_numpy() for a in args),  # pyright: ignore[reportAttributeAccessIssue]
                 factory_gufunc=factory_gufunc,
                 axis=-1,
                 index=index,
@@ -1588,9 +1589,7 @@ def _apply_indexed_function(
     axes = [axis] * len(args) + [-1] * 3 + [axis]
     signature = [dtype] * len(args) + [np.int64] * 3 + [dtype]
 
-    return factory_gufunc(  # type: ignore[no-any-return]
-        parallel_heuristic(parallel, size=first.size)
-    )(
+    return factory_gufunc(parallel_heuristic(parallel, size=first.size))(
         *args,
         index,
         group_start,
@@ -1604,8 +1603,8 @@ def _apply_indexed_function(
 
 @docfiller_local
 def delta_lnpi_from_updown_indexed(
-    down: T_Array,
-    up: T_Array,
+    down: GenArrayOrSeriesT,
+    up: GenArrayOrSeriesT,
     *,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
@@ -1618,7 +1617,7 @@ def delta_lnpi_from_updown_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""
     Calculate :math:`\Delta \ln \Pi(N)` from down/up probabilities by group.
 
@@ -1661,7 +1660,7 @@ def delta_lnpi_from_updown_indexed(
 
 @docfiller_local
 def normalize_lnpi_indexed(
-    lnpi: T_Array,
+    lnpi: GenArrayOrSeriesT,
     *,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
@@ -1674,7 +1673,7 @@ def normalize_lnpi_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""Normalize :math:`\ln \Pi(N)` with optional groups."""
 
     return _apply_indexed_function(
@@ -1696,7 +1695,7 @@ def normalize_lnpi_indexed(
 
 @docfiller_local
 def lnpi_from_delta_lnpi_indexed(
-    delta_lnpi: T_Array,
+    delta_lnpi: GenArrayOrSeriesT,
     *,
     normalize: bool = False,
     axis: AxisReduce = -1,
@@ -1710,7 +1709,7 @@ def lnpi_from_delta_lnpi_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""
     Calculate :math:`\ln \Pi(N)` from :math:`\Delta \ln \Pi(N)`.
 
@@ -1766,8 +1765,8 @@ def lnpi_from_delta_lnpi_indexed(
 
 @docfiller_local
 def lnpi_from_updown_indexed(
-    down: T_Array,
-    up: T_Array,
+    down: GenArrayOrSeriesT,
+    up: GenArrayOrSeriesT,
     *,
     normalize: bool = False,
     axis: AxisReduce = -1,
@@ -1781,7 +1780,7 @@ def lnpi_from_updown_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Array:
+) -> GenArrayOrSeriesT:
     r"""
     Calculate :math:`\ln \Pi(N)` from down/up probabilities by group.
 
@@ -1821,13 +1820,13 @@ def lnpi_from_updown_indexed(
         "apply_ufunc_kwargs": apply_ufunc_kwargs,
     }
 
-    delta_lnpi: T_Array = delta_lnpi_from_updown_indexed(down, up, **kws)  # type: ignore[arg-type]
+    delta_lnpi: GenArrayOrSeriesT = delta_lnpi_from_updown_indexed(down, up, **kws)  # type: ignore[arg-type]
     return lnpi_from_delta_lnpi_indexed(delta_lnpi, normalize=normalize, **kws)  # type: ignore[arg-type]
 
 
 # ** Assignment
 def _assign_indexed_function_result(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     *,
     name: str,
     func: Callable[..., Any],
@@ -1844,7 +1843,7 @@ def _assign_indexed_function_result(
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
     **kwargs: Any,
-) -> T_Frame:
+) -> FrameOrDatasetT:
     if is_dataframe(table):
         args = (table[key].to_numpy() for key in keys)
     else:
@@ -1870,7 +1869,7 @@ def _assign_indexed_function_result(
 
 @docfiller_local
 def assign_delta_lnpi_from_updown_indexed(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     *,
     down_name: str = "prob_down",
     up_name: str = "prob_up",
@@ -1886,7 +1885,7 @@ def assign_delta_lnpi_from_updown_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Frame:
+) -> FrameOrDatasetT:
     r"""
     Add :math:`\Delta \ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from up/down probabilities.
 
@@ -1938,7 +1937,7 @@ def assign_delta_lnpi_from_updown_indexed(
 
 @docfiller_local
 def assign_lnpi_from_delta_lnpi_indexed(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     *,
     delta_lnpi_name: str = "delta_lnpi",
     lnpi_name: str = "ln_prob",
@@ -1954,7 +1953,7 @@ def assign_lnpi_from_delta_lnpi_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Frame:
+) -> FrameOrDatasetT:
     r"""
     Add :math:`\ln \Pi(N) = \ln \Pi(N) - \ln \Pi(N-1)` from :math:`\Delta \ln \Pi(N)`.
 
@@ -2006,7 +2005,7 @@ def assign_lnpi_from_delta_lnpi_indexed(
 
 @docfiller_local
 def assign_lnpi_from_updown_indexed(
-    table: T_Frame,
+    table: FrameOrDatasetT,
     down_name: str = "prob_down",
     up_name: str = "prob_up",
     lnpi_name: str = "ln_prob",
@@ -2022,7 +2021,7 @@ def assign_lnpi_from_updown_indexed(
     parallel: bool | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> T_Frame:
+) -> FrameOrDatasetT:
     return _assign_indexed_function_result(
         table,
         name=lnpi_name,
