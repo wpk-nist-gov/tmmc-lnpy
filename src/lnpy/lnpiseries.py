@@ -15,11 +15,11 @@ import xarray as xr
 from module_utilities import cached
 
 from .core.docstrings import docfiller
+from .core.joblib import parallel_map_build as parallel_map
 
 # lazy loads
 from .core.utils import get_tqdm_build as get_tqdm
 from .core.utils import labels_to_masks, masks_to_labels
-from .core.utils import parallel_map_build as parallel_map
 from .extensions import AccessorMixin
 
 if TYPE_CHECKING:

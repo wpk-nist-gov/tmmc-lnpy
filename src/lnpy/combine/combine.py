@@ -24,7 +24,7 @@ from lnpy._lib.factory import (
 )
 from lnpy.core.array_utils import asarray_maybe_recast, select_dtype
 from lnpy.core.docstrings import docfiller
-from lnpy.core.utils import peek_at
+from lnpy.core.utils import peek_at, str_or_iterable_to_list
 from lnpy.core.validate import (
     is_dataarray,
     is_dataframe,
@@ -147,12 +147,6 @@ class OverlapError(ValueError):
     """Specific error for missing overlaps."""
 
 
-def _str_or_iterable_to_list(x: str | Iterable[str]) -> list[str]:
-    if isinstance(x, str):
-        return [x]
-    return list(x)
-
-
 # * connected graph
 # From networkx (see https://github.com/networkx/networkx/blob/main/networkx/algorithms/components/connected.py)
 def _plain_bfs(adj: dict[int, set[int]], source: int) -> set[int]:
@@ -211,7 +205,7 @@ def check_windows_overlap(
     OverlapError
         If the overlaps do not form a connected graph, then raise a ``OverlapError``.
     """
-    macrostate_names = _str_or_iterable_to_list(macrostate_names)
+    macrostate_names = str_or_iterable_to_list(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
     x: pd.DataFrame = (
@@ -288,7 +282,7 @@ def _concat_windows_xarray(
                         {
                             index_name: [
                                 window_name,
-                                *_str_or_iterable_to_list(coord_names),
+                                *str_or_iterable_to_list(coord_names),
                             ]
                         }
                     )  # pyright: ignore[reportArgumentType]
@@ -788,7 +782,7 @@ def shift_lnpi_windows(
     if window_max == 0:
         return table
 
-    macrostate_names = _str_or_iterable_to_list(macrostate_names)
+    macrostate_names = str_or_iterable_to_list(macrostate_names)
     overlap_total_table = _create_overlap_total_table(
         overlap_table=_create_overlap_table(
             table,

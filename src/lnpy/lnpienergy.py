@@ -15,11 +15,11 @@ import xarray as xr
 from module_utilities import cached
 
 from .core.docstrings import docfiller
+from .core.joblib import parallel_map_func_starargs
 from .core.utils import get_tqdm_calc as get_tqdm
 from .core.utils import (
     labels_to_masks,
     masks_change_convention,
-    parallel_map_func_starargs,
 )
 
 if TYPE_CHECKING:
