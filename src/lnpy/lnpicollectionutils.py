@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
-from .core.utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
+from .core.array_utils import array_to_scalar
+from .core.rootresults import RootResultDict, rootresults_to_rootresultdict
 from .lnpiseries import lnPiCollection
 
 if TYPE_CHECKING:
@@ -16,12 +17,12 @@ if TYPE_CHECKING:
     import xarray as xr
     from numpy.typing import ArrayLike
 
-    from .core.typing import MyNDArray
+    from .core.typing import NDArrayAny
     from .lnpidata import lnPiMasked
     from .segment import BuildPhasesBase
 
 
-def tag_phases_singlecomp(x: Sequence[lnPiMasked]) -> Sequence[int] | MyNDArray:
+def tag_phases_singlecomp(x: Sequence[lnPiMasked]) -> Sequence[int] | NDArrayAny:
     """
     Function to tag phases with a unique id.
 
@@ -322,16 +323,16 @@ def get_lnz_max(
 
 
 def build_grid(
-    x: ArrayLike | MyNDArray | None = None,
+    x: ArrayLike | NDArrayAny | None = None,
     dx: float | None = None,
-    x_range: Sequence[float] | MyNDArray | None = None,
+    x_range: Sequence[float] | NDArrayAny | None = None,
     x0: float | None = None,
-    offsets: Sequence[float] | MyNDArray | None = None,
+    offsets: Sequence[float] | NDArrayAny | None = None,
     even_grid: bool = False,
     digits: int | None = None,
     unique: bool = True,
     outlier: bool = False,
-) -> MyNDArray:
+) -> NDArrayAny:
     """
     Build a grid of values
 
@@ -412,7 +413,7 @@ def build_grid(
 def limited_collection(
     build_phases: BuildPhasesBase,
     dlnz: float,
-    lnz_range: Sequence[float] | MyNDArray | None = None,
+    lnz_range: Sequence[float] | NDArrayAny | None = None,
     offsets: list[int] | None = None,
     digits: int | None = None,
     even_grid: bool = True,

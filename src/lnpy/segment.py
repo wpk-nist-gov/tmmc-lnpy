@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     from .core.typing import (
-        MyNDArray,
+        NDArrayAny,
         PeakError,
         PeakStyle,
         PhasesFactorySignature,
@@ -99,9 +99,9 @@ docfiller_local = docfiller.append(
 
 @overload
 def peak_local_max_adaptive(
-    data: MyNDArray,
+    data: NDArrayAny,
     *,
-    mask: MyNDArray | None = ...,
+    mask: NDArrayAny | None = ...,
     min_distance: Sequence[int] | None = ...,
     style: Literal["indices"] = ...,
     threshold_rel: float = ...,
@@ -110,14 +110,14 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> tuple[MyNDArray, ...]: ...
+) -> tuple[NDArrayAny, ...]: ...
 
 
 @overload
 def peak_local_max_adaptive(
-    data: MyNDArray,
+    data: NDArrayAny,
     *,
-    mask: MyNDArray | None = ...,
+    mask: NDArrayAny | None = ...,
     min_distance: Sequence[int] | None = ...,
     style: Literal["mask", "marker"],
     threshold_rel: float = ...,
@@ -126,14 +126,14 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray: ...
+) -> NDArrayAny: ...
 
 
 @overload
 def peak_local_max_adaptive(
-    data: MyNDArray,
+    data: NDArrayAny,
     *,
-    mask: MyNDArray | None = ...,
+    mask: NDArrayAny | None = ...,
     min_distance: Sequence[int] | None = ...,
     style: str,
     threshold_rel: float = ...,
@@ -142,14 +142,14 @@ def peak_local_max_adaptive(
     connectivity: int | None = ...,
     errors: PeakError = ...,
     **kwargs: Any,
-) -> MyNDArray | tuple[MyNDArray, ...]: ...
+) -> NDArrayAny | tuple[NDArrayAny, ...]: ...
 
 
 @docfiller_local
 def peak_local_max_adaptive(
-    data: MyNDArray,
+    data: NDArrayAny,
     *,
-    mask: MyNDArray | None = None,
+    mask: NDArrayAny | None = None,
     min_distance: Sequence[int] | None = None,
     style: PeakStyle | str = "indices",
     threshold_rel: float = 0.0,
@@ -158,7 +158,7 @@ def peak_local_max_adaptive(
     connectivity: int | None = None,
     errors: PeakError = "warn",
     **kwargs: Any,
-) -> MyNDArray | tuple[MyNDArray, ...]:
+) -> NDArrayAny | tuple[NDArrayAny, ...]:
     """
     Find local max with fall backs min_distance and filter.
 
@@ -248,14 +248,14 @@ def peak_local_max_adaptive(
 
     idx = tuple(idx.T)
     if style == "indices":
-        return cast("tuple[MyNDArray, ...]", idx)
+        return cast("tuple[NDArrayAny, ...]", idx)
 
     out = np.zeros_like(data, dtype=bool)
     out[idx] = True
 
     if style == "marker":
         out = morphology_label(out, connectivity=connectivity)
-    return cast("MyNDArray", out)
+    return cast("NDArrayAny", out)
 
 
 @docfiller_local
@@ -287,57 +287,57 @@ class Segmenter:
     @overload
     def peaks(
         self,
-        data: MyNDArray,
-        mask: MyNDArray | None = ...,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = ...,
         *,
         num_peaks_max: int | None = ...,
         style: Literal["marker"] = ...,
         **kwargs: Any,
-    ) -> MyNDArray: ...
+    ) -> NDArrayAny: ...
 
     @overload
     def peaks(
         self,
-        data: MyNDArray,
-        mask: MyNDArray | None = ...,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = ...,
         *,
         num_peaks_max: int | None = ...,
         style: Literal["mask"],
         **kwargs: Any,
-    ) -> MyNDArray: ...
+    ) -> NDArrayAny: ...
 
     @overload
     def peaks(
         self,
-        data: MyNDArray,
-        mask: MyNDArray | None = ...,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = ...,
         *,
         num_peaks_max: int | None = ...,
         style: Literal["indices"],
         **kwargs: Any,
-    ) -> tuple[MyNDArray, ...]: ...
+    ) -> tuple[NDArrayAny, ...]: ...
 
     @overload
     def peaks(
         self,
-        data: MyNDArray,
-        mask: MyNDArray | None = ...,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = ...,
         *,
         num_peaks_max: int | None = ...,
         style: str,
         **kwargs: Any,
-    ) -> MyNDArray | tuple[MyNDArray, ...]: ...
+    ) -> NDArrayAny | tuple[NDArrayAny, ...]: ...
 
     @docfiller_local
     def peaks(
         self,
-        data: MyNDArray,
-        mask: MyNDArray | None = None,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = None,
         *,
         num_peaks_max: int | None = None,
         style: PeakStyle | str = "marker",
         **kwargs: Any,
-    ) -> MyNDArray | tuple[MyNDArray, ...]:
+    ) -> NDArrayAny | tuple[NDArrayAny, ...]:
         """
         Interface to :func:`peak_local_max_adaptive` with default values from `self`.
 
@@ -379,12 +379,12 @@ class Segmenter:
     @docfiller_local
     def watershed(
         self,
-        data: MyNDArray,
-        markers: int | MyNDArray,
-        mask: MyNDArray,
-        connectivity: int | MyNDArray | None = None,
+        data: NDArrayAny,
+        markers: int | NDArrayAny,
+        mask: NDArrayAny,
+        connectivity: int | NDArrayAny | None = None,
         **kwargs: Any,
-    ) -> MyNDArray:
+    ) -> NDArrayAny:
         """
         Interface to :func:`skimage.segmentation.watershed` function
 
@@ -417,13 +417,13 @@ class Segmenter:
     def segment_lnpi(
         self,
         lnpi: lnPiMasked,
-        markers: int | MyNDArray | None = None,
+        markers: int | NDArrayAny | None = None,
         find_peaks: bool = True,
         num_peaks_max: int | None = None,
-        connectivity: MyNDArray | None = None,
+        connectivity: NDArrayAny | None = None,
         peaks_kws: Mapping[str, Any] | None = None,
         watershed_kws: Mapping[str, Any] | None = None,
-    ) -> MyNDArray:
+    ) -> NDArrayAny:
         """
         Perform segmentations of lnPi object using watershed on negative of lnPi data.
 
@@ -545,9 +545,9 @@ class PhaseCreator:
     @staticmethod
     def _merge_phase_ids(
         ref: lnPiMasked,
-        phase_ids: Sequence[int] | MyNDArray,
+        phase_ids: Sequence[int] | NDArrayAny,
         lnpis: list[lnPiMasked],
-    ) -> tuple[MyNDArray, list[lnPiMasked]]:
+    ) -> tuple[NDArrayAny, list[lnPiMasked]]:
         """Perform merge of phase_ids/index"""
         from scipy.spatial.distance import pdist
 
@@ -576,7 +576,7 @@ class PhaseCreator:
     @overload
     def build_phases(
         self,
-        lnz: float | Sequence[float] | ArrayLike | MyNDArray | None = ...,
+        lnz: float | Sequence[float] | ArrayLike | NDArrayAny | None = ...,
         ref: lnPiMasked | None = ...,
         *,
         efac: float | None = ...,
@@ -597,7 +597,7 @@ class PhaseCreator:
     @overload
     def build_phases(
         self,
-        lnz: float | Sequence[float] | ArrayLike | MyNDArray | None = ...,
+        lnz: float | Sequence[float] | ArrayLike | NDArrayAny | None = ...,
         ref: lnPiMasked | None = ...,
         *,
         efac: float | None = ...,
@@ -613,12 +613,12 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
+    ) -> tuple[list[lnPiMasked], NDArrayAny]: ...
 
     @overload
     def build_phases(
         self,
-        lnz: float | Sequence[float] | ArrayLike | MyNDArray | None = ...,
+        lnz: float | Sequence[float] | ArrayLike | NDArrayAny | None = ...,
         ref: lnPiMasked | None = ...,
         *,
         efac: float | None = ...,
@@ -634,12 +634,12 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = ...,
         merge_kws: Mapping[str, Any] | None = ...,
         tag_phases: TagPhasesSignature | None = ...,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
+    ) -> tuple[list[lnPiMasked], NDArrayAny] | lnPiCollection: ...
 
     @docfiller_local
     def build_phases(
         self,
-        lnz: float | Sequence[float] | ArrayLike | MyNDArray | None = None,
+        lnz: float | Sequence[float] | ArrayLike | NDArrayAny | None = None,
         ref: lnPiMasked | None = None,
         *,
         efac: float | None = None,
@@ -655,7 +655,7 @@ class PhaseCreator:
         free_energy_kws: Mapping[str, Any] | None = None,
         merge_kws: Mapping[str, Any] | None = None,
         tag_phases: TagPhasesSignature | None = None,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
+    ) -> tuple[list[lnPiMasked], NDArrayAny] | lnPiCollection:
         """
         Construct 'phases' for a lnPi object.
 
@@ -910,7 +910,7 @@ class BuildPhasesBase:
     def _set_params(self) -> None:
         pass
 
-    def _get_lnz(self, lnz_index: float) -> MyNDArray:
+    def _get_lnz(self, lnz_index: float) -> NDArrayAny:
         raise NotImplementedError
 
     @overload
@@ -929,7 +929,7 @@ class BuildPhasesBase:
         *,
         phases_factory: Literal[False],
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray]: ...
+    ) -> tuple[list[lnPiMasked], NDArrayAny]: ...
 
     @overload
     def __call__(
@@ -938,7 +938,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | bool,
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection: ...
+    ) -> tuple[list[lnPiMasked], NDArrayAny] | lnPiCollection: ...
 
     def __call__(
         self,
@@ -946,7 +946,7 @@ class BuildPhasesBase:
         *,
         phases_factory: PhasesFactorySignature | bool = True,
         **kwargs: Any,
-    ) -> tuple[list[lnPiMasked], MyNDArray] | lnPiCollection:
+    ) -> tuple[list[lnPiMasked], NDArrayAny] | lnPiCollection:
         """
         Build phases from scalar value of lnz.
 
@@ -988,7 +988,7 @@ class BuildPhases_mu(BuildPhasesBase):  # noqa: N801
     def __init__(self, lnz: list[float | None], phase_creator: PhaseCreator) -> None:
         super().__init__(x=lnz, phase_creator=phase_creator)
 
-    def _get_lnz(self, lnz_index: float) -> MyNDArray:
+    def _get_lnz(self, lnz_index: float) -> NDArrayAny:
         lnz = self.x.copy()
         lnz[self.index] = lnz_index
         return np.asarray(lnz)
@@ -1009,9 +1009,9 @@ class BuildPhases_dmu(BuildPhasesBase):  # noqa: N801
         super().__init__(x=dlnz, phase_creator=phase_creator)
 
     def _set_params(self) -> None:
-        self._dlnz: MyNDArray = np.array([x if x is not None else 0.0 for x in self.x])
+        self._dlnz: NDArrayAny = np.array([x if x is not None else 0.0 for x in self.x])
 
-    def _get_lnz(self, lnz_index: float) -> MyNDArray:
+    def _get_lnz(self, lnz_index: float) -> NDArrayAny:
         return self._dlnz + lnz_index
 
 

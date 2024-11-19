@@ -16,7 +16,7 @@ from module_utilities import cached
 
 from .core.compat import copy_if_needed
 from .core.docstrings import docfiller
-from .core.utils import labels_to_masks, masks_change_convention
+from .core.mask import labels_to_masks, masks_change_convention
 from .extensions import AccessorMixin
 
 if TYPE_CHECKING:
@@ -28,19 +28,20 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from . import ensembles
-    from .core.typing import MaskConvention, MyNDArray
+    from .core.typing import MaskConvention, NDArrayAny
     from .core.typing_compat import Self
 
 
+# * Utilities -----------------------------------------------------------------
 @lru_cache(maxsize=20)
-def _get_n_ranges(shape: tuple[int, ...], dtype: DTypeLike) -> list[MyNDArray]:
+def _get_n_ranges(shape: tuple[int, ...], dtype: DTypeLike) -> list[NDArrayAny]:
     return [np.arange(s, dtype=dtype) for s in shape]
 
 
 @lru_cache(maxsize=20)
 def _get_shift(
     shape: tuple[int, ...], dlnz: tuple[float, ...], dtype: DTypeLike
-) -> MyNDArray:
+) -> NDArrayAny:
     shift = np.zeros([], dtype=dtype)
     for _i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):  # type: ignore[arg-type]
         shift = np.add.outer(shift, nr * m)
@@ -48,7 +49,7 @@ def _get_shift(
 
 
 @lru_cache(maxsize=20)
-def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> MyNDArray:
+def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> NDArrayAny:
     if all(x == 0 for x in dlnz):
         return base.data
     return _get_shift(base.shape, dlnz, base.data.dtype) + base.data  # pyright: ignore[reportArgumentType]
@@ -75,6 +76,7 @@ def _get_filled(
     return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore[no-any-return, no-untyped-call]
 
 
+# * lnPiArray -----------------------------------------------------------------
 class lnPiArray:  # noqa: N801
     """
     Wrapper on lnPi lnPiArray
@@ -88,7 +90,7 @@ class lnPiArray:  # noqa: N801
     def __init__(
         self,
         lnz: float | ArrayLike,
-        data: MyNDArray,
+        data: NDArrayAny,
         state_kws: dict[str, Any] | None = None,
         extra_kws: dict[str, Any] | None = None,
         fill_value: float | None = None,
@@ -135,7 +137,7 @@ class lnPiArray:  # noqa: N801
     def new_like(
         self,
         lnz: float | ArrayLike | None = None,
-        data: MyNDArray | None = None,
+        data: NDArrayAny | None = None,
         copy: bool | None = None,
     ) -> Self:
         """
@@ -194,7 +196,7 @@ class lnPiArray:  # noqa: N801
 
         import bottleneck
 
-        from .core import utils
+        from .core import array_utils
 
         if axes is None:
             axes = range(self.data.ndim)
@@ -202,19 +204,19 @@ class lnPiArray:  # noqa: N801
             axes = (axes,)
 
         data = self.data
-        datas: list[MyNDArray] = []
+        datas: list[NDArrayAny] = []
 
         if ffill:
-            datas += [utils.ffill(data, axis=axis, limit=limit) for axis in axes]
+            datas += [array_utils.ffill(data, axis=axis, limit=limit) for axis in axes]
         if bfill:
-            datas += [utils.bfill(data, axis=axis, limit=limit) for axis in axes]
+            datas += [array_utils.bfill(data, axis=axis, limit=limit) for axis in axes]
 
         if len(datas) > 0:
             data = bottleneck.nanmean(datas, axis=0)
 
         return self.new_like(data=data)
 
-    def zeromax(self, mask: MyNDArray | bool = False) -> Self:
+    def zeromax(self, mask: NDArrayAny | bool = False) -> Self:
         """
         Shift values such that lnpi.max() == 0
 
@@ -229,6 +231,7 @@ class lnPiArray:  # noqa: N801
         return self.new_like(data=data)
 
 
+# * Masked lnPi object --------------------------------------------------------
 @docfiller.decorate  # noqa: PLR0904
 class lnPiMasked(AccessorMixin):  # noqa: N801
     """
@@ -271,7 +274,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         self,
         lnz: float | ArrayLike,
         base: lnPiArray,
-        mask: MyNDArray | None = None,
+        mask: NDArrayAny | None = None,
         copy: bool | None = None,
     ) -> None:
         lnz = np.atleast_1d(lnz).astype(np.float64)
@@ -302,8 +305,8 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         cls,
         lnz: float | ArrayLike,
         lnz_data: float | ArrayLike,
-        data: MyNDArray,
-        mask: MyNDArray | None = None,
+        data: NDArrayAny,
+        mask: NDArrayAny | None = None,
         state_kws: dict[str, Any] | None = None,
         extra_kws: dict[str, Any] | None = None,
         fill_value: float | None = None,
@@ -343,7 +346,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         return cls(lnz=lnz, base=base, mask=mask, copy=copy)
 
     @property
-    def _data(self) -> MyNDArray:
+    def _data(self) -> NDArrayAny:
         return self._base.data
 
     @property
@@ -369,17 +372,17 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         """Masked array view of data reweighted data"""
         return _get_maskedarray(self._base, self, self._dlnz)
 
-    def filled(self, fill_value: float | None = None) -> MyNDArray:
+    def filled(self, fill_value: float | None = None) -> NDArrayAny:
         """Filled view or reweighted data"""
         return _get_filled(self._base, self, self._dlnz, fill_value)
 
     @property
-    def data(self) -> MyNDArray:
+    def data(self) -> NDArrayAny:
         """Reweighted data"""
         return _get_data(self._base, self._dlnz)
 
     @property
-    def mask(self) -> MyNDArray:
+    def mask(self) -> NDArrayAny:
         """Where `True`, values are masked out."""
         return self._mask
 
@@ -428,12 +431,12 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         return out
 
     # Parameters for xlnPi
-    def _lnpi_tot(self, fill_value: float | None = None) -> MyNDArray:
+    def _lnpi_tot(self, fill_value: float | None = None) -> NDArrayAny:
         return self.filled(fill_value)
 
     def _pi_params(
         self, fill_value: float | None = None
-    ) -> tuple[MyNDArray, float, float]:
+    ) -> tuple[NDArrayAny, float, float]:
         lnpi = self._lnpi_tot(fill_value)
 
         lnpi_local_max = lnpi.max()
@@ -446,7 +449,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         return pi_norm, pi_sum, lnpi_zero
 
     @property
-    def _lnz_tot(self) -> MyNDArray:
+    def _lnz_tot(self) -> NDArrayAny:
         return self.lnz
 
     # @cached.meth
@@ -529,7 +532,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         self,
         lnz: float | ArrayLike | None = None,
         base: lnPiArray | None = None,
-        mask: MyNDArray | None = None,
+        mask: NDArrayAny | None = None,
         copy: bool | None = None,
     ) -> Self:
         """
@@ -600,11 +603,11 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         """Create new object at specified value of `lnz`"""
         return self.new_like(lnz=lnz)
 
-    def or_mask(self, mask: MyNDArray) -> Self:
+    def or_mask(self, mask: NDArrayAny) -> Self:
         """New object with logical or of self.mask and mask"""
         return self.new_like(mask=(mask | self.mask))
 
-    def and_mask(self, mask: MyNDArray) -> Self:
+    def and_mask(self, mask: NDArrayAny) -> Self:
         """New object with logical and of self.mask and mask"""
         return self.new_like(mask=(mask & self.mask))
 
@@ -722,7 +725,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
 
     @docfiller.decorate
     def list_from_masks(
-        self, masks: Sequence[MyNDArray], convention: MaskConvention = "image"
+        self, masks: Sequence[NDArrayAny], convention: MaskConvention = "image"
     ) -> list[Self]:
         """
         Create list of lnpis corresponding to masks[i]
@@ -749,7 +752,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
     @docfiller.decorate
     def list_from_labels(
         self,
-        labels: MyNDArray,
+        labels: NDArrayAny,
         features: Sequence[int] | None = None,
         include_boundary: bool = False,
         check_features: bool = True,
@@ -789,16 +792,16 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
 
     @cached.prop
     @docfiller.decorate
-    def xge(self) -> ensembles.xGrandCanonical:
+    def xge(self) -> ensembles.GrandCanonicalEnsemble:
         """{accessor.xge}"""
-        from .ensembles import xGrandCanonical
+        from .ensembles import GrandCanonicalEnsemble
 
-        return xGrandCanonical(self)
+        return GrandCanonicalEnsemble(self)
 
     @cached.prop
     @docfiller.decorate
-    def xce(self) -> ensembles.xCanonical:
+    def xce(self) -> ensembles.CanonicalEnsemble:
         """{accessor.xce}"""
-        from .ensembles import xCanonical
+        from .ensembles import CanonicalEnsemble
 
-        return xCanonical(self)
+        return CanonicalEnsemble(self)

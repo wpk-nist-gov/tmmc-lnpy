@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 from module_utilities import cached
 
-from lnpy.core.utils import labels_to_masks, masks_change_convention
-from lnpy.ensembles import xCanonical, xGrandCanonical
+from lnpy.core.mask import labels_to_masks, masks_change_convention
+from lnpy.ensembles import CanonicalEnsemble, GrandCanonicalEnsemble
 from lnpy.extensions import AccessorMixin
 
 # NOTE : This is a rework of core.
@@ -216,7 +216,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         """
         import bottleneck
 
-        from lnpy.core.utils import bfill, ffill
+        from lnpy.core.array_utils import bfill, ffill
 
         if axes is None:
             axes = range(self.ndim)
@@ -502,9 +502,9 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         return self.list_from_masks(masks, convention=False)  # pyright: ignore[reportArgumentType]
 
     @cached.prop
-    def xge(self) -> xGrandCanonical:
-        return xGrandCanonical(self)  # type: ignore
+    def xge(self) -> GrandCanonicalEnsemble:
+        return GrandCanonicalEnsemble(self)  # type: ignore
 
     @cached.prop
-    def xce(self) -> xCanonical:
-        return xCanonical(self)  # type: ignore
+    def xce(self) -> CanonicalEnsemble:
+        return CanonicalEnsemble(self)  # type: ignore

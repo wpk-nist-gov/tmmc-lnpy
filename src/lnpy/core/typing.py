@@ -23,25 +23,25 @@ if TYPE_CHECKING:
     # Note: use fully qualified names
     import lnpy.lnpidata
     import lnpy.lnpiseries
-    from lnpy.ensembles import xCanonical, xGrandCanonical  # noqa: F401
+    from lnpy.ensembles import CanonicalEnsemble, GrandCanonicalEnsemble  # noqa: F401
 
 
 __all__ = [
     "C_Ensemble",
+    "EnsembleT",
     "F",
     "FuncType",
     "IndexingInt",
     "MaskConvention",
-    "MyNDArray",
+    "NDArrayAny",
     "P",
     "PeakError",
     "PeakStyle",
     "PhasesFactorySignature",
     "R",
     "T",
-    "T_Ensemble",
     "TagPhasesSignature",
-    "xArrayLike",
+    "XArrayLike",
 ]
 
 
@@ -49,21 +49,17 @@ FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[
 NDArrayInt = NDArray[np.int64]
 
 
-T_Ensemble = TypeVar("T_Ensemble", "xGrandCanonical", "xCanonical")
+EnsembleT = TypeVar("EnsembleT", "GrandCanonicalEnsemble", "CanonicalEnsemble")
 """TypeVar for Ensemble."""
 
 P = ParamSpec("P")
 R = TypeVar("R")
 T = TypeVar("T")
-C_Ensemble: TypeAlias = Callable[Concatenate[T_Ensemble, P], R]
+C_Ensemble: TypeAlias = Callable[Concatenate[EnsembleT, P], R]
 
 FuncType = Callable[..., Any]
 
 F = TypeVar("F", bound=FuncType)
-
-
-MyNDArray: TypeAlias = NDArray[Any]
-"""Alias for simple :class:`numpy.typing.NDArray`"""
 
 
 IndexingInt: TypeAlias = Union[
@@ -76,7 +72,7 @@ IndexingInt: TypeAlias = Union[
 ]
 
 
-xArrayLike: TypeAlias = Union[ArrayLike, xr.DataArray]  # noqa: N816
+XArrayLike: TypeAlias = Union[ArrayLike, xr.DataArray]
 
 IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
 Scalar: TypeAlias = IndexIterScalar
@@ -90,9 +86,12 @@ AxisReduce: TypeAlias = int
 DimsReduce: TypeAlias = Union[Hashable, Collection[Hashable]]
 
 NDArrayAny: TypeAlias = NDArray[Any]
+"""Alias for simple :class:`numpy.typing.NDArray[Any]`"""
+
+NDArrayBool: TypeAlias = NDArray[np.bool_]
 
 TagPhasesSignature = Callable[
-    [Sequence["lnpy.lnpidata.lnPiMasked"]], Union[Sequence[int], MyNDArray]
+    [Sequence["lnpy.lnpidata.lnPiMasked"]], Union[Sequence[int], NDArrayAny]
 ]
 """Signature for tag_phases function."""
 

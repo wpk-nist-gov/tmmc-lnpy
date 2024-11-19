@@ -79,3 +79,39 @@ def asarray_maybe_recast(
             return np.asarray(data, dtype=dtype)
         return data
     return np.asarray(data, dtype=dtype)
+
+
+# * Filling -------------------------------------------------------------------
+def ffill(arr: NDArrayAny, axis: int = -1, limit: int | None = None) -> NDArrayAny:
+    import bottleneck
+
+    _limit = limit if limit is not None else arr.shape[axis]
+    return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore[no-any-return]
+
+
+def bfill(arr: NDArrayAny, axis: int = -1, limit: int | None = None) -> NDArrayAny:
+    """Inverse of ffill"""
+    import bottleneck
+
+    # work around for bottleneck 178
+    _limit = limit if limit is not None else arr.shape[axis]
+
+    arr = np.flip(arr, axis=axis)
+    # fill
+    arr = bottleneck.push(arr, axis=axis, n=_limit)
+    # reverse back to original
+    return np.flip(arr, axis=axis)
+
+
+# * Helpers
+def array_to_scalar(x: float | NDArrayAny) -> float:
+    """
+    Convert array to scalar.
+
+    If `x` is an ndarray, convert to float of 0-d,
+    or extract first element (of flattened array )
+    if N-d.
+    """
+    if isinstance(x, np.ndarray):
+        return x.flat[0]  # type: ignore[no-any-return]
+    return x

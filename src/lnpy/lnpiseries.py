@@ -16,10 +16,10 @@ from module_utilities import cached
 
 from .core.docstrings import docfiller
 from .core.joblib import parallel_map_build as parallel_map
+from .core.mask import labels_to_masks, masks_to_labels
 
 # lazy loads
-from .core.utils import get_tqdm_build as get_tqdm
-from .core.utils import labels_to_masks, masks_to_labels
+from .core.progress import get_tqdm_build as get_tqdm
 from .extensions import AccessorMixin
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from pandas.core.groupby.generic import SeriesGroupBy
 
     from . import ensembles, lnpienergy, stability
-    from .core.typing import IndexingInt, MyNDArray, Scalar
+    from .core.typing import IndexingInt, NDArrayAny, Scalar
     from .core.typing_compat import IndexAny, Self
     from .lnpidata import lnPiMasked
 
@@ -238,7 +238,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         If True, then wrap lnPiCollection outputs in :class:`~xarray.DataArray`
     concat_dim : str, optional
         Name of dimensions to concat results along.
-        Also Used by :class:`~lnpy.ensembles.xGrandCanonical`.
+        Also Used by :class:`~lnpy.ensembles.GrandCanonicalEnsemble`.
     concat_coords : string, optional
         parameters `coords `to :func:`xarray.concat`
     unstack : bool, default=True
@@ -365,12 +365,12 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return iter(self._series)  # pyright: ignore[reportCallIssue,reportArgumentType]
 
     @property
-    def values(self) -> MyNDArray:
+    def values(self) -> NDArrayAny:
         """Series values"""
         return self._series.to_numpy()
 
     @property
-    def items(self) -> MyNDArray:
+    def items(self) -> NDArrayAny:
         """Alias to :attr:`values`"""
         return self.values
 
@@ -771,11 +771,11 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @overload
     def _get_lnz(
         self, component: None = ..., *, iloc: int = ..., zloc: int | None = ...
-    ) -> MyNDArray: ...
+    ) -> NDArrayAny: ...
 
     def _get_lnz(
         self, component: int | None = None, *, iloc: int = 0, zloc: int | None = None
-    ) -> float | MyNDArray:
+    ) -> float | NDArrayAny:
         """
         Helper function to.
         returns self.iloc[idx].lnz[component]
@@ -805,7 +805,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     def _nrec(self) -> int:
         return len(self._series)
 
-    def _lnpi_tot(self, fill_value: float | None = None) -> MyNDArray:
+    def _lnpi_tot(self, fill_value: float | None = None) -> NDArrayAny:
         # new method
         # this is no faster than the original
         # but makes clear where the time is being spent
@@ -818,16 +818,16 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return out
 
     @property
-    def _lnz_tot(self) -> MyNDArray:
+    def _lnz_tot(self) -> NDArrayAny:
         return np.stack([x.lnz for x in self])
 
     @property
-    def lnz(self) -> MyNDArray:
+    def lnz(self) -> NDArrayAny:
         return self._lnz_tot
 
     def _pi_params(
         self, fill_value: float | None = None
-    ) -> tuple[MyNDArray, MyNDArray, MyNDArray]:
+    ) -> tuple[NDArrayAny, NDArrayAny, NDArrayAny]:
         first = self.iloc[0]
         n = len(self)
 
@@ -859,7 +859,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     def from_list(
         cls,
         items: Sequence[lnPiMasked],
-        index: Iterable[int] | MyNDArray,
+        index: Iterable[int] | NDArrayAny,
         **kwargs: Any,
     ) -> Self:
         """
@@ -890,9 +890,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @classmethod
     def from_builder(
         cls,
-        lnzs: Sequence[float] | MyNDArray,
+        lnzs: Sequence[float] | NDArrayAny,
         # TODO(wpk): make better type for build_phases.
-        build_phases: Callable[..., tuple[list[lnPiMasked], MyNDArray]],
+        build_phases: Callable[..., tuple[list[lnPiMasked], NDArrayAny]],
         ref: lnPiMasked | None = None,
         build_kws: Mapping[str, Any] | None = None,
         nmax: int | None = None,
@@ -993,9 +993,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     def from_labels(
         cls,
         ref: lnPiMasked,
-        labels: Sequence[MyNDArray],
-        lnzs: Sequence[float | MyNDArray] | MyNDArray,
-        features: Sequence[int] | MyNDArray | None = None,
+        labels: Sequence[NDArrayAny],
+        lnzs: Sequence[float | NDArrayAny] | NDArrayAny,
+        features: Sequence[int] | NDArrayAny | None = None,
         include_boundary: bool = False,
         labels_kws: Mapping[str, Any] | None = None,
         check_features: bool = True,
@@ -1061,7 +1061,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         grouper: Hashable = "sample",
         include_boundary: bool = False,
         labels_kws: Mapping[str, Any] | None = None,
-        features: Sequence[int] | MyNDArray | None = None,
+        features: Sequence[int] | NDArrayAny | None = None,
         check_features: bool = True,
         **kwargs: Any,
     ) -> Self:
@@ -1104,11 +1104,11 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
     @cached.prop
     @docfiller.decorate
-    def xge(self) -> ensembles.xGrandCanonical:
+    def xge(self) -> ensembles.GrandCanonicalEnsemble:
         """{accessor.xge}"""
-        from .ensembles import xGrandCanonical
+        from .ensembles import GrandCanonicalEnsemble
 
-        return xGrandCanonical(self)
+        return GrandCanonicalEnsemble(self)
 
     @cached.prop
     def wfe(self) -> lnpienergy.wFreeEnergyCollection:

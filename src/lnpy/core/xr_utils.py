@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping
     from typing import Any
+
+    import xarray as xr
 
     from .typing import ApplyUFuncKwargs, MissingCoreDimOptions
 
@@ -39,3 +41,51 @@ def factory_apply_ufunc_kwargs(
     if output_dtypes:
         out.setdefault("output_dtypes", output_dtypes)
     return out
+
+
+# * xarray utils --------------------------------------------------------------
+def dim_to_suffix_dataarray(
+    da: xr.DataArray, dim: Hashable, join: str = "_"
+) -> xr.Dataset:
+    if dim in da.dims:
+        return da.assign_coords(  # type: ignore[misc]
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]
+        ).to_dataset(dim=dim)
+    return da.to_dataset()
+
+
+def dim_to_suffix_dataset(
+    table: xr.Dataset, dim: Hashable, join: str = "_"
+) -> xr.Dataset:
+    out = table
+    for k in out:
+        if dim in out[k].dims:
+            out = out.drop_vars(k).update(  # type: ignore[arg-type,unused-ignore]
+                table[k].pipe(dim_to_suffix_dataarray, dim, join)
+            )
+    return out
+
+
+@overload
+def dim_to_suffix(
+    ds: xr.DataArray, dim: Hashable = ..., join: str = ...
+) -> xr.DataArray: ...
+
+
+@overload
+def dim_to_suffix(
+    ds: xr.Dataset, dim: Hashable = ..., join: str = ...
+) -> xr.Dataset: ...
+
+
+def dim_to_suffix(
+    ds: xr.DataArray | xr.Dataset, dim: Hashable = "component", join: str = "_"
+) -> xr.DataArray | xr.Dataset:
+    from xarray import DataArray, Dataset
+
+    if isinstance(ds, DataArray):
+        return dim_to_suffix_dataarray(ds, dim=dim, join=join)
+    if isinstance(ds, Dataset):
+        return dim_to_suffix_dataset(ds, dim=dim, join=join)
+    msg = "`ds` must be `DataArray` or `Dataset`"
+    raise ValueError(msg)

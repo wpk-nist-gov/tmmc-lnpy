@@ -12,7 +12,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
     from typing import Any
 
-    from .typing import R
+    from .typing_compat import TypeVar
+
+    R = TypeVar("R")
 
 
 @lru_cache

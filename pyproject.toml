@@ -570,5 +570,5 @@ use_shortcuts = true
 datas = "datas"
 
 [tool.typos.default.extend-identifiers]
-MyNDArray = "MyNDArray"
+NDArrayAny = "NDArrayAny"
 fileprefix_inh = "fileprefix_inh"

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
-    from .typing import MyNDArray
+    from .typing import NDArrayAny
 
 
 if sys.version_info >= (3, 10):
@@ -57,7 +57,7 @@ def xr_dot(
 
 
 def rootresults(
-    root: float | MyNDArray | None,
+    root: float | NDArrayAny | None,
     iterations: int,
     function_calls: int,
     flag: int,

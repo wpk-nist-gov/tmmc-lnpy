@@ -14,19 +14,22 @@ import pandas as pd
 import xarray as xr
 from module_utilities import cached
 
+from lnpy.core.utils import peek_at
+
 from .core.docstrings import docfiller
 from .core.joblib import parallel_map_func_starargs
-from .core.utils import get_tqdm_calc as get_tqdm
-from .core.utils import (
+from .core.mask import (
     labels_to_masks,
     masks_change_convention,
 )
+from .core.progress import get_tqdm_calc as get_tqdm
+from .core.validate import validate_sequence
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import Any, Literal, Union
 
-    from .core.typing import MaskConvention, MyNDArray
+    from .core.typing import MaskConvention, NDArrayAny
     from .core.typing_compat import IndexAny, Self
     from .lnpiseries import lnPiCollection
 
@@ -41,11 +44,11 @@ if TYPE_CHECKING:
 
 @docfiller.decorate
 def find_boundaries(
-    masks: Sequence[MyNDArray],
+    masks: Iterable[NDArrayAny],
     mode: _FindBoundariesMode = "thick",
     connectivity: int | None = None,
     **kws: Any,
-) -> list[MyNDArray]:
+) -> list[NDArrayAny]:
     """
     Find boundary region for masks
 
@@ -70,7 +73,8 @@ def find_boundaries(
     from skimage import segmentation
 
     if connectivity is None:
-        connectivity = np.asarray(masks[0]).ndim
+        first, masks = peek_at(masks)
+        connectivity = np.asarray(first).ndim
 
     return [
         segmentation.find_boundaries(m, connectivity=connectivity, mode=mode, **kws)
@@ -80,40 +84,40 @@ def find_boundaries(
 
 @overload
 def find_boundaries_overlap(
-    masks: Sequence[MyNDArray],
+    masks: Iterable[NDArrayAny],
     *,
-    boundaries: list[MyNDArray] | None = ...,
+    boundaries: list[NDArrayAny] | None = ...,
     flag_none: bool = ...,
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["exact"] = ...,
-) -> dict[tuple[int, int, int], MyNDArray | None]: ...
+) -> dict[tuple[int, int, int], NDArrayAny | None]: ...
 
 
 @overload
 def find_boundaries_overlap(
-    masks: Sequence[MyNDArray],
+    masks: Iterable[NDArrayAny],
     *,
-    boundaries: list[MyNDArray] | None = ...,
+    boundaries: list[NDArrayAny] | None = ...,
     flag_none: bool = ...,
     mode: _FindBoundariesMode = ...,
     connectivity: int | None = ...,
     method: Literal["approx"],
-) -> dict[tuple[int, int], MyNDArray | None]: ...
+) -> dict[tuple[int, int], NDArrayAny | None]: ...
 
 
 @docfiller.decorate
 def find_boundaries_overlap(
-    masks: Sequence[MyNDArray],
+    masks: Iterable[NDArrayAny],
     *,
-    boundaries: list[MyNDArray] | None = None,
+    boundaries: list[NDArrayAny] | None = None,
     flag_none: bool = True,
     mode: _FindBoundariesMode = "thick",
     connectivity: int | None = None,
     method: _FindBoundariesMethod = "exact",
 ) -> (
-    dict[tuple[int, int, int], MyNDArray | None]
-    | dict[tuple[int, int], MyNDArray | None]
+    dict[tuple[int, int, int], NDArrayAny | None]
+    | dict[tuple[int, int], NDArrayAny | None]
 ):
     """
     Find regions where boundaries overlap
@@ -142,6 +146,7 @@ def find_boundaries_overlap(
     find_boundaries
     """
 
+    masks = validate_sequence(masks)
     n = len(masks)
     possible_methods = {"approx", "exact"}
 
@@ -156,8 +161,8 @@ def find_boundaries_overlap(
         msg = f"{boundaries=} must have length {n}."
         raise ValueError(msg)
 
-    def _get_approx() -> dict[tuple[int, int], MyNDArray | None]:
-        result: dict[tuple[int, int], MyNDArray | None] = {}
+    def _get_approx() -> dict[tuple[int, int], NDArrayAny | None]:
+        result: dict[tuple[int, int], NDArrayAny | None] = {}
         for i, j in itertools.combinations(range(n), 2):
             # overlap region is where boundaries overlap, and in one of the masks
             overlap = (boundaries[i] & boundaries[j]) & (masks[i] | masks[j])
@@ -167,8 +172,8 @@ def find_boundaries_overlap(
                 result[i, j] = overlap
         return result
 
-    def _get_exact() -> dict[tuple[int, int, int], MyNDArray | None]:
-        result: dict[tuple[int, int, int], MyNDArray | None] = {}
+    def _get_exact() -> dict[tuple[int, int, int], NDArrayAny | None]:
+        result: dict[tuple[int, int, int], NDArrayAny | None] = {}
         for i, j in itertools.combinations(range(n), 2):
             boundaries_overlap = boundaries[i] & boundaries[j]
             for index, m in enumerate([masks[i], masks[j]]):
@@ -190,14 +195,14 @@ def find_boundaries_overlap(
 
 @docfiller.decorate
 def find_masked_extrema(
-    data: MyNDArray,
-    masks: Sequence[MyNDArray | None],
+    data: NDArrayAny,
+    masks: Iterable[NDArrayAny | None],
     convention: MaskConvention = "image",
     extrema: _Extrema = "max",
     fill_val: _FillVal = np.nan,
     fill_arg: _FillArg = None,
     unravel: bool = True,
-) -> tuple[list[_ExtremaArg], MyNDArray]:
+) -> tuple[list[_ExtremaArg], NDArrayAny]:
     """
     Find position and value of extrema of masked data.
 
@@ -266,15 +271,15 @@ def find_masked_extrema(
 
 @docfiller.decorate
 def merge_regions(
-    w_tran: MyNDArray,
-    w_min: MyNDArray,
-    masks: Sequence[MyNDArray],
+    w_tran: NDArrayAny,
+    w_min: NDArrayAny,
+    masks: Iterable[NDArrayAny],
     nfeature_max: int | None = None,
     efac: float = 1.0,
     force: bool = True,
     convention: MaskConvention = "image",
     warn: bool = True,
-) -> tuple[Sequence[MyNDArray], MyNDArray, MyNDArray]:
+) -> tuple[list[NDArrayAny], NDArrayAny, NDArrayAny]:
     r"""
     Merge labels where free energy energy barrier < efac.
 
@@ -313,6 +318,8 @@ def merge_regions(
     w_min : array
         free energy minima of new masks
     """
+
+    masks = list(masks)
 
     nfeature = len(masks)
     if nfeature_max is None:
@@ -371,10 +378,7 @@ def merge_regions(
     w_tran = w_tran[idx_tran]
 
     # get masks
-    masks = [mapping[i] for i in idx_min]
-
-    # optionally convert image
-    masks = masks_change_convention(masks, True, convention)
+    masks = masks_change_convention((mapping[i] for i in idx_min), True, convention)
 
     return masks, w_tran, w_min
 
@@ -405,11 +409,11 @@ class wFreeEnergy:  # noqa: N801
 
     def __init__(
         self,
-        data: MyNDArray,
-        masks: Sequence[MyNDArray],
+        data: NDArrayAny,
+        masks: Iterable[NDArrayAny],
         convention: MaskConvention = "image",
         connectivity: int | None = None,
-        index: Sequence[int] | MyNDArray | None = None,
+        index: Sequence[int] | NDArrayAny | None = None,
     ) -> None:
         self.data = np.asarray(data)
 
@@ -436,8 +440,8 @@ class wFreeEnergy:  # noqa: N801
     @docfiller.decorate
     def from_labels(
         cls,
-        data: MyNDArray,
-        labels: MyNDArray,
+        data: NDArrayAny,
+        labels: NDArrayAny,
         connectivity: int | None = None,
         features: Sequence[int] | None = None,
         include_boundary: bool = False,
@@ -475,14 +479,14 @@ class wFreeEnergy:  # noqa: N801
         return cls(data=data, masks=masks, connectivity=connectivity)
 
     @cached.prop
-    def _data_max(self) -> tuple[list[_ExtremaArg], MyNDArray]:
+    def _data_max(self) -> tuple[list[_ExtremaArg], NDArrayAny]:
         """For lnPi data, find absolute argmax and max"""
         return find_masked_extrema(self.data, self.masks)
 
     @cached.meth
     def _boundary_max(
         self, method: Literal["approx", "exact"] = "exact", fill_value: float = np.nan
-    ) -> tuple[dict[tuple[int, int], _ExtremaArg], MyNDArray]:
+    ) -> tuple[dict[tuple[int, int], _ExtremaArg], NDArrayAny]:
         """
         Find argmax along boundaries of regions.
         Corresponds to argmin(w)
@@ -536,7 +540,7 @@ class wFreeEnergy:  # noqa: N801
         return out_arg, out_max
 
     @property
-    def w_min(self) -> MyNDArray:
+    def w_min(self) -> NDArrayAny:
         """Minimum value of `w` (max `lnPi`) in each phase/region."""
         return -self._data_max[1][:, None]
 
@@ -546,7 +550,7 @@ class wFreeEnergy:  # noqa: N801
         return self._data_max[0]
 
     @property
-    def w_tran(self) -> MyNDArray:
+    def w_tran(self) -> NDArrayAny:
         """
         Minimum value of `w` (max `lnPi`) in the boundary between phases.
 
@@ -560,7 +564,7 @@ class wFreeEnergy:  # noqa: N801
         return self._boundary_max()[0]
 
     @cached.prop
-    def delta_w(self) -> MyNDArray:
+    def delta_w(self) -> NDArrayAny:
         """Transition energy ``delta_w[i, j] = w_tran[i, j] - w_min[i]``."""
         return self.w_tran - self.w_min
 
@@ -571,7 +575,7 @@ class wFreeEnergy:  # noqa: N801
         force: bool = True,
         convention: MaskConvention = "image",
         warn: bool = True,
-    ) -> tuple[Sequence[MyNDArray], MyNDArray, MyNDArray]:
+    ) -> tuple[Sequence[NDArrayAny], NDArrayAny, NDArrayAny]:
         """
         Merge labels where free energy energy barrier < efac.
 
@@ -815,7 +819,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
     def get_dw(  # type: ignore[override]
         self, idx: int, idx_nebr: int | Iterable[int] | None = None
-    ) -> float | MyNDArray:
+    ) -> float | NDArrayAny:
         dw = self.dwx
         index = dw.indexes["phase"]
 

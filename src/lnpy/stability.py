@@ -13,8 +13,9 @@ from typing import TYPE_CHECKING, overload
 import numpy as np
 from module_utilities import cached
 
+from .core.array_utils import array_to_scalar
 from .core.compat import rootresults
-from .core.utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
+from .core.rootresults import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
 
-    from .core.typing import MyNDArray
+    from .core.typing import NDArrayAny
     from .core.typing_compat import Self
     from .lnpidata import lnPiMasked
     from .lnpiseries import lnPiCollection
@@ -545,7 +546,7 @@ class _SolveBinodal:
         self.ref = ref
         self.build_kws = build_kws or {}
 
-    def objective(self, x: float) -> float | MyNDArray:
+    def objective(self, x: float) -> float | NDArrayAny:
         self.collection = self.build_phases(x, ref=self.ref, **self.build_kws)
         out = (
             self.collection.xge.betaOmega()

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from typing import Any, Literal
 
-    from .core.typing import MyNDArray
+    from .core.typing import NDArrayAny
     from .lnpidata import lnPiMasked
 
     _ExampleNames = Literal["lj_sub", "lj_sup", "ljmix_sup", "hsmix", "watermof"]
@@ -60,11 +60,11 @@ def json_to_dict(basename: str) -> dict[str, Any]:
 class ExampleDict(TypedDict):
     """Example dict"""
 
-    lnPi_data: MyNDArray
-    lnPi_mask: MyNDArray
+    lnPi_data: NDArrayAny
+    lnPi_mask: NDArrayAny
     state_kws: dict[str, Any]
     extra_kws: dict[str, Any]
-    lnz: MyNDArray
+    lnz: NDArrayAny
 
 
 def load_example_dict(name: _ExampleNames) -> ExampleDict:
@@ -154,7 +154,7 @@ def lj_sup_example() -> Example:
     return Example(ref=ref, phase_creator=phase_creator, build_phases=build_phases)
 
 
-def tag_phases_single_comp_simple(x: Sequence[lnPiMasked]) -> MyNDArray:
+def tag_phases_single_comp_simple(x: Sequence[lnPiMasked]) -> NDArrayAny:
     if len(x) > 2:
         msg = "bad tag function"
         raise ValueError(msg)
@@ -195,7 +195,7 @@ def ljmix_sup_example() -> Example:
 def hsmix_example() -> Example:
     """Create an :class:`Example` instance for a hard-sphere mixture."""
 
-    def tag_phases(x: Sequence[lnPiMasked]) -> MyNDArray:
+    def tag_phases(x: Sequence[lnPiMasked]) -> NDArrayAny:
         if len(x) > 2:
             msg = "bad tag function"
             raise ValueError(msg)

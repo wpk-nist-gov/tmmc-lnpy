@@ -103,7 +103,7 @@ zloc
 xce
 iteratively
 wFreeEnergyPhases
-xCanonical
+CanonicalEnsemble
 Crompressibility
 Helmholtz
 Dataset
@@ -114,7 +114,7 @@ betapV
 ncoords
 ntot
 nvec
-xGrandCanonical
+GrandCanonicalEnsemble
 Compressibility
 frac
 coords

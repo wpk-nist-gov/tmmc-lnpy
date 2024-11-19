@@ -118,8 +118,8 @@ apply_ufunc_kwargs : dict-like
 
 
 _accessor_docs = {
-    "xge": "Accessor to :class:`~lnpy.ensembles.xGrandCanonical`.",
-    "xce": "Accessor to :class:`~lnpy.ensembles.xCanonical`.",
+    "xge": "Accessor to :class:`~lnpy.ensembles.GrandCanonicalEnsemble`.",
+    "xce": "Accessor to :class:`~lnpy.ensembles.CanonicalEnsemble`.",
 }
 
 

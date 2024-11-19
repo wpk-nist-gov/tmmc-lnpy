@@ -24,13 +24,14 @@ from lnpy._lib.factory import (
 )
 from lnpy.core.array_utils import asarray_maybe_recast, select_dtype
 from lnpy.core.docstrings import docfiller
-from lnpy.core.utils import peek_at, str_or_iterable_to_list
+from lnpy.core.utils import peek_at
 from lnpy.core.validate import (
     is_dataarray,
     is_dataframe,
     is_dataset,
     is_ndarray,
     is_series,
+    validate_str_or_iterable,
 )
 from lnpy.core.xr_utils import factory_apply_ufunc_kwargs
 
@@ -205,7 +206,7 @@ def check_windows_overlap(
     OverlapError
         If the overlaps do not form a connected graph, then raise a ``OverlapError``.
     """
-    macrostate_names = str_or_iterable_to_list(macrostate_names)
+    macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
     x: pd.DataFrame = (
@@ -282,7 +283,7 @@ def _concat_windows_xarray(
                         {
                             index_name: [
                                 window_name,
-                                *str_or_iterable_to_list(coord_names),
+                                *validate_str_or_iterable(coord_names),
                             ]
                         }
                     )  # pyright: ignore[reportArgumentType]
@@ -782,7 +783,7 @@ def shift_lnpi_windows(
     if window_max == 0:
         return table
 
-    macrostate_names = str_or_iterable_to_list(macrostate_names)
+    macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_total_table = _create_overlap_total_table(
         overlap_table=_create_overlap_table(
             table,

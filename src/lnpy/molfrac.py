@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .core.utils import RootResultDict, array_to_scalar, rootresults_to_rootresultdict
+from .core.array_utils import array_to_scalar
+from .core.rootresults import RootResultDict, rootresults_to_rootresultdict
 from .lnpiseries import lnPiCollection
 
 if TYPE_CHECKING:
