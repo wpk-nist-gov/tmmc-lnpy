@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, cast, overload
 import numpy as np
 import pandas as pd
 import xarray as xr
-from module_utilities.docfiller import DocFiller
 from scipy.sparse import coo_array
 
 from lnpy._lib.factory import (
@@ -23,7 +22,6 @@ from lnpy._lib.factory import (
     parallel_heuristic,
 )
 from lnpy.core.array_utils import asarray_maybe_recast, select_dtype
-from lnpy.core.docstrings import docfiller
 from lnpy.core.utils import peek_at
 from lnpy.core.validate import (
     is_dataarray,
@@ -33,7 +31,9 @@ from lnpy.core.validate import (
     is_series,
     validate_str_or_iterable,
 )
-from lnpy.core.xr_utils import factory_apply_ufunc_kwargs
+from lnpy.core.xr_utils import factory_apply_ufunc_kwargs, select_axis_dim
+
+from ._docfiller import docfiller_local
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -45,103 +45,15 @@ if TYPE_CHECKING:
         ApplyUFuncKwargs,
         AxisReduce,
         Casting,
+        DataAnyT,
+        DataT,
         DimsReduce,
+        FrameOrDatasetT,
+        FrameOrDataT,
+        GenArrayOrSeriesT,
         KeepAttrs,
         NDArrayAny,
     )
-    from lnpy.core.typing_compat import TypeVar
-
-    GenArrayT = TypeVar("GenArrayT", NDArray[Any], xr.DataArray)
-    GenArrayOrSeriesT = TypeVar(
-        "GenArrayOrSeriesT", NDArray[Any], xr.DataArray, pd.Series[Any]
-    )
-    SeriesOrDataArrayT = TypeVar("SeriesOrDataArrayT", pd.Series[Any], xr.DataArray)
-    FrameOrDatasetT = TypeVar("FrameOrDatasetT", pd.DataFrame, xr.Dataset)
-
-    DataT = TypeVar("DataT", xr.DataArray, xr.Dataset)
-
-    FrameOrDataT = TypeVar("FrameOrDataT", pd.DataFrame, xr.DataArray, xr.Dataset)
-
-    DataAnyT = TypeVar(
-        "DataAnyT",
-        NDArray[Any],
-        pd.Series[Any],
-        pd.DataFrame,
-        xr.DataArray,
-        xr.Dataset,
-    )
-
-
-_docstrings_local = r"""
-Parameters
-----------
-lnpi_name : str
-    Column/variable name corresponding to :math:`\ln \Pi(N)`.
-delta_lnpi_name : str
-    Column/variable name corresponding to :math:`\Delta \ln \Pi(N)`.
-window_name :
-    Column name corresponding to "window", i.e., an individual simulation.
-    Note that this is only used if passing in a single dataframe with multiple windows.
-state_name :
-    Column name corresponding to simulation state. For example, ``state="state"``.
-macrostate_names :
-    Column name(s) corresponding to a single "state". For example, for a single
-    component system, this could be ``macrostate_names="n"``, and for a binary
-    system ``macrostate_names=["n_0", "n_1"]``
-up_name :
-    Column name corresponding to "up" probability.
-down_name :
-    Column name corresponding to "down" probability.
-weight_name :
-    Column name corresponding to "weight" of probability.
-table_assign | table :
-    :class:`pandas.DataFrame` or :class:`xarray.Dataset` data container.
-check_connected :
-    If ``True``, check that all windows form a connected graph.
-tables :
-    Individual sample windows. If pass in a single
-    :class:`~pandas.DataFrame`, it must contain the column ``window_name``.
-    Otherwise, the individual frames will be concatenated and the
-    ``window_name`` column will be added (or replaced if already present).
-up :
-    Probability of moving from ``state[i]`` to ``state[i+1]``.
-down :
-    Probability of moving from ``state[i]`` to ``state[i-1]``.
-norm :
-    If True, normalize :math:`\ln \Pi(N)`.
-normalize : bool
-    If ``True``, normalize probability.
-array_name | name:
-    Optional name to assign to the output :class:`pandas.Series` or `xarray.DataArray`.
-
-index : array-like, optional
-    Index into `axis` of `data`.  Defaults to range(len(down))
-groups | group_start, group_end : array-like, optional
-    Start, end of index for a group.
-    ``index[group_start[group]:group_end[group]]`` are the indices for
-    group ``group``.  Defaults to single group
-
-axis : int, optional
-    Axis to calculate along.
-dim : str, optional
-    Dimension to calculate along.  Overrides `axis` if specified.
-out : ndarray, optional
-    Output array.
-dtype : dtype, optional
-    Optional :class:`~numpy.dtype` for output data.
-
-
-Raises
-------
-OverlapError
-    If the overlaps do not form a connected graph, then raise a ``OverlapError``.
-
-"""
-
-
-docfiller_local = docfiller.append(
-    DocFiller.from_docstring(_docstrings_local, combine_keys="parameters")
-).decorate
 
 
 class OverlapError(ValueError):
@@ -1301,16 +1213,6 @@ def assign_updown_from_collectionmatrix(
     )
 
 
-def _select_axis_dim(
-    target: xr.DataArray, axis: AxisReduce, dim: DimsReduce | None
-) -> tuple[int, DimsReduce]:
-    if dim is not None:
-        axis = target.get_axis_num(dim)  # type: ignore[assignment]
-    else:
-        dim = target.dims[axis]
-    return axis, dim
-
-
 @docfiller_local
 def delta_lnpi_from_updown(
     down: GenArrayOrSeriesT,
@@ -1357,7 +1259,7 @@ def delta_lnpi_from_updown(
         return np.moveaxis(delta, -1, axis)  # pyright: ignore[reportReturnType]
 
     if is_dataarray(down):
-        axis, dim = _select_axis_dim(down, axis, dim)
+        axis, dim = select_axis_dim(down, axis, dim)
 
         out: xr.DataArray = xr.apply_ufunc(
             delta_lnpi_from_updown,
@@ -1422,7 +1324,7 @@ def lnpi_from_updown(
         return normalize_lnpi(ln_prob, axis=axis) if norm else ln_prob
 
     if is_dataarray(down):
-        axis, dim = _select_axis_dim(down, axis, dim)
+        axis, dim = select_axis_dim(down, axis, dim)
 
         out: xr.DataArray = xr.apply_ufunc(
             lnpi_from_updown,
@@ -1456,7 +1358,7 @@ def normalize_lnpi(
         kws = {"axis": axis, "keepdims": True}
 
     elif is_dataarray(lnpi):
-        axis, dim = _select_axis_dim(lnpi, axis, dim)
+        axis, dim = select_axis_dim(lnpi, axis, dim)
         kws = {"dim": dim}
     else:
         kws = {}
@@ -1548,7 +1450,7 @@ def _apply_indexed_function(
 
     if is_dataarray(first):
         dtype = select_dtype(first, out=out, dtype=dtype)
-        axis, dim = _select_axis_dim(first, axis, dim)
+        axis, dim = select_axis_dim(first, axis, dim)
 
         xout: xr.DataArray = xr.apply_ufunc(
             _apply_indexed_function,

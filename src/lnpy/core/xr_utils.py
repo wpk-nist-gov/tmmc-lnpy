@@ -4,13 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
+from lnpy.core.validate import is_dataset
+
 if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping
     from typing import Any
 
     import xarray as xr
 
-    from .typing import ApplyUFuncKwargs, MissingCoreDimOptions
+    from .typing import (
+        ApplyUFuncKwargs,
+        AxisReduce,
+        DimsReduce,
+        MissingCoreDimOptions,
+    )
 
 
 # * apply_ufunc_kws
@@ -89,3 +96,20 @@ def dim_to_suffix(
         return dim_to_suffix_dataset(ds, dim=dim, join=join)
     msg = "`ds` must be `DataArray` or `Dataset`"
     raise ValueError(msg)
+
+
+# * Select Axis ---------------------------------------------------------------
+def select_axis_dim(
+    target: xr.DataArray | xr.Dataset, axis: AxisReduce, dim: DimsReduce | None
+) -> tuple[int, DimsReduce]:
+    if is_dataset(target):
+        if dim is None:
+            msg = "Must specify `dim` with dataset"
+            raise ValueError(msg)
+        return -1, dim
+
+    if dim is not None:
+        axis = target.get_axis_num(dim)  # type: ignore[assignment]
+    else:
+        dim = target.dims[axis]
+    return axis, dim

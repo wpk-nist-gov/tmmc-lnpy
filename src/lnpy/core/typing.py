@@ -5,7 +5,7 @@ Typing definitions for :mod:`lnpy`
 
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Hashable, Mapping, Sequence
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,6 +14,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 from numpy.typing import ArrayLike, NDArray
 
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     # Note: use fully qualified names
     import lnpy.lnpidata
     import lnpy.lnpiseries
+    from lnpy.combine.grouper import IndexedGrouper
     from lnpy.ensembles import CanonicalEnsemble, GrandCanonicalEnsemble  # noqa: F401
 
 
@@ -44,14 +46,35 @@ __all__ = [
     "XArrayLike",
 ]
 
-
-FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[misc]
+# * NDArray
+NDArrayAny: TypeAlias = NDArray[Any]
+"""Alias for simple :class:`numpy.typing.NDArray[Any]`"""
 NDArrayInt = NDArray[np.int64]
+NDArrayBool: TypeAlias = NDArray[np.bool_]
 
 
+# * TypeVars
 EnsembleT = TypeVar("EnsembleT", "GrandCanonicalEnsemble", "CanonicalEnsemble")
 """TypeVar for Ensemble."""
+FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[misc]
+GenArrayT = TypeVar("GenArrayT", NDArray[Any], xr.DataArray)
+GenArrayOrSeriesT = TypeVar(
+    "GenArrayOrSeriesT", NDArray[Any], xr.DataArray, "pd.Series[Any]"
+)
+SeriesOrDataArrayT = TypeVar("SeriesOrDataArrayT", "pd.Series[Any]", xr.DataArray)
+FrameOrDatasetT = TypeVar("FrameOrDatasetT", pd.DataFrame, xr.Dataset)
+DataT = TypeVar("DataT", xr.DataArray, xr.Dataset)
+FrameOrDataT = TypeVar("FrameOrDataT", pd.DataFrame, xr.DataArray, xr.Dataset)
+DataAnyT = TypeVar(
+    "DataAnyT",
+    NDArray[Any],
+    "pd.Series[Any]",
+    pd.DataFrame,
+    xr.DataArray,
+    xr.Dataset,
+)
 
+# * Decorating
 P = ParamSpec("P")
 R = TypeVar("R")
 T = TypeVar("T")
@@ -61,35 +84,7 @@ FuncType = Callable[..., Any]
 
 F = TypeVar("F", bound=FuncType)
 
-
-IndexingInt: TypeAlias = Union[
-    int,
-    "np.int_",
-    "np.integer[Any]",
-    "np.unsignedinteger[Any]",
-    "np.signedinteger[Any]",
-    "np.int8",
-]
-
-
-XArrayLike: TypeAlias = Union[ArrayLike, xr.DataArray]
-
-IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
-Scalar: TypeAlias = IndexIterScalar
-
-# Segmentation stuff
-PeakStyle = Literal["indices", "mask", "marker"]
-PeakError = Literal["ignore", "raise", "warn"]
-
-# reduction dimensions/axes
-AxisReduce: TypeAlias = int
-DimsReduce: TypeAlias = Union[Hashable, Collection[Hashable]]
-
-NDArrayAny: TypeAlias = NDArray[Any]
-"""Alias for simple :class:`numpy.typing.NDArray[Any]`"""
-
-NDArrayBool: TypeAlias = NDArray[np.bool_]
-
+# * Callables
 TagPhasesSignature = Callable[
     [Sequence["lnpy.lnpidata.lnPiMasked"]], Union[Sequence[int], NDArrayAny]
 ]
@@ -99,19 +94,48 @@ PhasesFactorySignature = Callable[..., "lnpy.lnpiseries.lnPiCollection"]
 """Signature for phases_factory function."""
 
 
+# * Literals
+PeakStyle = Literal["indices", "mask", "marker"]
+PeakError = Literal["ignore", "raise", "warn"]
+
 MaskConvention = Literal["image", "masked", True, False]
 """Convention for boolean masks."""
 
-
-# new stuff:
 Casting = Literal["no", "equiv", "safe", "same_kind", "unsafe"]
-
-ApplyUFuncKwargs: TypeAlias = Mapping[str, Any]
-
 MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
+
+# * Aliases
+IndexingInt: TypeAlias = Union[
+    int,
+    "np.int_",
+    "np.integer[Any]",
+    "np.unsignedinteger[Any]",
+    "np.signedinteger[Any]",
+    "np.int8",
+]
+
+XArrayLike: TypeAlias = Union[ArrayLike, xr.DataArray]
+IndexIterScalar: TypeAlias = Union[str, bytes, bool, int, float]
+Scalar: TypeAlias = IndexIterScalar
+
+AxisReduce: TypeAlias = int
+DimsReduce: TypeAlias = Union[Hashable, Collection[Hashable]]
+
+ApplyUFuncKwargs: TypeAlias = Mapping[str, Any]
 KeepAttrs: TypeAlias = Union[
     Literal["drop", "identical", "no_conflicts", "drop_conflicts", "override"],
     bool,
     None,
+]
+
+IndexAny: TypeAlias = "pd.Index[Any]"
+
+# * IndexedGrouper
+Groups: TypeAlias = Union[Sequence[Any], NDArrayAny, IndexAny, pd.MultiIndex]
+FactoryIndexedGrouperTypes: TypeAlias = Union[
+    str,
+    Iterable[str],
+    Mapping[str, Any],
+    "IndexedGrouper",
 ]
