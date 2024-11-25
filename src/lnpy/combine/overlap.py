@@ -14,6 +14,7 @@ from lnpy.core.validate import is_dataarray, is_series, validate_str_or_iterable
 from lnpy.core.xr_utils import factory_apply_ufunc_kwargs, select_axis_dim
 
 from ._docfiller import docfiller_local
+from .grouper import factory_indexed_grouper
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
     from lnpy.core.typing import (
         ApplyUFuncKwargs,
         DimsReduce,
+        FactoryIndexedGrouperTypes,
+        FrameOrDataT,
         GenArrayOrSeriesT,
         KeepAttrs,
         NDArrayAny,
@@ -410,23 +413,20 @@ def shift_lnpi_windows_indexed(
     lnpi: GenArrayOrSeriesT,
     window: GenArrayOrSeriesT,
     *macrostate: GenArrayOrSeriesT,
-    # grouper: FactoryIndexedGrouperTypes | None = None,  # noqa: ERA001
-    index: Sequence[int] | None = None,
-    group_start: Sequence[int] | None = None,
-    group_end: Sequence[int] | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     use_sparse: bool = False,
     check_overlap: bool = False,
     dim: DimsReduce | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> GenArrayOrSeriesT:
+    grouper = factory_indexed_grouper(grouper, data=lnpi, dim=dim, axis=-1)
+
     if is_series(lnpi):
         return pd.Series(
             shift_lnpi_windows_indexed(
                 *(a.to_numpy() for a in chain((lnpi, window), macrostate)),  # type: ignore[arg-type]
-                index=index,
-                group_start=group_start,
-                group_end=group_end,
+                grouper=grouper,
                 use_sparse=use_sparse,
                 check_overlap=check_overlap,
             ),
@@ -443,9 +443,7 @@ def shift_lnpi_windows_indexed(
             kwargs={
                 "use_sparse": use_sparse,
                 "check_overlap": check_overlap,
-                "index": index,
-                "group_start": group_start,
-                "group_end": group_end,
+                "grouper": grouper,
             },
             keep_attrs=keep_attrs,
             **factory_apply_ufunc_kwargs(
@@ -453,22 +451,50 @@ def shift_lnpi_windows_indexed(
             ),
         )
 
-    if group_start is None or group_end is None:
-        group_start, group_end = [0], [lnpi.shape[-1]]
-
-    if index is None:
-        index = range(lnpi.shape[-1])
-
     return cast(  # pyright: ignore[reportReturnType]
         "NDArrayAny",
         _shift_lnpi_windows_indexed(
             lnpi,
             window,  # pyright: ignore[reportArgumentType]
             np.stack(macrostate, axis=-1),
-            index,
-            group_start,
-            group_end,
+            grouper.index,
+            grouper.start,
+            grouper.end,
             use_sparse,
             check_overlap,
         ),
     )
+
+
+def assign_shift_lnpi_windows_indexed(
+    table: FrameOrDataT,
+    *,
+    window_name: str = "window",
+    macrostate_names: str | Iterable[str] = "state",
+    lnpi_name: str = "ln_prob",
+    grouper: FactoryIndexedGrouperTypes | None = None,
+    use_sparse: bool = False,
+    check_overlap: bool = False,
+    dim: DimsReduce | None = None,
+    keep_attrs: KeepAttrs = None,
+    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
+) -> FrameOrDataT:
+    r"""Create new object with shifted :math:`\ln \Pi(N)`"""
+
+    grouper = factory_indexed_grouper(grouper, data=table, dim=dim, axis=-1)
+
+    out = shift_lnpi_windows_indexed(
+        table if is_dataarray(table) else table[lnpi_name],
+        table[window_name],
+        *(table[k] for k in validate_str_or_iterable(macrostate_names)),
+        grouper=grouper,
+        use_sparse=use_sparse,
+        check_overlap=check_overlap,
+        dim=dim,
+        keep_attrs=keep_attrs,
+        apply_ufunc_kwargs=apply_ufunc_kwargs,
+    )
+
+    if is_dataarray(table):
+        return out  # pyright: ignore[reportReturnType]
+    return table.assign(**{lnpi_name: out})  # type: ignore[arg-type]

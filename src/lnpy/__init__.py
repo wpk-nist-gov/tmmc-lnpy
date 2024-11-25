@@ -3,11 +3,11 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from . import combine, ensembles, lnpienergy, segment  # noqa: TCH004
-    from .lnpidata import lnPiMasked  # noqa: TCH004
-    from .lnpiseries import lnPiCollection  # noqa: TCH004
-    from .options import OPTIONS, set_options  # noqa: TCH004
-    from .segment import PhaseCreator  # noqa: TCH004
+    from . import combine, ensembles, lnpienergy, segment  # noqa: TC004
+    from .lnpidata import lnPiMasked  # noqa: TC004
+    from .lnpiseries import lnPiCollection  # noqa: TC004
+    from .options import OPTIONS, set_options  # noqa: TC004
+    from .segment import PhaseCreator  # noqa: TC004
 else:
     import lazy_loader as lazy
 

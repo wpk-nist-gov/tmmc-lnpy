@@ -114,6 +114,15 @@ apply_ufunc_kwargs : dict-like
     variables of a :class:`~xarray.Dataset` missing core dimensions. Other
     options are ``join``, ``dataset_join``, ``dataset_fill_value``, and
     ``dask_gufunc_kwargs``. Unlisted options are handled internally.
+
+
+grouper : int or str or iterable of str or mapping or IndexedGrouper
+    Parameter meanings are as follows
+
+    #. str or iterable of str : ``factory_indexed_grouper(data=data, keys=grouper, **kwargs)``
+    #. mapping : return ``factory_indexed_grouper(**grouper, data=data, **kwargs)
+
+
 """
 
 

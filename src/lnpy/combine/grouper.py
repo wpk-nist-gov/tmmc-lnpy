@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from lnpy.core.validate import is_ndarray
+from lnpy.core.validate import is_dataarray, is_dataframe, is_xarray
 from lnpy.core.xr_utils import select_axis_dim
 
 if TYPE_CHECKING:
@@ -206,9 +206,9 @@ class IndexedGrouper:
 
     def __init__(
         self,
-        index: Groups,
-        start: Groups,
-        end: Groups,
+        index: Sequence[int],
+        start: Sequence[int],
+        end: Sequence[int],
         groups: Any = None,
     ) -> None:
         self.index = index
@@ -221,7 +221,7 @@ class IndexedGrouper:
         """Create object from single `group` array"""
         kwargs.setdefault("kind", "stable")
         groups, index, start, end = factor_by_to_index(group, **kwargs)
-        return cls(index=index, start=start, end=end, groups=groups)
+        return cls(index=index, start=start, end=end, groups=groups)  # type: ignore[arg-type]
 
     @classmethod
     def from_groups(
@@ -248,23 +248,23 @@ class IndexedGrouper:
         """Create object from data object and group variables/columns"""
         if isinstance(keys, str):
             keys = [keys]
-        return cls.from_groups(*(data[k] for k in keys), **kwargs)
+        return cls.from_groups(*(data[k] for k in keys), **kwargs)  # type: ignore[arg-type]
 
     @classmethod
     def from_size(
         cls,
-        data: NDArrayAny | pd.DataFrame | xr.DataArray | xr.Dataset,
+        data: NDArrayAny | pd.Series[Any] | pd.DataFrame | xr.DataArray | xr.Dataset,
         dim: DimsReduce | None = None,
         axis: AxisReduce = -1,
     ) -> Self:
         """Create a grouper for whole object"""
-        if isinstance(data, pd.DataFrame):
-            size = len(data)
-        elif isinstance(data, np.ndarray):
+        if is_xarray(data):
+            axis, dim = select_axis_dim(data, axis, dim)
+            size = data.sizes[dim]  # type: ignore[index]
+        elif is_dataarray(data):
             size = data.shape[axis]
         else:
-            axis, dim = select_axis_dim(data, axis, dim)
-            size = data.sizes[dim]
+            size = len(data)
 
         return cls(
             index=range(size),
@@ -277,7 +277,7 @@ def factory_indexed_grouper(
     grouper: FactoryIndexedGrouperTypes | None = None,
     *,
     # From data and keys
-    data: NDArrayAny | pd.DataFrame | xr.DataArray | xr.Dataset,
+    data: NDArrayAny | pd.Series[Any] | pd.DataFrame | xr.DataArray | xr.Dataset,
     keys: str | Iterable[str] | None = None,
     dim: DimsReduce | None = None,
     axis: AxisReduce = -1,
@@ -285,9 +285,9 @@ def factory_indexed_grouper(
     group: Groups | None = None,
     groups: Iterable[Groups] | None = None,
     # From index/start/end
-    index: Groups | None = None,
-    start: Groups | None = None,
-    end: Groups | None = None,
+    index: Sequence[int] | None = None,
+    start: Sequence[int] | None = None,
+    end: Sequence[int] | None = None,
     **kwargs: Any,
 ) -> IndexedGrouper:
     """
@@ -329,7 +329,9 @@ def factory_indexed_grouper(
     """
 
     if grouper is None:
-        if index is not None and start is not None and end is not None:
+        if start is not None and end is not None:
+            if index is None:
+                index = range(end[-1])
             return IndexedGrouper(index, start, end)
 
         if group is not None:
@@ -338,7 +340,7 @@ def factory_indexed_grouper(
         if groups is not None:
             return IndexedGrouper.from_groups(*groups, **kwargs)
 
-        if not is_ndarray(data) and keys is not None:
+        if (is_xarray(data) or is_dataframe(data)) and keys is not None:
             return IndexedGrouper.from_data(data=data, keys=keys, **kwargs)
 
         return IndexedGrouper.from_size(data=data, axis=axis, dim=dim)

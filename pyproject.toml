@@ -174,8 +174,6 @@ lint.select = [
 ]
 lint.ignore = [
     # * Annotations
-    "ANN101", # - Leads to issues with methods and self
-    "ANN102", # - Leads to issues with classmethods and cls
     "ANN401", # - Any ok sometimes
     # * These conflict with formatter
     "COM", # - flake8-commas, formatter should take care of this?

@@ -34,6 +34,7 @@ from lnpy.core.validate import (
 from lnpy.core.xr_utils import factory_apply_ufunc_kwargs, select_axis_dim
 
 from ._docfiller import docfiller_local
+from .grouper import factory_indexed_grouper
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
         DataAnyT,
         DataT,
         DimsReduce,
+        FactoryIndexedGrouperTypes,
         FrameOrDatasetT,
         FrameOrDataT,
         GenArrayOrSeriesT,
@@ -1418,9 +1420,7 @@ def _apply_indexed_function(
     factory_gufunc: Callable[[bool], Callable[..., NDArrayAny]],
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1431,15 +1431,15 @@ def _apply_indexed_function(
     """Generic indexed routine"""
     first = args[0]
 
+    grouper = factory_indexed_grouper(grouper, data=first, dim=dim, axis=axis)
+
     if is_series(first):
         return pd.Series(  # pyright: ignore[reportReturnType]
             _apply_indexed_function(
                 *(a.to_numpy() for a in args),  # pyright: ignore[reportAttributeAccessIssue]
                 factory_gufunc=factory_gufunc,
                 axis=-1,
-                index=index,
-                group_start=group_start,
-                group_end=group_end,
+                grouper=grouper,
                 out=out,
                 dtype=dtype,
                 casting=casting,
@@ -1460,9 +1460,7 @@ def _apply_indexed_function(
             kwargs={
                 "factory_gufunc": factory_gufunc,
                 "axis": -1,
-                "index": index,
-                "group_start": group_start,
-                "group_end": group_end,
+                "grouper": grouper,
                 "out": out,
                 "dtype": dtype,
                 "casting": casting,
@@ -1477,20 +1475,15 @@ def _apply_indexed_function(
 
     dtype = select_dtype(first, out=out, dtype=dtype)
     first = asarray_maybe_recast(first, dtype)
-    if group_start is None or group_end is None:
-        group_start, group_end = [0], [first.shape[axis]]
-
-    if index is None:
-        index = range(first.shape[axis])
 
     axes = [axis] * len(args) + [-1] * 3 + [axis]
     signature = [dtype] * len(args) + [np.int64] * 3 + [dtype]
 
     return factory_gufunc(parallel_heuristic(parallel, size=first.size))(
         *args,
-        index,
-        group_start,
-        group_end,
+        grouper.index,
+        grouper.start,
+        grouper.end,
         out=out,
         axes=axes,
         casting=casting,
@@ -1505,9 +1498,7 @@ def delta_lnpi_from_updown_indexed(
     *,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1524,8 +1515,7 @@ def delta_lnpi_from_updown_indexed(
     {up}
     {axis}
     {dim}
-    {index}
-    {groups}
+    {grouper}
     {casting}
     {parallel}
     {keep_attrs}
@@ -1543,9 +1533,7 @@ def delta_lnpi_from_updown_indexed(
         factory_gufunc=factory_delta_lnpi_from_updown,
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1561,9 +1549,7 @@ def normalize_lnpi_indexed(
     *,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1578,9 +1564,7 @@ def normalize_lnpi_indexed(
         factory_gufunc=factory_normalize_lnpi,
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1597,9 +1581,7 @@ def lnpi_from_delta_lnpi_indexed(
     normalize: bool = False,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1615,8 +1597,7 @@ def lnpi_from_delta_lnpi_indexed(
     delta_lnpi : ndarray or Series or DataArray
     {axis}
     {dim}
-    {index}
-    {groups}
+    {grouper}
     {casting}
     {parallel}
     {keep_attrs}
@@ -1648,9 +1629,7 @@ def lnpi_from_delta_lnpi_indexed(
         factory_gufunc=factory_gufunc,
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1668,9 +1647,7 @@ def lnpi_from_updown_indexed(
     normalize: bool = False,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1690,8 +1667,7 @@ def lnpi_from_updown_indexed(
     {up}
     {axis}
     {dim}
-    {index}
-    {groups}
+    {grouper}
     {casting}
     {parallel}
     {keep_attrs}
@@ -1703,12 +1679,13 @@ def lnpi_from_updown_indexed(
     ndarray or Series or DataArray
         Same type as `down`.
     """
+    # do this once now
+    grouper = factory_indexed_grouper(grouper, data=down, axis=axis, dim=dim)
+
     kws = {
         "axis": axis,
         "dim": dim,
-        "index": index,
-        "group_start": group_start,
-        "group_end": group_end,
+        "grouper": grouper,
         "out": out,
         "dtype": dtype,
         "casting": casting,
@@ -1730,9 +1707,7 @@ def _assign_indexed_function_result(
     keys: Iterable[str],
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1746,13 +1721,14 @@ def _assign_indexed_function_result(
     else:
         args = (table[key] for key in keys)
 
+    # do grouper here
+    grouper = factory_indexed_grouper(grouper, data=table, axis=axis, dim=dim)
+
     result = func(
         *args,
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1773,9 +1749,7 @@ def assign_delta_lnpi_from_updown_indexed(
     delta_lnpi_name: str = "delta_lnpi",
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1800,8 +1774,7 @@ def assign_delta_lnpi_from_updown_indexed(
     {delta_lnpi_name}
     {axis}
     {dim}
-    {index}
-    {groups}
+    {grouper}
     {out}
     {casting}
     {keep_attrs}
@@ -1820,9 +1793,7 @@ def assign_delta_lnpi_from_updown_indexed(
         keys=(down_name, up_name),
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1841,9 +1812,7 @@ def assign_lnpi_from_delta_lnpi_indexed(
     normalize: bool = False,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1868,8 +1837,7 @@ def assign_lnpi_from_delta_lnpi_indexed(
     {normalize}
     {axis}
     {dim}
-    {index}
-    {groups}
+    {grouper}
     {out}
     {casting}
     {keep_attrs}
@@ -1887,9 +1855,7 @@ def assign_lnpi_from_delta_lnpi_indexed(
         keys=(delta_lnpi_name,),
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
@@ -1903,15 +1869,14 @@ def assign_lnpi_from_delta_lnpi_indexed(
 @docfiller_local
 def assign_lnpi_from_updown_indexed(
     table: FrameOrDatasetT,
+    *,
     down_name: str = "prob_down",
     up_name: str = "prob_up",
     lnpi_name: str = "ln_prob",
     normalize: bool = False,
     axis: AxisReduce = -1,
     dim: DimsReduce | None = None,
-    index: ArrayLike | None = None,
-    group_start: ArrayLike | None = None,
-    group_end: ArrayLike | None = None,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     out: NDArrayAny | None = None,
     dtype: DTypeLike | None = None,
     casting: Casting = "same_kind",
@@ -1926,9 +1891,7 @@ def assign_lnpi_from_updown_indexed(
         keys=(down_name, up_name),
         axis=axis,
         dim=dim,
-        index=index,
-        group_start=group_start,
-        group_end=group_end,
+        grouper=grouper,
         out=out,
         dtype=dtype,
         casting=casting,
