@@ -597,8 +597,11 @@ def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> Non
 
     # test dataset
     ds = table_updown.to_xarray()
+
+    dim = list(ds.dims)[-1]
+
     out_ds = combine.assign_delta_lnpi_from_updown_indexed(
-        ds, delta_lnpi_name="my_delta"
+        ds, delta_lnpi_name="my_delta", dim=dim
     )
     np.testing.assert_allclose(delta_lnpi, out_ds["my_delta"])
 

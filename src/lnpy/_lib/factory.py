@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike
 
-    from lnpy.core.typing import NDArrayAny
+    from lnpy.core.typing import NDArrayAny, NDArrayInt
 
     class DeltalnPiFromUpDown(Protocol):
         def __call__(
@@ -36,6 +36,32 @@ if TYPE_CHECKING:
             /,
             **kwargs: Any,
         ) -> NDArrayAny: ...
+
+    class StateMaxWindow(Protocol):
+        def __call__(
+            self,
+            state: ArrayLike,
+            window_index: ArrayLike,
+            window_start: ArrayLike,
+            window_end: ArrayLike,
+            /,
+            **kwargs: Any,
+        ) -> NDArrayInt: ...
+
+    class KeepFirstIndexer(Protocol):
+        def __call__(
+            self,
+            state: ArrayLike,
+            state_min: ArrayLike,
+            window_index: ArrayLike,
+            window_start: ArrayLike,
+            window_end: ArrayLike,
+            rec_index: ArrayLike,
+            rec_start: ArrayLike,
+            rec_end: ArrayLike,
+            /,
+            **kwargs: Any,
+        ) -> tuple[NDArrayInt, int]: ...
 
 
 @lru_cache
@@ -74,26 +100,44 @@ def parallel_heuristic(
 
 def factory_delta_lnpi_from_updown(parallel: bool) -> DeltalnPiFromUpDown:
     if parallel:
-        from .combine import delta_lnpi_from_updown
-    else:
         from .combine_parallel import delta_lnpi_from_updown
+    else:
+        from .combine import delta_lnpi_from_updown
 
     return cast("DeltalnPiFromUpDown", delta_lnpi_from_updown)
 
 
 def factory_lnpi_from_delta_lnpi(parallel: bool) -> IndexedFunc:
     if parallel:
-        from .combine import lnpi_from_delta_lnpi
-    else:
         from .combine_parallel import lnpi_from_delta_lnpi
+    else:
+        from .combine import lnpi_from_delta_lnpi
 
     return cast("IndexedFunc", lnpi_from_delta_lnpi)
 
 
 def factory_normalize_lnpi(parallel: bool) -> IndexedFunc:
     if parallel:
-        from .combine import normalize_lnpi
-    else:
         from .combine_parallel import normalize_lnpi
+    else:
+        from .combine import normalize_lnpi
 
     return cast("IndexedFunc", normalize_lnpi)
+
+
+def factory_state_max(parallel: bool) -> StateMaxWindow:
+    if parallel:
+        from .combine_parallel import state_max_window
+    else:
+        from .combine import state_max_window
+
+    return cast("StateMaxWindow", state_max_window)
+
+
+def factory_keep_first_indexer(parallel: bool) -> KeepFirstIndexer:
+    if parallel:
+        from .combine_parallel import keep_first_indexer
+    else:
+        from .combine import keep_first_indexer
+
+    return cast("KeepFirstIndexer", keep_first_indexer)

@@ -119,6 +119,7 @@ def factor_by(
 
 def factor_by_to_index(
     by: Groups,
+    sort: bool = True,
     **kwargs: Any,
 ) -> tuple[list[Any] | IndexAny | pd.MultiIndex, NDArrayInt, NDArrayInt, NDArrayInt]:
     """
@@ -172,7 +173,7 @@ def factor_by_to_index(
 
     """
     # factorize by to groups and codes
-    groups, codes = factor_by(by, sort=True)
+    groups, codes = factor_by(by, sort=sort)
 
     # exclude missing
     keep = codes >= 0
@@ -182,8 +183,13 @@ def factor_by_to_index(
     else:
         index = None
 
-    indexes_sorted = np.argsort(codes, **kwargs)
-    group_idx_sorted = codes[indexes_sorted]
+    if sort:
+        indexes_sorted = np.argsort(codes, **kwargs)
+        group_idx_sorted = codes[indexes_sorted]
+    else:
+        indexes_sorted = np.arange(len(codes))
+        group_idx_sorted = codes
+
     _groups, n_start, count = np.unique(
         group_idx_sorted, return_index=True, return_counts=True
     )
@@ -211,16 +217,16 @@ class IndexedGrouper:
         end: Sequence[int],
         groups: Any = None,
     ) -> None:
-        self.index = index
-        self.start = start
-        self.end = end
+        self.index: NDArrayInt = np.asarray(index, dtype=np.int64)
+        self.start: NDArrayInt = np.asarray(start, dtype=np.int64)
+        self.end: NDArrayInt = np.asarray(end, dtype=np.int64)
         self.groups = groups
 
     @classmethod
-    def from_group(cls, group: Groups, **kwargs: Any) -> Self:
+    def from_group(cls, group: Groups, sort: bool = True, **kwargs: Any) -> Self:
         """Create object from single `group` array"""
         kwargs.setdefault("kind", "stable")
-        groups, index, start, end = factor_by_to_index(group, **kwargs)
+        groups, index, start, end = factor_by_to_index(group, sort=sort, **kwargs)
         return cls(index=index, start=start, end=end, groups=groups)  # type: ignore[arg-type]
 
     @classmethod
@@ -228,6 +234,7 @@ class IndexedGrouper:
         cls,
         *groups: Groups,
         names: Hashable | Sequence[Hashable] | None = None,
+        sort: bool = True,
         **kwargs: Any,
     ) -> Self:
         """Create object from multiple `group` arrays"""
@@ -236,19 +243,20 @@ class IndexedGrouper:
         else:
             idx = pd.MultiIndex.from_arrays(groups, names=names)
 
-        return cls.from_group(idx, **kwargs)
+        return cls.from_group(idx, sort=sort, **kwargs)
 
     @classmethod
     def from_data(
         cls,
         data: pd.DataFrame | xr.DataArray | xr.Dataset,
         keys: str | Iterable[str],
+        sort: bool = True,
         **kwargs: Any,
     ) -> Self:
         """Create object from data object and group variables/columns"""
         if isinstance(keys, str):
             keys = [keys]
-        return cls.from_groups(*(data[k] for k in keys), **kwargs)  # type: ignore[arg-type]
+        return cls.from_groups(*(data[k] for k in keys), sort=sort, **kwargs)  # type: ignore[arg-type]
 
     @classmethod
     def from_size(

@@ -10,29 +10,42 @@ import pandas as pd
 import xarray as xr
 from scipy.sparse import coo_array
 
-from lnpy.core.validate import is_dataarray, is_series, validate_str_or_iterable
+from lnpy._lib.factory import (
+    factory_keep_first_indexer,
+    factory_state_max,
+    parallel_heuristic,
+)
+from lnpy.core.validate import (
+    is_dataarray,
+    is_dataframe,
+    is_series,
+    validate_str_or_iterable,
+)
 from lnpy.core.xr_utils import factory_apply_ufunc_kwargs, select_axis_dim
 
 from ._docfiller import docfiller_local
-from .grouper import factory_indexed_grouper
+from .grouper import IndexedGrouper, factory_indexed_grouper
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from typing import Any
 
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
 
     from lnpy.core.typing import (
         ApplyUFuncKwargs,
+        AxisReduce,
         DimsReduce,
         FactoryIndexedGrouperTypes,
         FrameOrDataT,
         GenArrayOrSeriesT,
         KeepAttrs,
         NDArrayAny,
+        NDArrayInt,
     )
 
 
+# * Overlap -------------------------------------------------------------------
 class OverlapError(ValueError):
     """Specific error for missing overlaps."""
 
@@ -117,25 +130,6 @@ def check_windows_overlap(
             for subgraph in components:
                 msg = f"{msg}\ngraph: {set(map(int, subgraph))}"
         raise OverlapError(msg)
-
-
-def _add_window_index(
-    table: pd.DataFrame,
-    window_name: str,
-    window_index_name: str,
-) -> pd.DataFrame:
-    """
-    Add continuous integer index to the provided windows.
-
-    This will fix cases where windows = ['a', 'b', ...], etc.
-    """
-    window_map: pd.Series[Any] = (
-        table[window_name]
-        .drop_duplicates()
-        .pipe(lambda x: pd.Series(range(len(x)), index=x))
-    )
-    table[window_index_name] = window_map[table[window_name]].to_numpy()
-    return table
 
 
 def _create_overlap_table(
@@ -242,6 +236,7 @@ def _create_lhs_matrix_numpy(
     return a
 
 
+# * Shift combine -------------------------------------------------------------
 @np.vectorize(signature="(n), (n), (n, d), (), () -> (n)")  # type: ignore[call-arg]
 def _shift_lnpi_windows(
     lnpi: NDArrayAny,
@@ -363,18 +358,22 @@ def shift_lnpi_windows(
     lnpi: GenArrayOrSeriesT,
     window: GenArrayOrSeriesT,
     *macrostate: GenArrayOrSeriesT,
+    grouper: FactoryIndexedGrouperTypes | None = None,
     use_sparse: bool = False,
-    check_overlap: bool = False,
+    check_connected: bool = False,
     dim: DimsReduce | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> GenArrayOrSeriesT:
+    grouper = factory_indexed_grouper(grouper, data=lnpi, dim=dim, axis=-1)
+
     if is_series(lnpi):
         return pd.Series(
             shift_lnpi_windows(
                 *(a.to_numpy() for a in chain((lnpi, window), macrostate)),  # type: ignore[arg-type]
+                grouper=grouper,
                 use_sparse=use_sparse,
-                check_overlap=check_overlap,
+                check_connected=check_connected,
             ),
             index=lnpi.index,
         )
@@ -388,61 +387,7 @@ def shift_lnpi_windows(
             *macrostate,
             kwargs={
                 "use_sparse": use_sparse,
-                "check_overlap": check_overlap,
-            },
-            keep_attrs=keep_attrs,
-            **factory_apply_ufunc_kwargs(
-                apply_ufunc_kwargs=apply_ufunc_kwargs,
-            ),
-        )
-
-    return cast(  # pyright: ignore[reportReturnType]
-        "NDArrayAny",
-        _shift_lnpi_windows(
-            lnpi,
-            window,
-            np.stack(macrostate, axis=-1),
-            use_sparse,
-            check_overlap,
-        ),
-    )
-
-
-@docfiller_local
-def shift_lnpi_windows_indexed(
-    lnpi: GenArrayOrSeriesT,
-    window: GenArrayOrSeriesT,
-    *macrostate: GenArrayOrSeriesT,
-    grouper: FactoryIndexedGrouperTypes | None = None,
-    use_sparse: bool = False,
-    check_overlap: bool = False,
-    dim: DimsReduce | None = None,
-    keep_attrs: KeepAttrs = None,
-    apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
-) -> GenArrayOrSeriesT:
-    grouper = factory_indexed_grouper(grouper, data=lnpi, dim=dim, axis=-1)
-
-    if is_series(lnpi):
-        return pd.Series(
-            shift_lnpi_windows_indexed(
-                *(a.to_numpy() for a in chain((lnpi, window), macrostate)),  # type: ignore[arg-type]
-                grouper=grouper,
-                use_sparse=use_sparse,
-                check_overlap=check_overlap,
-            ),
-            index=lnpi.index,
-        )
-
-    if is_dataarray(lnpi):
-        _, dim = select_axis_dim(lnpi, -1, dim)
-        return xr.apply_ufunc(  # type: ignore[no-any-return]
-            shift_lnpi_windows_indexed,
-            lnpi,
-            window,
-            *macrostate,
-            kwargs={
-                "use_sparse": use_sparse,
-                "check_overlap": check_overlap,
+                "check_connected": check_connected,
                 "grouper": grouper,
             },
             keep_attrs=keep_attrs,
@@ -461,12 +406,12 @@ def shift_lnpi_windows_indexed(
             grouper.start,
             grouper.end,
             use_sparse,
-            check_overlap,
+            check_connected,
         ),
     )
 
 
-def assign_shift_lnpi_windows_indexed(
+def assign_shift_lnpi_windows(
     table: FrameOrDataT,
     *,
     window_name: str = "window",
@@ -474,7 +419,7 @@ def assign_shift_lnpi_windows_indexed(
     lnpi_name: str = "ln_prob",
     grouper: FactoryIndexedGrouperTypes | None = None,
     use_sparse: bool = False,
-    check_overlap: bool = False,
+    check_connected: bool = False,
     dim: DimsReduce | None = None,
     keep_attrs: KeepAttrs = None,
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
@@ -483,13 +428,13 @@ def assign_shift_lnpi_windows_indexed(
 
     grouper = factory_indexed_grouper(grouper, data=table, dim=dim, axis=-1)
 
-    out = shift_lnpi_windows_indexed(
+    out = shift_lnpi_windows(
         table if is_dataarray(table) else table[lnpi_name],
         table[window_name],
         *(table[k] for k in validate_str_or_iterable(macrostate_names)),
         grouper=grouper,
         use_sparse=use_sparse,
-        check_overlap=check_overlap,
+        check_connected=check_connected,
         dim=dim,
         keep_attrs=keep_attrs,
         apply_ufunc_kwargs=apply_ufunc_kwargs,
@@ -498,3 +443,124 @@ def assign_shift_lnpi_windows_indexed(
     if is_dataarray(table):
         return out  # pyright: ignore[reportReturnType]
     return table.assign(**{lnpi_name: out})  # type: ignore[arg-type]
+
+
+# * Keep first combine --------------------------------------------------------
+def _keep_first_indexer(
+    state: NDArrayAny,
+    window: NDArrayAny,
+    rec: NDArrayAny,
+    *,
+    parallel: bool | None = None,
+) -> tuple[NDArrayInt, int]:
+    parallel = parallel_heuristic(parallel, size=state.size)
+
+    grouper_rec_window = IndexedGrouper.from_groups(rec, window, sort=False)
+    state_max = factory_state_max(parallel)(
+        state,
+        grouper_rec_window.index,
+        grouper_rec_window.start,
+        grouper_rec_window.end,
+        signature=(np.float64, np.int64, np.int64, np.int64, np.float64),
+    )
+
+    # recreate grouper in order with state_max ...
+    # If unsorted use something like:
+    # state_max_array = np.empty_like(state, dtype=state_max.dtype)  # noqa: ERA001
+    # state_max_array[grouper_rec_window.index] = np.repeat(...)  # noqa: ERA001
+    state_max_array = np.repeat(
+        state_max,
+        (grouper_rec_window.end - grouper_rec_window.start),
+    )
+    grouper_rec_window = IndexedGrouper.from_groups(rec, state_max_array, sort=True)
+    # grouper of grouper
+    grouper_grouper_rec = IndexedGrouper.from_group(
+        np.take(rec, grouper_rec_window.index[grouper_rec_window.start])
+    )
+
+    state_min = np.empty_like(state_max)
+    state_min[1:] = state_max_array[
+        grouper_rec_window.index[grouper_rec_window.start[:-1]]
+    ]
+    state_min[grouper_grouper_rec.index[grouper_grouper_rec.start]] = -1
+
+    indexer, count = factory_keep_first_indexer(parallel)(
+        state,
+        state_min,
+        grouper_rec_window.index,
+        grouper_rec_window.start,
+        grouper_rec_window.end,
+        grouper_grouper_rec.index,
+        grouper_grouper_rec.start,
+        grouper_grouper_rec.end,
+        signature=(np.float64, np.float64, *((np.int64,) * 8)),
+    )
+
+    return indexer, count
+
+
+def keep_first_indexer(
+    table: FrameOrDataT,
+    *group: str | ArrayLike,
+    window: str | ArrayLike = "window",
+    state: str | ArrayLike = "state",
+    parallel: bool | None = None,
+    check_connected: bool = False,
+) -> NDArrayInt:
+    def _factorize(*x: str | ArrayLike, sort: bool = False) -> NDArrayInt:
+        args = [table[k] if isinstance(k, str) else k for k in x]
+        idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)
+        return pd.factorize(idx, sort=sort)[0]
+
+    state = np.array(table[state] if isinstance(state, str) else state)
+    window = _factorize(window)
+    rec = (
+        _factorize(*group) if len(group) > 0 else np.zeros(len(window), dtype=np.int64)
+    )
+
+    if check_connected:
+        for _, g in pd.DataFrame(
+            {"rec": rec, "window": window, "state": state}
+        ).groupby("rec"):
+            _create_overlap_table(
+                g,
+                window_index_name="window",
+                window_max=window.max(),
+                macrostate_names=["state"],
+                lnpi_name="rec",
+                check_connected=check_connected,
+            )
+
+    indexer, count = _keep_first_indexer(
+        state=state,
+        window=window,
+        rec=rec,
+        parallel=parallel,
+    )
+
+    return indexer[:count]
+
+
+def keep_first(
+    table: FrameOrDataT,
+    *group: str | ArrayLike,
+    window: str | ArrayLike = "window",
+    state: str | ArrayLike = "state",
+    parallel: bool | None = None,
+    check_connected: bool = False,
+    axis: AxisReduce = -1,
+    dim: DimsReduce | None = None,
+) -> FrameOrDataT:
+    indexer = keep_first_indexer(
+        table,
+        *group,
+        window=window,
+        state=state,
+        parallel=parallel,
+        check_connected=check_connected,
+    )
+    if is_dataframe(table):
+        return table.iloc[indexer]
+
+    axis, dim = select_axis_dim(table, axis, dim)
+    return table.isel({dim: indexer})
