@@ -10,7 +10,7 @@
 bottleneck
 cmomy>=0.23.4
 dask[diagnostics]
-importlib-resources;python_version<"3.10"
+importlib-resources; python_version < "3.10"
 ipykernel
 ipython
 ipywidgets
@@ -36,5 +36,5 @@ scikit-image>=0.21
 scipy
 tqdm
 types-tqdm
-typing-extensions>=4.10.0;python_version<"3.13"
+typing-extensions>=4.10.0; python_version < "3.13"
 xarray
