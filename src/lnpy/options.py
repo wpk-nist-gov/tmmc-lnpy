@@ -155,7 +155,7 @@ class set_options:  # noqa: N801
 
     def __init__(self, **kwargs: Any) -> None:
         self.old: Options = {}
-        for k, v in cast(Options, kwargs).items():
+        for k, v in cast("Options", kwargs).items():
             if k not in OPTIONS:
                 msg = f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 raise ValueError(msg)
@@ -163,7 +163,7 @@ class set_options:  # noqa: N801
                 msg = f"option {k!r} given an invalid value: {v!r}"
                 raise ValueError(msg)
             self.old[k] = OPTIONS[k]  # type: ignore[literal-required]
-        _apply_update(cast(Options, kwargs))
+        _apply_update(cast("Options", kwargs))
 
     def __enter__(self) -> None:
         return

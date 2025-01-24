@@ -30,8 +30,8 @@ def _get_tqdm() -> ModuleType | None:
 
 @lru_cache
 def _get_tqdm_default() -> Callable[..., Any]:
-    _tqdm = _get_tqdm()
-    if _tqdm:
+    tqdm_ = _get_tqdm()
+    if tqdm_:
         try:
             from IPython.core.getipython import (  # pyright: ignore[reportMissingImports]
                 get_ipython,
@@ -42,9 +42,9 @@ def _get_tqdm_default() -> Callable[..., Any]:
                 from tqdm.notebook import tqdm as tqdm_default
 
                 return tqdm_default
-            return cast("Callable[..., Any]", _tqdm.tqdm)
+            return cast("Callable[..., Any]", tqdm_.tqdm)
         except ImportError:
-            return cast("Callable[..., Any]", _tqdm.tqdm)
+            return cast("Callable[..., Any]", tqdm_.tqdm)
     else:
 
         def wrapper(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:  # noqa: ARG001
@@ -55,12 +55,12 @@ def _get_tqdm_default() -> Callable[..., Any]:
 
 def tqdm(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
     opt = OPTIONS["tqdm_bar"]
-    _tqdm = _get_tqdm()
-    if _tqdm:
+    tqdm_ = _get_tqdm()
+    if tqdm_:
         if opt == "text":
-            func = _tqdm.tqdm
+            func = tqdm_.tqdm
         elif opt == "notebook":
-            func = _tqdm.tqdm_notebook
+            func = tqdm_.tqdm_notebook
         else:
             func = _get_tqdm_default()
     else:
@@ -72,7 +72,7 @@ def get_tqdm(
     seq: Iterable[T], len_min: str | int, leave: bool | None = None, **kwargs: Any
 ) -> Iterable[T]:
     n = kwargs.get("total")
-    _tqdm = _get_tqdm()
+    tqdm_ = _get_tqdm()
 
     if isinstance(len_min, str):
         len_min = OPTIONS[len_min]  # type: ignore[literal-required]
@@ -85,7 +85,7 @@ def get_tqdm(
         seq = tuple(seq)
         n = len(seq)
 
-    if _tqdm and OPTIONS["tqdm_use"] and n >= len_min:
+    if tqdm_ and OPTIONS["tqdm_use"] and n >= len_min:
         if leave is None:
             leave = OPTIONS["tqdm_leave"]
         seq = tqdm(seq, leave=leave, **kwargs)

@@ -353,7 +353,7 @@ def test_combine_keep_first_xarray_routines(table_dataset: xr.Dataset) -> None:
     with pytest.raises(ValueError, match=r".* in dimensions"):
         combine.keep_first(table_dataset)
 
-    with pytest.raises(TypeError, match="Unknown .*"):
+    with pytest.raises(TypeError, match=r"Unknown .*"):
         combine.concat_windows(["hello"])  # type: ignore[list-item]  # on purpose error
 
 

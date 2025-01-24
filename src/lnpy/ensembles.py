@@ -76,13 +76,13 @@ def xr_name(
     def decorator(
         func: C_Ensemble[EnsembleT, P, xr.DataArray],
     ) -> C_Ensemble[EnsembleT, P, xr.DataArray]:
-        _name = func.__name__.lstrip("_") if name is None else name
+        name_ = func.__name__.lstrip("_") if name is None else name
 
         @wraps(func)
         def wrapper(
             self: EnsembleT, /, *args: P.args, **kwargs: P.kwargs
         ) -> xr.DataArray:
-            out = func(self, *args, **kwargs).rename(_name)
+            out = func(self, *args, **kwargs).rename(name_)
             attrs = dict(getattr(self, "_standard_attrs", {}), **kws)
             if long_name is not None:
                 attrs["long_name"] = long_name

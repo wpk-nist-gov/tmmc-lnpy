@@ -85,8 +85,8 @@ def asarray_maybe_recast(
 def ffill(arr: NDArrayAny, axis: int = -1, limit: int | None = None) -> NDArrayAny:
     import bottleneck
 
-    _limit = limit if limit is not None else arr.shape[axis]
-    return bottleneck.push(arr, n=_limit, axis=axis)  # type: ignore[no-any-return]
+    limit_ = limit if limit is not None else arr.shape[axis]
+    return bottleneck.push(arr, n=limit_, axis=axis)  # type: ignore[no-any-return]
 
 
 def bfill(arr: NDArrayAny, axis: int = -1, limit: int | None = None) -> NDArrayAny:
@@ -94,11 +94,11 @@ def bfill(arr: NDArrayAny, axis: int = -1, limit: int | None = None) -> NDArrayA
     import bottleneck
 
     # work around for bottleneck 178
-    _limit = limit if limit is not None else arr.shape[axis]
+    limit_ = limit if limit is not None else arr.shape[axis]
 
     arr = np.flip(arr, axis=axis)
     # fill
-    arr = bottleneck.push(arr, axis=axis, n=_limit)
+    arr = bottleneck.push(arr, axis=axis, n=limit_)
     # reverse back to original
     return np.flip(arr, axis=axis)
 

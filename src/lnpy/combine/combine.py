@@ -693,7 +693,7 @@ def shift_lnpi_windows(
         table, window_name=window_name, window_index_name=window_index_name
     )
 
-    window_max = cast(int, table[window_index_name].iloc[-1])
+    window_max = cast("int", table[window_index_name].iloc[-1])
     if window_max == 0:
         return table
 

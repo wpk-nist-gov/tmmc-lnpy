@@ -10,19 +10,32 @@
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.12
   - bottleneck
+  - ipykernel
+  - ipython
   - joblib
   - lazy_loader
   - module-utilities>=0.9.0
+  - mypy>=1.14.1
+  - nbclient>=0.10.0
+  - nbval
+  - nox>=2024.4.15
   - numba
   - numpy
   - packaging
   - pandas-stubs
+  - pylint
   - pytest
+  - pytest-cov
+  - pytest-sugar
+  - pytest-xdist
   - scikit-image>=0.21
   - scipy
   - tqdm
   - types-tqdm
   - typing-extensions>=4.10.0
   - xarray
+  - pip
+  - pip:
+      - pytest-accept

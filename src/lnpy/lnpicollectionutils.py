@@ -220,7 +220,7 @@ def get_lnz_max(
         raise ValueError(msg)
 
     lnz_idx = build_phases.index
-    lnz_start = cast(float, lnz_start or ref.lnz[lnz_idx])
+    lnz_start = cast("float", lnz_start or ref.lnz[lnz_idx])
 
     # need left/right bounds
     # left is greatest lnz point with edge_distance > edge_distance_min
@@ -235,7 +235,7 @@ def get_lnz_max(
     def getter(p: lnPiCollection) -> xr.DataArray:
         v = p.xge.edge_distance(ref)
         if not p._xarray_unstack:
-            v = v.unstack(p._concat_dim)  # noqa: PD010
+            v = v.unstack(p._concat_dim)
         return v.min("phase")
 
     # if have collection, try to use it

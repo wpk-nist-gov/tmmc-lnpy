@@ -98,7 +98,7 @@ PhasesFactorySignature = Callable[..., "lnpy.lnpiseries.lnPiCollection"]
 PeakStyle = Literal["indices", "mask", "marker"]
 PeakError = Literal["ignore", "raise", "warn"]
 
-MaskConvention = Literal["image", "masked"] | bool
+MaskConvention: TypeAlias = 'Literal["image", "masked"] | bool'
 """Convention for boolean masks."""
 
 Casting = Literal["no", "equiv", "safe", "same_kind", "unsafe"]
