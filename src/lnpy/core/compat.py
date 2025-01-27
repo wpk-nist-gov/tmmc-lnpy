@@ -80,7 +80,7 @@ def rootresults(
             method=method,  # pyright: ignore[reportCallIssue]
         )
     except TypeError:
-        return RootResults(  # pyright: ignore[reportCallIssue]
+        return RootResults(  # pyright: ignore[reportCallIssue]  # pylint: disable=no-value-for-parameter
             root=root,
             iterations=iterations,
             function_calls=function_calls,

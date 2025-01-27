@@ -11,10 +11,10 @@ from numba import guvectorize, njit
 OPTIONS = {"fastmath": True, "cache": True}
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
-    from typing import Any, Callable
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any
 
-    from cmomy.core.typing import FuncT, NumbaType
+    from lnpy.core.typing import FuncT, NumbaType
 
 
 # * Threading
@@ -31,6 +31,7 @@ def is_in_unsafe_thread_pool() -> bool:
 
 @lru_cache
 def _thread_backend() -> str | None:
+    # pylint: disable=unused-import
     # Note that `importlib.util.find_spec` doesn't work for these; it will falsely return True
     try:
         from numba.np.ufunc import (
@@ -161,4 +162,4 @@ def _get_signatures(
         x = sig[0]
         return (x == nb.float64) or (hasattr(x, "dtype") and x.dtype == nb.float64)
 
-    return list(filter(_filter_float32, signatures))
+    return [s for s in signatures if _filter_float32(s)]

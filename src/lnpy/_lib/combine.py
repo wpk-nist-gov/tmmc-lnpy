@@ -1,4 +1,5 @@
 """Vectorized pushers."""
+# pylint: disable=consider-using-enumerate
 
 from __future__ import annotations
 
@@ -11,9 +12,7 @@ import numpy as np
 from .decorators import myguvectorize
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
-    from lnpy.core.typing import FloatT, NDArrayInt
+    from lnpy.core.typing import NDArrayAny, NDArrayInt
 
 _PARALLEL = False
 _decorator = partial(myguvectorize, parallel=_PARALLEL)
@@ -42,19 +41,18 @@ _decorator = partial(myguvectorize, parallel=_PARALLEL)
     writable=None,
 )
 def delta_lnpi_from_updown(
-    down: NDArray[FloatT],
-    up: NDArray[FloatT],
+    down: NDArrayAny,
+    up: NDArrayAny,
     index: NDArrayInt,
     group_start: NDArrayInt,
     group_end: NDArrayInt,
-    out: NDArray[FloatT],
+    out: NDArrayAny,
 ) -> None:
     ngroups = len(group_start)
 
     for group in range(ngroups):
         start = group_start[group]
         end = group_end[group]
-
         out[index[start]] = 0.0
         up_last = up[start]
         for i in range(start + 1, end):
@@ -72,11 +70,11 @@ def delta_lnpi_from_updown(
     writable=None,
 )
 def lnpi_from_delta_lnpi(
-    delta_lnpi: NDArray[FloatT],
+    delta_lnpi: NDArrayAny,
     index: NDArrayInt,
     group_start: NDArrayInt,
     group_end: NDArrayInt,
-    lnpi: NDArray[FloatT],
+    lnpi: NDArrayAny,
 ) -> None:
     ngroups = len(group_start)
 
@@ -102,11 +100,11 @@ def lnpi_from_delta_lnpi(
     writable=None,
 )
 def normalize_lnpi(
-    lnpi: NDArray[FloatT],
+    lnpi: NDArrayAny,
     index: NDArrayInt,
     group_start: NDArrayInt,
     group_end: NDArrayInt,
-    out: NDArray[FloatT],
+    out: NDArrayAny,
 ) -> None:
     ngroups = len(group_start)
 
@@ -133,11 +131,11 @@ def normalize_lnpi(
     writable=None,
 )
 def state_max_window(
-    state: NDArray[FloatT],
+    state: NDArrayAny,
     window_index: NDArrayInt,
     window_start: NDArrayInt,
     window_end: NDArrayInt,
-    out: NDArray[FloatT],
+    out: NDArrayAny,
 ) -> None:
     """Get the maximum state value for each window"""
     for window in range(len(window_start)):
@@ -145,7 +143,7 @@ def state_max_window(
         end = window_end[window]
         max_ = state[window_index[start]]
         for i in range(start + 1, end):
-            max_ = max(max_, state[window_index[i]])
+            max_ = max(max_, state[window_index[i]])  # pyright: ignore[reportArgumentType]
         out[window] = max_
 
 
@@ -168,8 +166,8 @@ def state_max_window(
     writable=None,
 )
 def keep_first_indexer(
-    state: NDArray[FloatT],
-    state_min: NDArray[FloatT],
+    state: NDArrayAny,
+    state_min: NDArrayAny,
     window_index: NDArrayInt,
     window_start: NDArrayInt,
     window_end: NDArrayInt,

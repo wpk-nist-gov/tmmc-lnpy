@@ -138,19 +138,17 @@ def _solve_lnz_molfrac(
     ----------
     target : float
         target molfraction
-    a, b : float
+    left, right : float
         lnz values bracketing solution
+    build_phases : BuildPhasesBase object
     phase_id : int
         target phase
     ref : lnPiMasked
         object to reweight
     component : int, optional
         if not specified, use build_phases.index
-    full_output : bool, default=False
-        if True, return solve stats
     tol : float, default=1e-4
         solver tolerance
-
     **kwargs : extra arguments to scipy.optimize.brentq
 
     Returns
@@ -196,11 +194,11 @@ def _solve_lnz_molfrac(
 
         # by not using the ListAccessor,
         # can parallelize
-        mf: float
-        if skip_phase_id or phase_id in p._get_level("phase"):
-            mf = array_to_scalar(getter(p).values)
-        else:
-            mf = np.inf
+        mf: float = (
+            array_to_scalar(getter(p).values)
+            if skip_phase_id or phase_id in p._get_level("phase")
+            else np.inf
+        )
 
         return mf - target
 

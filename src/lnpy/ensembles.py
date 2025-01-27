@@ -19,8 +19,8 @@ from .lnpidata import lnPiMasked
 from .lnpiseries import lnPiCollection
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Mapping, Sequence
-    from typing import Any, Callable
+    from collections.abc import Callable, Hashable, Mapping, Sequence
+    from typing import Any
 
     import pandas as pd
     from numpy.typing import ArrayLike, NDArray
@@ -176,7 +176,7 @@ class LogPiWrapper:
             coords = {}
 
         if coords_n:
-            coords = dict(coords, **self.coords_n)
+            coords = dict(coords, **self.coords_n)  # pylint: disable=not-a-mapping
 
         return xr.DataArray(
             data,
@@ -421,6 +421,8 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
             Otherwise, should be an array of same shape as single lnPi.
             If x (or result of callable) is not a :class:`~xarray.DataArray`, try to
             convert it to one.
+        allow_extra_kws : bool
+            If `True`, allow getting property from `extra_kws`.
         *args, **kwargs
             Extra arguments to `x` if passing callable
 
@@ -589,7 +591,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
 
     @property
     def _sample_argmax_indexer_dict(self) -> dict[str, xr.DataArray]:
-        return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)
+        return dict(self._argmax_indexer_dict, **self._sample_indexer_dict)  # pylint: disable=not-a-mapping
 
     def lnpi_max(
         self, fill_value: float | None = None, add_n_coords: bool = True
@@ -806,8 +808,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
                 return [x]
             return list(x)
 
-        keys = _process_keys(keys) + _process_keys(default_keys)
-        if not keys:
+        if not (keys := _process_keys(keys) + _process_keys(default_keys)):
             msg = "must specify some keys or default_keys to use"
             raise ValueError(msg)
 
@@ -815,12 +816,11 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         # this preserves order
         for key in dict.fromkeys(keys):
             try:
-                v = getattr(self, key, None)
-                if v is not None:
+                if (v := getattr(self, key, None)) is not None:
                     if callable(v):
                         v = v()
                     out.append(v)  # pyright: ignore[reportArgumentType]
-            except Exception:  # noqa: PERF203, BLE001, S110
+            except Exception:  # noqa: PERF203, BLE001, S110  # pylint: disable=broad-exception-caught
                 pass
 
         ds: xr.Dataset = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
@@ -982,8 +982,7 @@ class CanonicalEnsemble:
     def PE(self) -> xr.DataArray:
         """Internal Energy :math:`PE`"""
         # if betaPE available, use that:
-        PE = self._parent.extra_kws.get("PE", None)
-        if PE is None:
+        if (PE := self._parent.extra_kws.get("PE", None)) is None:
             msg = 'must set "PE" in "extra_kws" of lnPiMasked'
             raise AttributeError(msg)
         x = self._xge
@@ -1115,7 +1114,7 @@ class CanonicalEnsemble:
                 if callable(v):
                     v = v()
                 out.append(v)  # pyright: ignore[reportArgumentType]
-            except Exception:  # noqa: PERF203, BLE001, S110
+            except Exception:  # noqa: PERF203, BLE001, S110  # pylint: disable=broad-exception-caught
                 pass
 
         ds = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
@@ -1124,5 +1123,5 @@ class CanonicalEnsemble:
             if isinstance(dim_to_suffix, str):
                 dim_to_suffix = [dim_to_suffix]
             for dim in dim_to_suffix:
-                ds = ds.pipe(dim_to_suffix_dataset, dim=dim)
+                ds = ds.pipe(dim_to_suffix_dataset, dim=dim)  # pylint: disable=redefined-variable-type
         return ds

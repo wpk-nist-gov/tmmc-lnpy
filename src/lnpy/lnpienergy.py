@@ -27,19 +27,19 @@ from .core.validate import validate_sequence
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-    from typing import Any, Literal, Union
+    from typing import Any, Literal
 
     from .core.typing import MaskConvention, NDArrayAny
-    from .core.typing_compat import IndexAny, Self
+    from .core.typing_compat import IndexAny, Self, TypeAlias
     from .lnpiseries import lnPiCollection
 
     _FindBoundariesMode = Literal["thick", "inner", "outer", "subpixel"]
     _FindBoundariesMethod = Literal["exact", "approx"]
     _Extrema = Literal["min", "max"]
 
-    _FillArg = Union[int, None]
-    _FillVal = Union[_FillArg, float]
-    _ExtremaArg = Union[int, "tuple[int, ...]", None]
+    _FillArg: TypeAlias = "int | None"
+    _FillVal: TypeAlias = "_FillArg | float"
+    _ExtremaArg: TypeAlias = "int | tuple[int, ...] | None"
 
 
 @docfiller.decorate
@@ -337,9 +337,7 @@ def merge_regions(
         de = w_tran - w_min
 
         min_arg = np.unravel_index(np.nanargmin(de), de.shape)
-        min_val = de[min_arg]
-
-        if min_val > efac:
+        if de[min_arg] > efac:
             if not force:
                 if warn and nfeature > nfeature_max:
                     warnings.warn(
@@ -351,7 +349,7 @@ def merge_regions(
             if nfeature <= nfeature_max:
                 break
 
-        idx_keep, idx_kill = min_arg
+        idx_keep, idx_kill = min_arg  # pylint: disable=unbalanced-tuple-unpacking
         # keep the one with lower energy
         if w_min[idx_keep, 0] > w_min[idx_kill, 0]:
             idx_keep, idx_kill = idx_kill, idx_keep
@@ -637,7 +635,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
 
     argtran = []
     for idxs in zip(
-        *[w_tran.index.get_level_values(_) for _ in ["phase", "phase_nebr"]]
+        *[w_tran.index.get_level_values(_) for _ in ("phase", "phase_nebr")]
     ):
         i, j = (index_map[_] for _ in idxs)
 
@@ -797,8 +795,8 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
     """
 
-    # @property
-    # @cached.meth
+    # pylint: disable=invalid-overridden-method
+
     @cached.prop
     def dwx(self) -> xr.DataArray:  # type: ignore[override]
         index = list(self._parent.index.get_level_values("phase"))
@@ -810,8 +808,6 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
-    # @property
-    # @cached.meth
     @cached.prop
     def dw(self) -> pd.Series[Any]:  # type: ignore[override]
         """Series representation of delta_w"""
@@ -833,6 +829,6 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
                 idx_nebr = [idx_nebr]
             nebrs = [x for x in idx_nebr if x in index]
 
-        if len(nebrs) == 0:
+        if len(nebrs) == 0:  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
             return np.inf
         return dw.sel(phase=idx, phase_nebr=nebrs).min("phase_nebr").to_numpy()

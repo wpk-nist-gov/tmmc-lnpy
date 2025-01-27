@@ -1,4 +1,6 @@
 # mypy: disable-error-code="no-untyped-def, no-untyped-call"
+# pylint: disable=file-ignored
+# pylint: skip-file
 """
 Legacy lnPi array routines (:mod:`~lnPi.maskedlnpi_legacy`)
 ===========================================================

@@ -5,12 +5,14 @@ Options (:mod:`~lnpy.options`)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
+    from typing import Any
 
-ValidatorFunc = Callable[[Any], bool]
+    ValidatorFunc = Callable[[Any], bool]
 
 
 class Options(TypedDict, total=False):

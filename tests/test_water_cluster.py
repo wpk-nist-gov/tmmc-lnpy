@@ -54,7 +54,7 @@ def load_ref():
 
 @pytest.fixture(params=[0, 1])
 def ref(request):
-    if request.param == 0:
+    if not request.param:
         return load_ref()
 
     import lnpy.examples

@@ -15,13 +15,13 @@ defining-attr-methods = [
 ]
 
 [tool.pylint.design]
-max-args = 15
+max-args = 25
 max-attributes = 40
 max-bool-expr = 5
 max-branches = 50
 max-locals = 50
 max-parents = 12
-max-positional-arguments = 15
+max-positional-arguments = 25
 max-public-methods = 500
 max-returns = 20
 max-statements = 150
@@ -58,6 +58,14 @@ disable = [
     "consider-using-f-string",
     # "duplicate-code",
     # "cyclic-import",
+    "redefined-builtin",
+    "protected-access",
+    "fixme",
+    "broad-exception-caught",
+    "missing-class-docstring",
+    "duplicate-code",
+    "consider-using-augmented-assign",
+    "too-many-try-statements",
 ]
 
 [tool.pylint.reports]

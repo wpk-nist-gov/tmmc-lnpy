@@ -37,8 +37,8 @@ from ._docfiller import docfiller_local
 from .grouper import factory_indexed_grouper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
-    from typing import Any, Callable
+    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from typing import Any
 
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
@@ -69,7 +69,7 @@ def _plain_bfs(adj: dict[int, set[int]], source: int) -> set[int]:
     n = len(adj)
     seen = {source}
     nextlevel = [source]
-    while nextlevel:
+    while nextlevel:  # pylint: disable=while-used
         thislevel = nextlevel
         nextlevel = []
         for v in thislevel:
@@ -140,7 +140,7 @@ def check_windows_overlap(
         msg = "Disconnected graph."
         if verbose:
             for subgraph in components:
-                msg = f"{msg}\ngraph: {set(map(int, subgraph))}"
+                msg = f"{msg}\ngraph: {set(map(int, subgraph))}"  # pylint: disable=bad-builtin
         raise OverlapError(msg)
 
 
@@ -493,7 +493,7 @@ def _create_overlap_table(
         [window_index_name, *macrostate_names, lnpi_name],
     ]
 
-    if len(overlap_table) == 0:
+    if len(overlap_table) == 0:  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
         msg = "No overlaps with multiple windows"
         raise OverlapError(msg)
 
@@ -693,8 +693,7 @@ def shift_lnpi_windows(
         table, window_name=window_name, window_index_name=window_index_name
     )
 
-    window_max = cast("int", table[window_index_name].iloc[-1])
-    if window_max == 0:
+    if not (window_max := cast("int", table[window_index_name].iloc[-1])):
         return table
 
     macrostate_names = validate_str_or_iterable(macrostate_names)
@@ -773,8 +772,7 @@ def _filter_min_max_keep_first(
         .pipe(lambda x: pd.Series(range(len(x)), index=x))
     )
 
-    window_max = window_map.iloc[-1]
-    if window_max == 0:
+    if not (window_max := window_map.iloc[-1]):
         return table
 
     table = table.assign(
@@ -1092,18 +1090,18 @@ def updown_mean(
 
     if use_running:
         columns = [weight_name, down_name, up_name]
-        return table.groupby(by, as_index=as_index, **kwargs)[columns].apply(  # type: ignore[arg-type]  # no clue why this is throwing an error
+        return table.groupby(by, as_index=as_index, **kwargs)[columns].apply(  # type: ignore[no-any-return,call-overload,arg-type,unused-ignore]  # no clue why this is throwing an error
             _factory_average_updown(*columns)
         )
 
-    return (
-        table.assign(
+    return (  # type: ignore[no-any-return,unused-ignore]
+        table.assign(  # type: ignore[call-overload,unused-ignore]
             **{
                 down_name: lambda x: x[down_name] * x[weight_name],
                 up_name: lambda x: x[up_name] * x[weight_name],
             }
         )
-        .groupby(by, as_index=as_index, **kwargs)[[weight_name, down_name, up_name]]  # type: ignore[arg-type]
+        .groupby(by, as_index=as_index, **kwargs)[[weight_name, down_name, up_name]]  # type: ignore[arg-type,unused-ignore] # pyright: ignore[reportArgumentType]
         .sum()
         .assign(
             **{
@@ -1183,7 +1181,7 @@ def updown_from_collectionmatrix(
 @docfiller_local
 def assign_updown_from_collectionmatrix(
     table: FrameOrDatasetT,
-    matrix_names: Iterable[str] = ["c0", "c1", "c2"],
+    matrix_names: Iterable[str] = ("c0", "c1", "c2"),
     weight_name: str = "n_trials",
     down_name: str = "prob_down",
     up_name: str = "prob_up",
@@ -1388,9 +1386,6 @@ def assign_lnpi_from_updown(
     {lnpi_name}
     {down_name}
     {up_name}
-    use_prod :
-        If true (default), calculate from cumulative product (on probability).
-        Otherwise, calculate from cumulative sum (on log of probability).
     norm :
         If true (default), normalize distribution.
 
@@ -1716,10 +1711,11 @@ def _assign_indexed_function_result(
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
     **kwargs: Any,
 ) -> FrameOrDatasetT:
-    if is_dataframe(table):
-        args = (table[key].to_numpy() for key in keys)
-    else:
-        args = (table[key] for key in keys)
+    args: Iterator[NDArrayAny | xr.DataArray] = (
+        (table[key].to_numpy() for key in keys)
+        if is_dataframe(table)
+        else (table[key] for key in keys)  # type: ignore[misc]
+    )
 
     # do grouper here
     grouper = factory_indexed_grouper(grouper, data=table, axis=axis, dim=dim)

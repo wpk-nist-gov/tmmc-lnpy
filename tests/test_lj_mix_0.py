@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import lnpy
+import lnpy.examples
 
 path_data = Path(__file__).parent / "../examples/archived/LJ_mix"
 
@@ -29,12 +30,9 @@ def phase_creator(ref):
     )
 
 
-import lnpy.examples
-
-
 @pytest.fixture(params=[0, 1])
 def obj(request, ref, phase_creator):
-    if request.param == 0:
+    if not request.param:
         return lnpy.examples.Example(
             ref=ref,
             phase_creator=phase_creator,

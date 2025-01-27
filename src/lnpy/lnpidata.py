@@ -50,7 +50,7 @@ def _get_shift(
 
 @lru_cache(maxsize=20)
 def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> NDArrayAny:
-    if all(x == 0 for x in dlnz):
+    if all(x == 0 for x in dlnz):  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
         return base.data
     return _get_shift(base.shape, dlnz, base.data.dtype) + base.data  # pyright: ignore[reportArgumentType]
 
@@ -283,10 +283,12 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
             msg = f"{lnz.shape=} must be {base.lnz.shape}"
             raise ValueError(msg)
 
-        if mask is None:
-            mask = np.full(base.data.shape, fill_value=False, dtype=bool)
-        else:
-            mask = np.array(mask, copy=copy_if_needed(copy), dtype=bool)
+        mask = (
+            np.full(base.data.shape, fill_value=False, dtype=bool)
+            if mask is None
+            else np.array(mask, copy=copy_if_needed(copy), dtype=bool)
+        )
+
         if mask.shape != base.data.shape:
             msg = f"{mask.shape=} must be {base.data.shape}."
             raise ValueError(msg)
@@ -571,7 +573,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         {ffill}
         {bfill}
         {fill_limit}
-        inplace : bool, default=False
 
         Returns
         -------
@@ -711,7 +712,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
             if "lnz" in k:
                 lnz.append(val)
             else:
-                if val.ndim == 0:
+                if not val.ndim:
                     val = val[()]
                 state_kws[k] = val
         kws["lnz"] = lnz

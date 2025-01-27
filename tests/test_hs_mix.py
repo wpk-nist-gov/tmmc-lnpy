@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 import lnpy
+import lnpy.examples
 import lnpy.stability
 
 if TYPE_CHECKING:
@@ -53,12 +54,9 @@ def phase_creator(ref):
     )
 
 
-import lnpy.examples
-
-
 @pytest.fixture(params=[0, 1])
 def obj(request, ref, phase_creator):
-    if request.param == 0:
+    if not request.param:
         return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=None
         )
@@ -104,14 +102,14 @@ def test_collection(obj, build_phases, lnzs) -> None:
     ref = obj.ref
 
     c = lnpy.lnPiCollection.from_builder(lnzs, build_phases)
-    c.spinodal(2, build_phases, inplace=True, unstack=True)
-    c.binodal(2, build_phases, inplace=True, unstack=True)
+    c.spinodal(2, build_phases, inplace=True, unstack=True)  # pylint: disable=too-many-function-args,unexpected-keyword-arg
+    c.binodal(2, build_phases, inplace=True, unstack=True)  # pylint: disable=too-many-function-args,unexpected-keyword-arg
 
-    for path, y in [
+    for path, y in (
         ("data_0", c),
         ("data_0_spin", c.spinodal.access),
         ("data_0_bino", c.binodal.access),
-    ]:
+    ):
         test = pd.read_csv(path_data / (path + ".csv"))
         other = get_test_table(y, ref)
 

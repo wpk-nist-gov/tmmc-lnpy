@@ -3,6 +3,8 @@ Typing definitions for :mod:`lnpy`
 ==================================
 """
 
+# pylint: disable=consider-alternative-union-syntax
+
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
@@ -31,8 +33,7 @@ if TYPE_CHECKING:
 __all__ = [
     "C_Ensemble",
     "EnsembleT",
-    "F",
-    "FuncType",
+    "FuncT",
     "IndexingInt",
     "MaskConvention",
     "NDArrayAny",
@@ -80,12 +81,12 @@ R = TypeVar("R")
 T = TypeVar("T")
 C_Ensemble: TypeAlias = Callable[Concatenate[EnsembleT, P], R]
 
-FuncType = Callable[..., Any]
+FuncT = TypeVar("FuncT", bound=Callable[..., Any])
+NumbaType = Any
 
-F = TypeVar("F", bound=FuncType)
 
 # * Callables
-TagPhasesSignature = Callable[
+TagPhasesSignature: TypeAlias = Callable[
     [Sequence["lnpy.lnpidata.lnPiMasked"]], Union[Sequence[int], NDArrayAny]
 ]
 """Signature for tag_phases function."""

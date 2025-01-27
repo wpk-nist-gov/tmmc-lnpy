@@ -7,12 +7,13 @@ This is inspired by xarray accessors.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Callable, Generic, overload
+from typing import TYPE_CHECKING, Generic, overload
 
 from module_utilities import cached
 from module_utilities.typing import C_prop, R, S
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Literal
 
     from module_utilities.cached import CachedProperty

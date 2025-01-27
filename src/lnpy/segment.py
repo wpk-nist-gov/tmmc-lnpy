@@ -197,7 +197,7 @@ def peak_local_max_adaptive(
     ~skimage.morphology.label
     """
     import bottleneck
-    from skimage.feature import peak_local_max
+    from skimage.feature import peak_local_max  # pylint: disable=no-name-in-module
     from skimage.morphology import label as morphology_label
 
     possible_styles = {"indices", "mask", "marker"}
@@ -229,8 +229,7 @@ def peak_local_max_adaptive(
             **kwargs,
         )
 
-        n = len(idx)
-        if n <= num_peaks_max:
+        if (n := len(idx)) <= num_peaks_max:
             break
 
     if n is None or idx is None:
@@ -557,7 +556,7 @@ class PhaseCreator:
             return phase_ids, lnpis
 
         dist = pdist(phase_ids.reshape(-1, 1)).astype(int)
-        if not np.any(dist == 0):
+        if not np.any(dist == 0):  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
             # all different
             return phase_ids, lnpis
 
@@ -1009,7 +1008,7 @@ class BuildPhases_dmu(BuildPhasesBase):  # noqa: N801
         super().__init__(x=dlnz, phase_creator=phase_creator)
 
     def _set_params(self) -> None:
-        self._dlnz: NDArrayAny = np.array([x if x is not None else 0.0 for x in self.x])
+        self._dlnz: NDArrayAny = np.array([x if x is not None else 0.0 for x in self.x])  # pylint: disable=attribute-defined-outside-init
 
     def _get_lnz(self, lnz_index: float) -> NDArrayAny:
         return self._dlnz + lnz_index

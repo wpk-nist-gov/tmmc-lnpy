@@ -23,10 +23,16 @@ from .core.progress import get_tqdm_build as get_tqdm
 from .extensions import AccessorMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import (
+        Callable,
+        Hashable,
+        Iterable,
+        Iterator,
+        Mapping,
+        Sequence,
+    )
     from typing import (
         Any,
-        Callable,
         Final,
         Literal,
     )
@@ -288,7 +294,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         self._verify = self._base_class is not None
 
         series: pd.Series[Any] = pd.Series(  # type: ignore[misc]
-            data=data,
+            data=data,  # type: ignore[arg-type,unused-ignore]
             index=index,  # type: ignore[arg-type]
             dtype=dtype,  # type: ignore[arg-type]
             name=name,
@@ -388,7 +394,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return type(self)(data=self.s, base_class=self._base_class)
 
     def _wrapped_pandas_method(
-        self, mtd: str, wrap: bool = False, *args: Any, **kwargs: Any
+        self, mtd: str, *args: Any, wrap: bool = False, **kwargs: Any
     ) -> lnPiMasked | pd.Series[Any] | Self:
         """Wrap a generic pandas method to ensure it returns a GeoSeries"""
         val = getattr(self._series, mtd)(*args, **kwargs)
@@ -503,7 +509,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
     def sort_index(self, *args: Any, **kwargs: Any) -> Self:
         """Interface to :meth:`pandas.Series.sort_index`"""
-        return self._wrapped_pandas_method("sort_index", *args, wrap=True, **kwargs)  # type: ignore[misc,return-value]
+        return self._wrapped_pandas_method("sort_index", *args, wrap=True, **kwargs)  # type: ignore[return-value]
 
     @overload
     def groupby(
@@ -650,7 +656,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             first = objs[0]
             if isinstance(first, cls):
                 objs = tuple(x._series for x in objs)
-        elif isinstance(objs, Mapping):
+        elif isinstance(objs, Mapping):  # pylint: disable=confusing-consecutive-elif
             out = {}
             remap = None
             for k in objs:
@@ -661,10 +667,11 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
                     out[k] = v._series
                 else:
                     out[k] = v
-            objs = out
+            objs = out  # pylint: disable=redefined-variable-type
         else:
             msg = f"bad input type {type(objs[0])}"
             raise TypeError(msg)
+
         return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]
 
     def concat_like(
@@ -686,8 +693,8 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         | Sequence[pd.Series[Any]]
         | Mapping[Hashable, Self]
         | Mapping[Hashable, pd.Series[Any]],
-        concat_kws: Mapping[str, Any] | None = None,
         *args: Any,
+        concat_kws: Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create collection from sequence of objects"""
@@ -871,8 +878,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             Sequence of lnPi
         index : sequence
             Sequence of phases ID for each lnPi
-        *args
-            Extra positional arguments to `cls`
         **kwargs :
             Extra keyword arguments to `cls`
 

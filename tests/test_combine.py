@@ -85,9 +85,7 @@ def table() -> pd.DataFrame:
 def table_sequence(
     table: pd.DataFrame, request: pytest.FixtureRequest
 ) -> list[pd.DataFrame]:
-    n = request.param
-
-    if n == 1:
+    if (n := request.param) == 1:
         return [table]
 
     split = len(table) // n
@@ -95,7 +93,7 @@ def table_sequence(
     table_sequence = []
     for i in range(n + 1):
         ub = lb + split + 1
-        table_sequence.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))  # noqa: B023
+        table_sequence.append(table.iloc[lb:ub].assign(y=lambda x: x["y"] + 10 * i))  # noqa: B023  # pylint: disable=cell-var-from-loop
 
         lb += split
         if lb >= len(table):
@@ -322,7 +320,6 @@ def test_combine_keep_first_single_table(table: pd.DataFrame) -> None:
     da_out = combine.keep_first(
         combine.concat_windows([da_expanded], coord_names="x"), state_name="x"
     )
-    (_ for _ in [da_expanded])
     xr.testing.assert_allclose(da, da_out.drop_vars("window"))
 
     da_stack = da.expand_dims("window").stack(index=["window", "x"])  # noqa: PD013
@@ -509,7 +506,7 @@ def test_updown_mean(
     )
 
     out_tail = out.iloc[-1]
-    for k in ["n_trials", "prob_down", "prob_up"]:
+    for k in ("n_trials", "prob_down", "prob_up"):
         np.testing.assert_allclose(out_tail[k], df_add.iloc[-1][k])
 
 
@@ -551,7 +548,7 @@ def test_lnpi_from_updown_axis(rng, shape, axis, norm) -> None:
     )
 
     expected = expected.cumsum(axis=axis)
-    expected -= expected.max(axis=axis, keepdims=True)
+    expected -= expected.max(axis=axis, keepdims=True)  # pylint: disable=unexpected-keyword-arg
 
     if norm:
         expected = combine.normalize_lnpi(expected, axis=axis)

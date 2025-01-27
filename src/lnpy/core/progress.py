@@ -24,14 +24,13 @@ def _get_tqdm() -> ModuleType | None:
         import tqdm
     except ImportError:
         return None
-    else:
-        return tqdm
+
+    return tqdm
 
 
 @lru_cache
 def _get_tqdm_default() -> Callable[..., Any]:
-    tqdm_ = _get_tqdm()
-    if tqdm_:
+    if tqdm_ := _get_tqdm():
         try:
             from IPython.core.getipython import (  # pyright: ignore[reportMissingImports]
                 get_ipython,
@@ -55,8 +54,7 @@ def _get_tqdm_default() -> Callable[..., Any]:
 
 def tqdm(seq: Iterable[T], *args: Any, **kwargs: Any) -> Iterable[T]:
     opt = OPTIONS["tqdm_bar"]
-    tqdm_ = _get_tqdm()
-    if tqdm_:
+    if tqdm_ := _get_tqdm():
         if opt == "text":
             func = tqdm_.tqdm
         elif opt == "notebook":

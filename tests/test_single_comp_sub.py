@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import lnpy
+import lnpy.examples
 import lnpy.stability
 
 
@@ -48,12 +49,9 @@ def build_phases(phase_creator):
     return phase_creator.build_phases_mu([None])
 
 
-import lnpy.examples
-
-
 @pytest.fixture(params=[1])
 def obj(request, ref, phase_creator, build_phases):
-    if request.param == 0:
+    if not request.param:
         return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=build_phases
         )
@@ -148,8 +146,8 @@ def test_nice_grid(obj, path_data) -> None:
     pd.testing.assert_frame_equal(other_fine, test)
 
     # spinodal/binodal
-    o_course.spinodal(2, build_phases)
-    o_course.binodal(2, build_phases)
+    o_course.spinodal(2, build_phases)  # pylint: disable=too-many-function-args
+    o_course.binodal(2, build_phases)  # pylint: disable=too-many-function-args
 
     other = get_test_table(o_course.spinodal.access, ref)
     test = pd.read_csv(path_data / "data_1_spin.csv")

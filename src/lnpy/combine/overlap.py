@@ -27,7 +27,7 @@ from ._docfiller import docfiller_local
 from .grouper import IndexedGrouper, factory_indexed_grouper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator
     from typing import Any
 
     from numpy.typing import ArrayLike, NDArray
@@ -57,7 +57,7 @@ def _plain_bfs(adj: dict[int, set[int]], source: int) -> set[int]:
     n = len(adj)
     seen = {source}
     nextlevel = [source]
-    while nextlevel:
+    while nextlevel:  # pylint: disable=while-used
         thislevel = nextlevel
         nextlevel = []
         for v in thislevel:
@@ -128,7 +128,7 @@ def check_windows_overlap(
         msg = "Disconnected graph."
         if verbose:
             for subgraph in components:
-                msg = f"{msg}\ngraph: {set(map(int, subgraph))}"
+                msg = f"{msg}\ngraph: {set(map(int, subgraph))}"  # pylint: disable=bad-builtin
         raise OverlapError(msg)
 
 
@@ -145,7 +145,7 @@ def _create_overlap_table(
         [window_index_name, *macrostate_names, lnpi_name],
     ]
 
-    if len(overlap_table) == 0:
+    if len(overlap_table) == 0:  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
         msg = "No overlaps with multiple windows"
         raise OverlapError(msg)
 
@@ -247,9 +247,8 @@ def _shift_lnpi_windows(
 ) -> NDArrayAny:
     # first get unique windows
     window_codes, _ = pd.factorize(windows, sort=False)
-    window_max = window_codes.max()
 
-    if window_max == 0:
+    if not (window_max := window_codes.max()):
         return lnpi
 
     if macrostate.ndim == 1:
@@ -329,9 +328,9 @@ def _shift_lnpi_windows_indexed(
     lnpi: NDArrayAny,
     windows: NDArrayAny,
     macrostate: NDArrayAny,
-    index: Sequence[int],
-    group_start: Sequence[int],
-    group_end: Sequence[int],
+    index: NDArrayInt,
+    group_start: NDArrayInt,
+    group_end: NDArrayInt,
     use_sparse: bool = True,
     check_connected: bool = True,
 ) -> NDArrayAny:
@@ -456,7 +455,7 @@ def _keep_first_indexer(
     parallel = parallel_heuristic(parallel, size=state.size)
 
     grouper_rec_window = IndexedGrouper.from_groups(rec, window, sort=False)
-    state_max = factory_state_max(parallel)(
+    state_max = factory_state_max(parallel)(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
         state,
         grouper_rec_window.index,
         grouper_rec_window.start,
@@ -484,7 +483,7 @@ def _keep_first_indexer(
     ]
     state_min[grouper_grouper_rec.index[grouper_grouper_rec.start]] = -1
 
-    indexer, count = factory_keep_first_indexer(parallel)(
+    indexer, count = factory_keep_first_indexer(parallel)(  # pylint: disable=unpacking-non-sequence,unexpected-keyword-arg,no-value-for-parameter
         state,
         state_min,
         grouper_rec_window.index,
@@ -510,7 +509,7 @@ def keep_first_indexer(
     def _factorize(*x: str | ArrayLike, sort: bool = False) -> NDArrayInt:
         args = [table[k] if isinstance(k, str) else k for k in x]
         idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)
-        return pd.factorize(idx, sort=sort)[0]
+        return pd.factorize(idx, sort=sort)[0]  # type: ignore[arg-type]
 
     state = np.array(table[state] if isinstance(state, str) else state)
     window = _factorize(window)

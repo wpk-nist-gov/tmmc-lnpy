@@ -191,7 +191,7 @@ def get_lnz_min(
         f.lnpi = p  # type: ignore[attr-defined]
         return array_to_scalar(getter(p).values) - target
 
-    a, b = sorted([x._get_lnz(lnz_idx) for x in [left, right]])
+    a, b = sorted([x._get_lnz(lnz_idx) for x in (left, right)])
 
     xx, r = brentq(f, a, b, full_output=True, **(solve_kws or {}))
 
@@ -213,9 +213,7 @@ def get_lnz_max(
     """Find max lnz by bisection"""
 
     build_kws = build_kws or {}
-    ref = ref or build_phases.phase_creator.ref
-
-    if ref is None:
+    if (ref := ref or build_phases.phase_creator.ref) is None:
         msg = "must specify `ref` or build_phases must have access to reference lnPiMasked object"
         raise ValueError(msg)
 
@@ -304,8 +302,7 @@ def get_lnz_max(
 
     for i in range(ntry):  # noqa: B007
         lnz = [x._get_lnz(lnz_idx) for x in bracket]
-        delta = np.abs(lnz[1] - lnz[0])
-        if delta < threshold_abs:
+        if (delta := np.abs(lnz[1] - lnz[0])) < threshold_abs:
             break
         lnz_mid = 0.5 * (lnz[0] + lnz[1])
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
@@ -438,8 +435,7 @@ def limited_collection(
     """
 
     if lnz_range is None:
-        ref = ref or build_phases.phase_creator.ref
-        if ref is None:
+        if (ref := ref or build_phases.phase_creator.ref) is None:
             msg = "Must pass in ref or build_phases must have access to reference lnPiMasked object"
             raise ValueError(msg)
         x0 = ref.lnz[build_phases.index]
@@ -513,10 +509,11 @@ def limited_collection(
     )
 
     if c_course is None:
-        c_course = c
-    elif limit_course:
+        return c, c
+
+    if limit_course:
         slnz = f"lnz_{build_phases.index}"
         q = f"{slnz} >= {lnz_min} and {slnz} <= {lnz_max}"
-        c_course = c_course.query(q)
+        return c_course.query(q), c  # pylint: disable=too-many-function-args
 
     return c_course, c

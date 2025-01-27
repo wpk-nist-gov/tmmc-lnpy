@@ -1,6 +1,7 @@
 """Handle typing compatibility issues."""
 
 import sys
+from typing import TYPE_CHECKING, Any  # pylint: disable=unused-import
 
 if sys.version_info >= (3, 10):
     from typing import Concatenate, ParamSpec, TypeAlias
@@ -16,9 +17,6 @@ if sys.version_info >= (3, 13):  # pragma: no cover
     from typing import TypeIs, TypeVar
 else:
     from typing_extensions import TypeIs, TypeVar
-
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pandas as pd

@@ -5,6 +5,7 @@ Thermodynamic stability (:mod:`~lnpy.stability`)
 Calculation of spinodal and binodal
 """
 
+# pylint: disable=chained-comparison,use-implicit-booleaness-not-comparison-to-zero
 from __future__ import annotations
 
 import itertools
@@ -101,15 +102,10 @@ def _initial_bracket_spinodal_right(
         initial estimates to work from
     idx, idx_nebr : int
         id's of from/to phases.
-    lnz_in : list
-        list with value of static chem pot, and None for variable. e.g.,
-        lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
     efac : float, default=1.0
         cutoff value for spinodal
     dlnz : float, default=0.5
         factor to kick back if collection doesn't already have left and right bounds
-    vmax : float default=1e20
-        value indicating no transition, but phase `idx` present.
     ntry : int, default=20
         number of times to try kicking forward/backwards to find bracket
     step : int, default=+1
@@ -224,7 +220,7 @@ def _refine_bracket_spinodal_right(
         See above
     build_phases : callable
     build_kws : dict
-    close_kwargs : dict
+    close_kws : dict
         arguments to :func:`numpy.allclose`
 
     Returns
@@ -259,6 +255,7 @@ def _refine_bracket_spinodal_right(
 
         ########
         # converged?
+        # pylint: disable=redefined-variable-type
         if np.allclose(left._get_lnz(), right._get_lnz(), **close_kws):
             # we've reached a breaking point
             if left_done:
@@ -339,6 +336,8 @@ def _get_step(collection: lnPiCollection, idx: int, idx_nebr: int | None) -> int
 
 
 class _SolveSpinodal:
+    """Spinodal solve base."""
+
     collection: lnPiCollection
 
     def __init__(
@@ -405,9 +404,6 @@ def get_spinodal(
         initial estimates to work from.  Function assumes collection is in lnz sorted order
     idx, idx_nebr : int
         from/to phase id
-    lnz_in : list
-        list with value of static chem pot, and None for variable. e.g.,
-        lnz_in=[None,0.0] implies lnz[0] is variable, and lnz[1]=0.0
     efac : float, optional
         cutoff value for spinodal
     dlnz : float, optional
@@ -446,9 +442,10 @@ def get_spinodal(
     close_kws = close_kws or {}
     solve_kws = solve_kws or {}
 
-    step = step or _get_step(collection, idx=idx, idx_nebr=idx_nebr)
-
-    if step not in {-1, +1}:
+    if (step := step or _get_step(collection, idx=idx, idx_nebr=idx_nebr)) not in {
+        -1,
+        +1,
+    }:
         msg = f"{step=} must by +/- 1"
         raise ValueError(msg)
 
@@ -502,7 +499,7 @@ def get_spinodal(
         if step == -1:
             left, right = right, left
 
-        a, b = (x._get_lnz(build_phases.index) for x in [left, right])
+        a, b = (x._get_lnz(build_phases.index) for x in (left, right))
         _lnz, r, spin = _SolveSpinodal(
             ref=ref,
             idx=idx,
@@ -570,7 +567,7 @@ class _SolveBinodal:
             phase index of pair to equate
         lnz_min, lnz_max : float
             lnz_index values bracketing solution
-        **kwargs :
+        **kws :
             extra arguments to ``brentq``
 
         Returns
@@ -591,7 +588,7 @@ class _SolveBinodal:
             msg = f"{ids=} must have length 2."
             raise ValueError(msg)
 
-        self.ids = ids
+        self.ids = ids  # pylint: disable=attribute-defined-outside-init
 
         a, b = min(lnz_min, lnz_max), max(lnz_min, lnz_max)
 
@@ -649,7 +646,7 @@ class StabilityBase:
         items = items or self._items
         concat_kws = concat_kws or {}
 
-        concat_kws = dict(names=[self._NAME], **concat_kws)
+        concat_kws = {"names": [self._NAME], **concat_kws}
         kwargs = dict(self.access_kws, **kwargs)
 
         return self._parent.concat(items, concat_kws=concat_kws, **kwargs)  # type: ignore[arg-type]
@@ -822,10 +819,7 @@ class Spinodals(StabilityBase):
             )
             raise TypeError(msg)
 
-        if isinstance(phase_ids, int):
-            phase_ids = list(range(phase_ids))
-        else:
-            phase_ids = list(phase_ids)
+        phase_ids = list(range(phase_ids) if isinstance(phase_ids, int) else phase_ids)
 
         out: dict[int, lnPiCollection | None] = {}
         info: dict[int, RootResultTotal] = {}
@@ -883,8 +877,7 @@ class Binodals(StabilityBase):
         def _get_lnz(idx: int) -> float:
             if spinodals is None:
                 raise ValueError
-            s = spinodals[idx]
-            if s is None:
+            if (s := spinodals[idx]) is None:
                 msg = f"spinodal with index={idx} is None"
                 raise ValueError(msg)
             return s._get_lnz(solver.build_phases.index)
@@ -1011,14 +1004,11 @@ class Binodals(StabilityBase):
             out = self._items if as_dict else self.access
             return out, self._info
 
-        self._solver = _SolveBinodal(
+        self._solver = _SolveBinodal(  # pylint: disable=attribute-defined-outside-init
             ref=ref, build_phases=build_phases, build_kws=build_kws
         )
 
-        if isinstance(phase_ids, int):
-            phase_ids = list(range(phase_ids))
-        else:
-            phase_ids = list(phase_ids)
+        phase_ids = list(range(phase_ids) if isinstance(phase_ids, int) else phase_ids)
 
         out = {}
         info = {}
@@ -1047,7 +1037,7 @@ class Binodals(StabilityBase):
         if inplace:
             self._items = out
             self._info = info
-            self._index = index
+            self._index = index  # pylint: disable=attribute-defined-outside-init
             return self
 
         if not as_dict and converged:

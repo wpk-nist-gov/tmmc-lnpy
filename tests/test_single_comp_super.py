@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import lnpy
+import lnpy.examples
 
 
 @pytest.fixture(scope="session")
@@ -38,13 +39,10 @@ def build_phases(phase_creator):
     return phase_creator.build_phases_mu([None])
 
 
-import lnpy.examples
-
-
 # can drop param = 0 after make sure all good
 @pytest.fixture(params=[1])
 def obj(request, ref, phase_creator, build_phases):
-    if request.param == 0:
+    if not request.param:
         return lnpy.examples.Example(
             ref=ref, phase_creator=phase_creator, build_phases=build_phases
         )
