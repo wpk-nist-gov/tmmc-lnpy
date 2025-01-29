@@ -283,7 +283,7 @@ def _refine_bracket_spinodal_right(
                 right=right,
                 left_done=left_done,
                 right_done=right_done,
-                info="all clase and not left_done",
+                info="all close and not left_done",
             )
 
             return None, None, r

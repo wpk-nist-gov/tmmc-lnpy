@@ -7,7 +7,7 @@ _PARALLEL = False  # !!!PARALLEL_FALSE!!!
 
 and inserts
 
-_PARALLE = True  # !!!PARALLEL_TRUE!!!
+_PARALLEL = True  # !!!PARALLEL_TRUE!!!
 """
 
 from __future__ import annotations
@@ -25,8 +25,7 @@ def _write_file(path_in: Path, path_out: Path) -> None:
     parallel_line = re.compile(r"^_PARALLEL.*?=.*?False(.*)")
     with path_in.open() as f_in, path_out.open("w") as f_out:
         for line in f_in:
-            match = parallel_line.match(line)
-            if match:
+            if parallel_line.match(line):
                 f_out.write(f"_PARALLEL = True  # Auto generated from {path_in.name}\n")
             else:
                 f_out.write(line)

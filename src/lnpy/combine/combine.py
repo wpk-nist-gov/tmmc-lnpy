@@ -1714,7 +1714,7 @@ def _assign_indexed_function_result(
     args: Iterator[NDArrayAny | xr.DataArray] = (
         (table[key].to_numpy() for key in keys)
         if is_dataframe(table)
-        else (table[key] for key in keys)  # type: ignore[misc]
+        else (table[key] for key in keys)
     )
 
     # do grouper here
