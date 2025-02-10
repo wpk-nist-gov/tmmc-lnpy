@@ -6,11 +6,11 @@ from importlib.metadata import version as _version
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from . import combine, ensembles, lnpienergy, segment  # noqa: TC004
-    from .lnpidata import lnPiMasked  # noqa: TC004
-    from .lnpiseries import lnPiCollection  # noqa: TC004
-    from .options import OPTIONS, set_options  # noqa: TC004
-    from .segment import PhaseCreator  # noqa: TC004
+    from . import combine, ensembles, lnpienergy, segment
+    from .lnpidata import lnPiMasked
+    from .lnpiseries import lnPiCollection
+    from .options import OPTIONS, set_options
+    from .segment import PhaseCreator
 else:
     import lazy_loader as lazy
 
