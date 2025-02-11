@@ -122,7 +122,6 @@ def _initial_bracket_spinodal_right(
         left and right bracketing :class:`~lnpy.lnpiseries.lnPiCollection` objects
 
     """
-
     if build_kws is None:
         build_kws = {}
     if efac <= 0:
@@ -581,7 +580,6 @@ class _SolveBinodal:
         --------
         scipy.optimize.brentq
         """
-
         from scipy.optimize import brentq
 
         if len(ids) != 2:
@@ -801,7 +799,6 @@ class Spinodals(StabilityBase):
             if inplace, return self.
             if not inplace, and as dict, return dict, else return :class:`lnpy.lnpiseries.lnPiCollection` with phase_id in index
         """
-
         if hasattr(self, "_items") and not force:
             if inplace:
                 return self
@@ -996,7 +993,6 @@ class Binodals(StabilityBase):
             if inplace, return self
             if not inplace, and as dict, return dict, else return lnPiCollection with phase_id in index
         """
-
         if inplace and hasattr(self, "_items") and not force:
             if inplace:
                 return self

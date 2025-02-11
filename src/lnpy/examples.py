@@ -42,7 +42,6 @@ def json_to_dict(basename: str) -> dict[str, Any]:
     output : dict
 
     """
-
     if basename.endswith(".gz"):
         import gzip
 
@@ -75,7 +74,6 @@ def load_example_dict(name: _ExampleNames) -> ExampleDict:
     ----------
     name : {'lj_sub', 'lj_sup', 'ljmix_sup', 'hsmix', 'watermof}
     """
-
     ref = load_example_lnpimasked(name)
 
     return ExampleDict(

@@ -245,7 +245,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
 
     def zeromax(self, inplace=False):
         """Shift so that lnpi.max() == 0"""
-
         if inplace:
             new = self
             self._clear_cache()
@@ -257,7 +256,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
 
     def adjust(self, zeromax=False, pad=False, inplace=False):
         """Do multiple adjustments in one go"""
-
         new = self if inplace else self.copy()
 
         if zeromax:
@@ -286,7 +284,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         -------
         object
         """
-
         lnz = np.atleast_1d(lnz)
 
         assert len(lnz) == len(self.lnz)
@@ -429,7 +426,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     @classmethod
     def from_dataarray(cls, da, state_as_attrs=None, **kwargs):
         """Create a lnPi object from xarray.DataArray"""
-
         kws = {}
         kws["data"] = da.to_numpy()
         if "mask" in da.coords:
@@ -477,7 +473,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         lnpis : list
             list of lnpis corresponding to each mask
         """
-
         return [
             self.or_mask(m)
             for m in masks_change_convention(masks, convention, False)  # pyright: ignore[reportCallIssue,reportArgumentType]
@@ -492,7 +487,6 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
         **kwargs,
     ):
         """Create list of lnpis corresponding to labels"""
-
         masks, features = labels_to_masks(
             labels=labels,
             features=features,

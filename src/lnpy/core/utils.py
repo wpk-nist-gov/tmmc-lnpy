@@ -118,7 +118,6 @@ def lnpimasked_to_dataset(
     -------
     output : Dataset
     """
-
     return data.xce.table(keys=keys, default_keys=None)
 
 
@@ -144,7 +143,6 @@ def dataset_to_lnpimasked(
     -------
     lnpi : lnPiMasked
     """
-
     from lnpy.lnpidata import lnPiMasked
 
     data = ds[lnpi_name]

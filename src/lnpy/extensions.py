@@ -73,7 +73,6 @@ def _cachedaccessorcleared(name: str, accessor: C_prop[S, R]) -> CachedProperty[
     This gets deleted if self._cache is cleared.
     If you only want to create it once, then use the Single access wrapper below
     """
-
     return cached.prop(key=name)(accessor)
 
 

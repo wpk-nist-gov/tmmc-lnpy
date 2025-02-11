@@ -497,7 +497,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         **kwds: Any,
     ) -> Self | pd.Series[Any]:
         """Interface to :meth:`pandas.Series.apply`"""
-
         return self._wrapped_pandas_method(  # type: ignore[return-value]
             "apply",
             wrap=wrap,
@@ -741,7 +740,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @property
     def state_kws(self) -> dict[str, Any]:
         """state_kws from first :class:`~lnpy.lnpidata.lnPiMasked`"""
-
         return self.iloc[0].state_kws
 
     @property
@@ -885,7 +883,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         -------
         lnPiCollection
         """
-
         table = pd.DataFrame(
             [lnpi._index_dict(phase) for lnpi, phase in zip(items, index)]
         )
@@ -959,7 +956,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             Default to `numpy.uint8`.
         reset_index : bool, default=True
         """
-
         dtype = dtype or np.uint8
 
         labels = []
@@ -1030,7 +1026,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         ~lnpy.core.utils.labels_to_masks
         from_list
         """
-
         if labels_kws is None:
             labels_kws = {}
         if len(labels) != len(lnzs):
@@ -1088,7 +1083,6 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         --------
         from_labels
         """
-
         labels = []
         lnzs = []
 

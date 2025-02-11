@@ -145,7 +145,6 @@ def find_boundaries_overlap(
     --------
     find_boundaries
     """
-
     masks = validate_sequence(masks)
     n = len(masks)
     possible_methods = {"approx", "exact"}
@@ -229,7 +228,6 @@ def find_masked_extrema(
     out_val : ndarray
         value of extrema, one for each `mask`
     """
-
     fill_val = fill_val or np.nan
 
     if extrema == "max":
@@ -318,7 +316,6 @@ def merge_regions(
     w_min : array
         free energy minima of new masks
     """
-
     masks = list(masks)
 
     nfeature = len(masks)
@@ -602,7 +599,6 @@ class wFreeEnergy:  # noqa: N801
         w_min : array
             free energy minima of new masks
         """
-
         return merge_regions(
             w_tran=self.w_tran,
             w_min=self.w_min,
@@ -751,7 +747,6 @@ class wFreeEnergyCollection:  # noqa: N801
             - if idx does not exists, dw = 0.0 (no barrier between idx and anything else)
             - else min of transition for idx to idx_nebr
         """
-
         delta_w = self.dwx
 
         # reindex so that has idx in phase

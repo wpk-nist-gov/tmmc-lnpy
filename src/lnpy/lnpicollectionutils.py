@@ -211,7 +211,6 @@ def get_lnz_max(
     build_kws: Mapping[str, Any] | None = None,
 ) -> tuple[lnPiCollection, dict[str, int | float]]:
     """Find max lnz by bisection"""
-
     build_kws = build_kws or {}
     if (ref := ref or build_phases.phase_creator.ref) is None:
         msg = "must specify `ref` or build_phases must have access to reference lnPiMasked object"
@@ -358,7 +357,6 @@ def build_grid(
     -------
     out : array of values
     """
-
     if x is None:
         if dx is None:
             msg = "Must specify dx"
@@ -433,7 +431,6 @@ def limited_collection(
     ----------
     build_phases :
     """
-
     if lnz_range is None:
         if (ref := ref or build_phases.phase_creator.ref) is None:
             msg = "Must pass in ref or build_phases must have access to reference lnPiMasked object"

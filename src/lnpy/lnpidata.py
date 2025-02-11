@@ -106,7 +106,6 @@ class lnPiArray:  # noqa: N801
         {fill_value}
         {copy}
         """
-
         lnz = np.atleast_1d(lnz).astype(np.float64)
         data = np.array(data, copy=copy_if_needed(copy))
         if data.ndim != len(lnz):
@@ -193,7 +192,6 @@ class lnPiArray:  # noqa: N801
         out : lnPiArray
             object with padded data
         """
-
         import bottleneck
 
         from .core import array_utils
@@ -226,7 +224,6 @@ class lnPiArray:  # noqa: N801
             Optional mask to apply to data.  Where `mask` is True,
             data is excluded from calculating maximum.
         """
-
         data = self.data - np.ma.MaskedArray(self.data, mask).max()  # type: ignore[no-untyped-call]
         return self.new_like(data=data)
 
@@ -334,7 +331,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         -------
         out : lnPiMasked
         """
-
         fill_value = fill_value or np.nan
 
         base = cls._DataClass(
@@ -547,7 +543,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         {mask_masked}
         {copy}
         """
-
         if lnz is None:
             lnz = self._lnz
         if base is None:
@@ -584,7 +579,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         --------
         lnPiArray.pad
         """
-
         base = self._base.pad(axes=axes, ffill=ffill, bfill=bfill, limit=limit)
         return self.new_like(base=base)
 
@@ -596,7 +590,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         --------
         lnPiArray.zeromax
         """
-
         base = self._base.zeromax(mask=self._mask)
         return self.new_like(base=base)
 
@@ -691,7 +684,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         :meth:`from_data`
 
         """
-
         kws: dict[str, Any] = {}
         kws["data"] = da.to_numpy()
         if "mask" in da.coords:
@@ -745,7 +737,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         --------
         lnpy.core.utils.masks_change_convention
         """
-
         return [
             self.or_mask(m) for m in masks_change_convention(masks, convention, False)
         ]
@@ -780,7 +771,6 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         lnPiMasked.list_from_masks
         lnpy.core.utils.labels_to_masks
         """
-
         masks, features = labels_to_masks(
             labels=labels,
             features=features,

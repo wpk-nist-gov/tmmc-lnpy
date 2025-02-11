@@ -494,7 +494,6 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         :math:`mean_pi`
 
         """
-
         x = self._array_or_callable_to_xarray(x, **kwargs)
 
         # this cuts down on memory usage
@@ -644,7 +643,6 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         max_frac : bool, optional
             if not None, val = max_frac * self.pi_norm.max(self.dims_n)
         """
-
         if max_frac is not None:
             if not (0.0 < max_frac < 1.0):
                 msg = f"{max_frac=} outside range (0.0, 1.0)."
@@ -728,7 +726,6 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
     @xr_name("mask_stable", description="True where state is most stable")
     def mask_stable(self) -> xr.DataArray:
         """Masks are True where values are stable. Only works for unstacked data."""
-
         if not isinstance(self._parent, lnPiCollection):
             msg = "only implemented for lnPiCollection"
             raise TypeError(msg)
@@ -796,7 +793,6 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         -----
         The results can be easily convert to a :class:`pandas.DataFrame` using ``ds.to_frame()``
         """
-
         out: list[xr.DataArray] = []
         if ref is not None:
             out.append(self.edge_distance(ref))
@@ -892,7 +888,6 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
     @xr_name(r"$S(\mu,V,T)/(n kB)$", standard_name="entropy_per_particle")
     def S_n(self, lnpi_zero: XArrayLike | None = None, ndim: int = 3) -> xr.DataArray:
         r"""Scaled entropy per particle :math:`S / (N k_{\rm B})`."""
-
         return self.S(lnpi_zero, ndim) / self.ntot
 
 
@@ -1095,7 +1090,6 @@ class CanonicalEnsemble:
         -------
         table : Dataset
         """
-
         out: list[xr.DataArray] = []
 
         def _process_keys(x: str | Sequence[str] | None) -> list[str]:

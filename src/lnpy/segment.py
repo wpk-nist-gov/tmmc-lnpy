@@ -366,7 +366,6 @@ class Segmenter:
         peak_local_max_adaptive
 
         """
-
         if mask is not None:
             kwargs["mask"] = mask
         if num_peaks_max is not None:
@@ -450,7 +449,6 @@ class Segmenter:
         ~skimage.segmentation.watershed
 
         """
-
         if markers is None:
             if find_peaks:
                 if peaks_kws is None:

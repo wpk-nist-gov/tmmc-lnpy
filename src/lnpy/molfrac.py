@@ -33,7 +33,6 @@ def _initial_bracket_molfrac(
     ntry: int = 20,
 ) -> tuple[lnPiCollection, lnPiCollection, dict[str, Any]]:
     """Find bracket for molfrac"""
-
     lnz_idx = build_phases.index
     if component is None:
         component = lnz_idx

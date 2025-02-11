@@ -333,7 +333,6 @@ def factory_indexed_grouper(
         Extra arguments to constructors
 
     """
-
     if grouper is None:
         if start is not None and end is not None:
             if index is None:

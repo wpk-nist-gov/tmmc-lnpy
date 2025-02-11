@@ -424,7 +424,6 @@ def assign_shift_lnpi_windows(
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> FrameOrDataT:
     r"""Create new object with shifted :math:`\ln \Pi(N)`"""
-
     grouper = factory_indexed_grouper(grouper, data=table, dim=dim, axis=-1)
 
     out = shift_lnpi_windows(

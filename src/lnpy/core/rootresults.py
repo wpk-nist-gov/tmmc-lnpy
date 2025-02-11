@@ -31,7 +31,6 @@ def rootresults_to_rootresultdict(
     r: RootResults, residual: float | NDArrayAny | None
 ) -> RootResultDict:
     """Convert :class:`scipy.optimize.RootResults` to typed dictionary"""
-
     out = RootResultDict(
         root=r.root,
         iterations=r.iterations,

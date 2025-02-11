@@ -424,7 +424,6 @@ def concat_windows(
         values   (index) int64 48B 0 1 2 2 3 4
 
     """
-
     first, tables_iter = peek_at(tables)
 
     if is_dataset(first):
@@ -956,7 +955,6 @@ def keep_first(
         lnpi     (index) int64 40B 0 1 2 13 14
 
     """
-
     window_index_name = "_window_index"
 
     def _process_dataframe(data: pd.DataFrame) -> pd.DataFrame:
@@ -1024,7 +1022,6 @@ def _factory_average_updown(
     up_name: str = "prob_up",
 ) -> Callable[[pd.DataFrame], pd.Series[Any]]:
     """Return callable to be used with groupby.apply"""
-
     columns = [weight_name, down_name, up_name]
 
     def running_average(g: pd.DataFrame) -> pd.Series[Any]:
@@ -1087,7 +1084,6 @@ def updown_mean(
     DataFrame
         Combined transition matrix.
     """
-
     if use_running:
         columns = [weight_name, down_name, up_name]
         return table.groupby(by, as_index=as_index, **kwargs)[columns].apply(  # type: ignore[no-any-return,call-overload,arg-type,unused-ignore]  # no clue why this is throwing an error
@@ -1146,7 +1142,6 @@ def stack_weight_and_average(
 
     Output to be used with cmomy for example
     """
-
     weight, average = (x.to_xarray() if is_series(x) else x for x in (weight, average))
 
     if is_dataarray(weight):
@@ -1243,7 +1238,6 @@ def delta_lnpi_from_updown(
     Series or DataArray or ndarray
         Calculated value of same type as ``up``.
     """
-
     if is_ndarray(down):  # pragma: no branch
         up_ = (
             up.to_numpy()
@@ -1316,7 +1310,6 @@ def lnpi_from_updown(
     Series or DataArray or ndarray
         Calculated value of same type as ``up``.
     """
-
     if is_ndarray(down):
         ln_prob = delta_lnpi_from_updown(down=down, up=up, axis=axis).cumsum(axis=axis)
         # subtract maximum
@@ -1394,7 +1387,6 @@ def assign_lnpi_from_updown(
     DataFrame
         New dataframe with assigned :math:`\ln \Pi`.
     """
-
     ln_prob = lnpi_from_updown(
         down=table[down_name],
         up=table[up_name],
@@ -1553,7 +1545,6 @@ def normalize_lnpi_indexed(
     apply_ufunc_kwargs: ApplyUFuncKwargs | None = None,
 ) -> GenArrayOrSeriesT:
     r"""Normalize :math:`\ln \Pi(N)` with optional groups."""
-
     return _apply_indexed_function(
         lnpi,
         factory_gufunc=factory_normalize_lnpi,
@@ -1604,7 +1595,6 @@ def lnpi_from_delta_lnpi_indexed(
     ndarray or Series or DataArray
         Same type as ``delta_lnpi``.
     """
-
     if normalize:
 
         def factory_gufunc(parallel: bool) -> Callable[..., NDArrayAny]:
@@ -1781,7 +1771,6 @@ def assign_delta_lnpi_from_updown_indexed(
     Dataframe or Dataset
         Same type as ``table``, with ``delta_lnpi_name`` column/variable.
     """
-
     return _assign_indexed_function_result(
         table,
         name=delta_lnpi_name,

@@ -72,7 +72,6 @@ def mask_change_convention(
     ndarray
         New 'mask' array with specified convention.
     """
-
     if mask is None:
         return mask
 
@@ -130,7 +129,6 @@ def masks_change_convention(
     new_masks : list of array
         New 'masks' array with specified convention.
     """
-
     same_convention = _convention_to_bool(convention_in) == _convention_to_bool(
         convention_out
     )
@@ -247,7 +245,6 @@ def masks_to_labels(
     --------
     labels_to_masks
     """
-
     masks = validate_sequence(masks)
     if features is None:
         features = range(1, len(masks) + 1)

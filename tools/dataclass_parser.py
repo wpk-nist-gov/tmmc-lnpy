@@ -379,7 +379,7 @@ def _get_underlying_type(
 def _get_underlying_if_optional(t: Any, pass_through: bool = False) -> Any:
     if _is_union_type(t):
         args = get_args(t)
-        if len(args) == 2 and _NoneType in args:
+        if len(args) == 2 and _NoneType in args:  # noqa: PLR2004
             for arg in args:
                 if arg != _NoneType:
                     return arg
