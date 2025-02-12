@@ -680,7 +680,7 @@ nox.session(name="testdist-conda", **CONDA_ALL_KWS)(testdist)
 # # ** Docs
 @nox.session(name="docs", **DEFAULT_KWS)
 @add_opts
-def docs(  # noqa: C901
+def docs(  # noqa: PLR0912, C901
     session: nox.Session,
     opts: SessionParams,
 ) -> None:
@@ -793,7 +793,7 @@ def lint(
 # ** type checking
 @nox.session(name="typing", **ALL_KWS)
 @add_opts
-def typing(  # noqa: C901
+def typing(  # noqa: PLR0912, C901
     session: nox.Session,
     opts: SessionParams,
 ) -> None:

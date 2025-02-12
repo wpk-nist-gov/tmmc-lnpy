@@ -735,7 +735,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
 
         See Also
         --------
-        lnpy.core.utils.masks_change_convention
+        lnpy.core.mask.masks_change_convention
         """
         return [
             self.or_mask(m) for m in masks_change_convention(masks, convention, False)
@@ -760,7 +760,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         {include_boundary}
         {check_features}
         **kwargs
-            Extra arguments to to :func:`~lnpy.core.utils.labels_to_masks`
+            Extra arguments to to :func:`~lnpy.core.mask.labels_to_masks`
 
         Returns
         -------
@@ -769,7 +769,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         See Also
         --------
         lnPiMasked.list_from_masks
-        lnpy.core.utils.labels_to_masks
+        lnpy.core.mask.labels_to_masks
         """
         masks, features = labels_to_masks(
             labels=labels,

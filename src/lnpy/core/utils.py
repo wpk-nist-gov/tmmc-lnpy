@@ -1,6 +1,6 @@
 """
 Utility functions (:mod:`~lnpy.core.utils`)
-======================================
+===========================================
 """
 
 from __future__ import annotations

@@ -1023,7 +1023,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
         See Also
         --------
-        ~lnpy.core.utils.labels_to_masks
+        ~lnpy.core.mask.labels_to_masks
         from_list
         """
         if labels_kws is None:

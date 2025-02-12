@@ -19,5 +19,7 @@
    stability
    lnpiseries
    examples
-   utils
+   core.utils
+   core.mask
+   core.rootresults
    options

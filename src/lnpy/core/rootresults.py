@@ -13,7 +13,9 @@ if TYPE_CHECKING:
 # --- Root results ---------------------------------------------------------------------
 
 
-class _RootResultDictReq(TypedDict, total=True):
+class RootResultDictReq(TypedDict, total=True):
+    """Base root results"""
+
     root: float | NDArrayAny | None
     iterations: int
     function_calls: int
@@ -21,7 +23,7 @@ class _RootResultDictReq(TypedDict, total=True):
     flag: str
 
 
-class RootResultDict(_RootResultDictReq, total=False):
+class RootResultDict(RootResultDictReq, total=False):
     """Interface to :class:`scipy.optimize.RootResults`."""
 
     residual: float | NDArrayAny

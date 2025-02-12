@@ -26,6 +26,8 @@ api-legacy
     lnpy.ensembles
     lnpy.stability
     lnpy.core.utils
+    lnpy.core.mask
+    lnpy.core.rootresults
     lnpy.examples
 
 

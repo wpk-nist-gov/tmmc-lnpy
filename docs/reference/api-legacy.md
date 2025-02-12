@@ -20,14 +20,14 @@ This is simply an interface to {mod}`lnpy` routines with some renaming.
 
 .. autosummary::
 
-    lnPi.MaskedlnPiDelayed
-    lnPi.CollectionlnPi
+    MaskedlnPiDelayed
+    CollectionlnPi
 
 .. autosummary::
     :toctree: generated/
     :template: autodocsumm/module.rst
 
-    lnPi.maskedlnpi_legacy
+    maskedlnpi_legacy
 
 
 ```

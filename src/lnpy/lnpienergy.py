@@ -454,7 +454,7 @@ class wFreeEnergy:  # noqa: N801
         {features}
         {include_boundary}
         **kwargs
-            Extra arguments to :func:`~lnpy.core.utils.labels_to_masks`
+            Extra arguments to :func:`~lnpy.core.mask.labels_to_masks`
 
         Returns
         -------
@@ -462,7 +462,7 @@ class wFreeEnergy:  # noqa: N801
 
         See Also
         --------
-        lnpy.core.utils.labels_to_masks
+        lnpy.core.mask.labels_to_masks
         """
         masks, features = labels_to_masks(
             labels,
