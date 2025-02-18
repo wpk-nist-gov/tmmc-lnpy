@@ -123,7 +123,7 @@ def check_windows_overlap(
     macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
-    x: pd.DataFrame = (
+    x: pd.DataFrame = (  # pyright: ignore[reportAssignmentType]
         overlap_table.merge(
             overlap_table, on=macrostate_names, how="outer", suffixes=("", "_nebr")
         )
@@ -162,10 +162,10 @@ def _concat_windows_dataframe(
     )
     if window_name in table.columns:
         if overwrite_window:
-            return table.drop(window_name, axis=1).reset_index(window_name)
-        return table.reset_index(window_name, drop=True)
+            return table.drop(window_name, axis=1).reset_index(window_name)  # pyright: ignore[reportReturnType]
+        return table.reset_index(window_name, drop=True)  # pyright: ignore[reportReturnType]
 
-    return table.reset_index(window_name)
+    return table.reset_index(window_name)  # pyright: ignore[reportReturnType]
 
 
 def _concat_windows_xarray(
@@ -750,7 +750,7 @@ def shift_lnpi_windows(
     shift[:-1] = np.linalg.solve(lhs, rhs)
     shift -= shift[0]
 
-    return table.assign(
+    return table.assign(  # pyright: ignore[reportReturnType]
         **{lnpi_name: table[lnpi_name] + shift[table[window_index_name].to_numpy()]}
     ).drop(window_index_name, axis=1)
 
@@ -796,7 +796,7 @@ def _filter_min_max_keep_first(
     keep_max = min_max["max"]
     query = f"_keep_min < {state_name} <= _keep_max"
 
-    return (
+    return (  # pyright: ignore[reportReturnType]
         table.assign(
             _keep_min=lambda x: keep_min[x[window_index_name]].to_numpy(),
             _keep_max=lambda x: keep_max[x[window_index_name]].to_numpy(),
@@ -987,7 +987,7 @@ def keep_first(
         # indexing dataframe
         frame = (
             data[index_name]  # pyright: ignore[reportIndexIssue]  # py38 only
-            .pipe(lambda x: x.copy(data=range(len(x))))
+            .pipe(lambda x: x.copy(data=range(len(x))))  # pyright: ignore[reportArgumentType]
             .to_dataframe()[index_name]
             .reset_index()
             .pipe(

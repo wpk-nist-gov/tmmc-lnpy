@@ -615,7 +615,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
-    w_tran = (
+    w_tran: pd.Series[Any] = (
         pd.DataFrame(  # type: ignore[call-overload]  # noqa: PD013
             w.w_tran,
             index=index,
@@ -719,7 +719,7 @@ class wFreeEnergyCollection:  # noqa: N801
     @property
     def dw(self) -> pd.Series[Any]:
         """Series representation of `dw = w_tran - w_min`"""
-        return (self.w_tran - self.w_min).rename("delta_w")
+        return (self.w_tran - self.w_min).rename("delta_w")  # pyright: ignore[reportReturnType]
 
     @property
     def dwx(self) -> xr.DataArray:

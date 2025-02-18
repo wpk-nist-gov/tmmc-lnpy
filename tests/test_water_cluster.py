@@ -8,7 +8,6 @@ import pandas as pd
 import pytest
 
 import lnpy
-import lnpy.stability
 
 path_data = Path(__file__).parent / "water_cluster"
 

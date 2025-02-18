@@ -741,7 +741,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
                 .loc[pv.indexes["sample"]]  # pyright: ignore[reportUnknownMemberType]
             )
 
-        return self.betapV().pipe(lambda x: x.max("phase") == x)  # type: ignore[no-any-return] # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
+        return self.betapV().pipe(lambda x: x.max("phase") == x)  # type: ignore[no-any-return,unused-ignore] # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
 
     # @cached_meth
     @xr_name(r"$\beta p(\mu,V,T)/\rho$", standard_name="compressibility_factor")

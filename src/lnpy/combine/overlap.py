@@ -111,7 +111,7 @@ def check_windows_overlap(
     macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
-    x: pd.DataFrame = (
+    x: pd.DataFrame = (  # pyright: ignore[reportAssignmentType]
         overlap_table.merge(
             overlap_table, on=macrostate_names, how="outer", suffixes=("", "_nebr")
         )
@@ -507,7 +507,7 @@ def keep_first_indexer(
 ) -> NDArrayInt:
     def _factorize(*x: str | ArrayLike, sort: bool = False) -> NDArrayInt:
         args = [table[k] if isinstance(k, str) else k for k in x]
-        idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)
+        idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)  # type: ignore[arg-type,unused-ignore]
         return pd.factorize(idx, sort=sort)[0]  # type: ignore[arg-type]
 
     state = np.array(table[state] if isinstance(state, str) else state)

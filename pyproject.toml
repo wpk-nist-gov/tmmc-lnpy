@@ -71,7 +71,6 @@ dev = [
     { include-group = "nbval" },
     { include-group = "test" },
     { include-group = "typing" },
-    { include-group = "uvxrun" },
 ]
 test = [
     { include-group = "test-extras" },
@@ -90,14 +89,14 @@ dev-extras = [
     "ipykernel",
     "ipython",
     "nbclient>=0.10.0",
-    "nox>=2024.4.15",
+    "nox>=2024.10.9",
     "pytest-accept",
 ]
 docs-live = [
     "sphinx-autobuild",
     { include-group = "docs" },
 ]
-mypy = [ "mypy>=1.14.1" ]
+mypy = [ "mypy>=1.15.0" ]
 nbval = [ "nbclient>=0.10.0", "nbval" ]
 test-extras = [
     "pytest",
@@ -115,11 +114,7 @@ typing = [
     "pylint",
     "pytest",
     "types-tqdm",
-    { include-group = "uvxrun" },
 ]
-# Anything needed to run tools/uvxrun.py
-# NOTE: uvxrun-tools defined explicitly in tool.pyproject2conda.envs.uvxrun-tools
-uvxrun = [ "packaging" ]
 
 [tool.hatch.version]
 source = "vcs"
@@ -323,15 +318,16 @@ python = "default"
 groups = [ "test" ]
 python = "all"
 
-[tool.pyproject2conda.envs.uvxrun-tools]
+[tool.pyproject2conda.envs.uvx-tools]
 # define these here so they don't override deps in uv.lock
 reqs = [
-    # these used solely for specking tools to be used with tools/uvxrun.py
+    # these used solely for specking tools to be used with uvx ...
     "conda-lock>=2.5.5",
     "grayskull>=2.5.3",
     "nbqa>=1.8.4",
     "pre-commit",
-    "pyright>=1.1.392",
+    "pre-commit-uv",
+    "pyright>=1.1.396",
     "scriv",
     "twine>=5.0.0",
 ]
@@ -350,7 +346,7 @@ python = "all"
 managed = true
 default-groups = [ "dev" ]
 fork-strategy = "requires-python"
-required-version = ">=0.5.21"
+required-version = ">=0.6.5"
 
 [tool.uv.pip]
 annotation-style = "line"

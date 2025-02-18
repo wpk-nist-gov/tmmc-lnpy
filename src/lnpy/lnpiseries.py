@@ -156,7 +156,7 @@ class _Query:
 
     def __init__(self, parent: lnPiCollection) -> None:
         self._parent = parent
-        self._frame: pd.DataFrame = self._parent.index.to_frame().reset_index(drop=True)
+        self._frame: pd.DataFrame = self._parent.index.to_frame().reset_index(drop=True)  # pyright: ignore[reportAttributeAccessIssue]
 
     def __call__(self, expr: str, **kwargs: Any) -> lnPiCollection:
         idx = self._frame.query(expr, **kwargs).index
@@ -761,7 +761,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             .to_frame()
             .assign(lnz_sample=lambda x: np.arange(len(x)))["lnz_sample"]
         )
-        return (
+        return (  # pyright: ignore[reportReturnType]
             self.index.to_frame()
             .reset_index("phase", drop=True)[["phase"]]
             .assign(lnz_index=lambda x: sample_frame[x.index])

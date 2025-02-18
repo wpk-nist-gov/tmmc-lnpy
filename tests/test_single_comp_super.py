@@ -88,7 +88,7 @@ def test_collection_properties(obj, test_table) -> None:
 
     other = get_test_table(o, ref)
 
-    pd.testing.assert_frame_equal(test_table, other)
+    pd.testing.assert_frame_equal(test_table, other)  # pyright: ignore[reportArgumentType]
 
 
 @pytest.fixture(scope="session")
@@ -129,8 +129,8 @@ def test_nice_grid(obj, path_data) -> None:
 
     other_course = get_test_table(o_course, ref)
     test_course = pd.read_csv(path_data / "data_0_course.csv")
-    pd.testing.assert_frame_equal(other_course, test_course)
+    pd.testing.assert_frame_equal(other_course, test_course)  # pyright: ignore[reportArgumentType]
 
     other_fine = get_test_table(o, ref)
     test = pd.read_csv(path_data / "data_0_fine.csv")
-    pd.testing.assert_frame_equal(other_fine, test)
+    pd.testing.assert_frame_equal(other_fine, test)  # pyright: ignore[reportArgumentType]

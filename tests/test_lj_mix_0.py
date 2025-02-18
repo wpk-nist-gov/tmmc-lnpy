@@ -78,4 +78,4 @@ def test_collection(obj) -> None:
 
     other = get_test_table(o, ref).unstack("sample").to_dataframe().reset_index()  # noqa: PD010
 
-    pd.testing.assert_frame_equal(other, test)
+    pd.testing.assert_frame_equal(other, test)  # pyright: ignore[reportArgumentType]

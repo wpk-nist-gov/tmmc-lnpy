@@ -238,7 +238,7 @@ class IndexedGrouper:
         idx = (
             pd.Index(groups[0], name=names)
             if len(groups) == 1
-            else pd.MultiIndex.from_arrays(groups, names=names)
+            else pd.MultiIndex.from_arrays(groups, names=names)  # type: ignore[arg-type, unused-ignore]
         )
 
         return cls.from_group(idx, sort=sort, **kwargs)

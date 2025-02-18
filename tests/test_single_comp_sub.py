@@ -6,7 +6,6 @@ import pytest
 
 import lnpy
 import lnpy.examples
-import lnpy.stability
 
 
 def tag_phases2(x):
@@ -96,7 +95,7 @@ def test_collection_properties(build_phases, test_table, obj) -> None:
 
     other = get_test_table(o, ref)
 
-    pd.testing.assert_frame_equal(test_table, other)
+    pd.testing.assert_frame_equal(test_table, other)  # pyright: ignore[reportArgumentType]
 
 
 @pytest.fixture(scope="session")
@@ -139,11 +138,11 @@ def test_nice_grid(obj, path_data) -> None:
 
     other_course = get_test_table(o_course, ref)
     test_course = pd.read_csv(path_data / "data_1_course.csv")
-    pd.testing.assert_frame_equal(other_course, test_course)
+    pd.testing.assert_frame_equal(other_course, test_course)  # pyright: ignore[reportArgumentType]
 
     other_fine = get_test_table(o, ref)
     test = pd.read_csv(path_data / "data_1_fine.csv")
-    pd.testing.assert_frame_equal(other_fine, test)
+    pd.testing.assert_frame_equal(other_fine, test)  # pyright: ignore[reportArgumentType]
 
     # spinodal/binodal
     o_course.spinodal(2, build_phases)  # pylint: disable=too-many-function-args
@@ -151,13 +150,13 @@ def test_nice_grid(obj, path_data) -> None:
 
     other = get_test_table(o_course.spinodal.access, ref)
     test = pd.read_csv(path_data / "data_1_spin.csv")
-    pd.testing.assert_frame_equal(other, test)
+    pd.testing.assert_frame_equal(other, test)  # pyright: ignore[reportArgumentType]
 
     other = get_test_table(o_course.binodal.access, ref)
     test = pd.read_csv(path_data / "data_1_bino.csv")
-    pd.testing.assert_frame_equal(other, test)
+    pd.testing.assert_frame_equal(other, test)  # pyright: ignore[reportArgumentType]
 
     # check dw
     other = o_course.spinodal.access.wfe.dw.to_frame().reset_index()
     test = pd.read_csv(path_data / "data_1_spin_dw.csv")
-    pd.testing.assert_frame_equal(other, test)
+    pd.testing.assert_frame_equal(other, test)  # pyright: ignore[reportArgumentType]
