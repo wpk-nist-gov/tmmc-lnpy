@@ -1,3 +1,10 @@
+Modules
+=======
+
+.. autosummary::
+
+   lnpy
+
 .. currentmodule:: lnpy
 
 .. autosummary::

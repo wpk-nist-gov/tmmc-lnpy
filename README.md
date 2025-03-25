@@ -62,20 +62,6 @@ include:
 This package is actively used by the author. Please feel free to create a pull
 request for wanted features and suggestions!
 
-## Quick start
-
-Use one of the following
-
-```bash
-pip install tmmc-lnpy
-```
-
-or
-
-```bash
-conda install -c conda-forge tmmc-lnpy
-```
-
 ## Example usage
 
 Note that the distribution name `tmmc-lnpy` is different than the import name
@@ -133,6 +119,24 @@ Attributes:
 ```
 
 <!-- end-docs -->
+
+## Installation
+
+<!-- start-installation -->
+
+Use one of the following
+
+```bash
+pip install tmmc-lnpy
+```
+
+or
+
+```bash
+conda install -c conda-forge tmmc-lnpy
+```
+
+<!-- end-installation -->
 
 ## Documentation
 
