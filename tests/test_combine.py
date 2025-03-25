@@ -586,7 +586,7 @@ def table_updown(rng: np.random.Generator) -> pd.DataFrame:
 
 def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
     delta_lnpi = (
-        np.log(table_updown["prob_up"].shift(1) / table_updown["prob_down"]).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
+        np.log(table_updown["prob_up"].shift(1) / table_updown["prob_down"]).fillna(0.0)  # type: ignore[attr-defined]
     )
 
     out = combine.assign_delta_lnpi_from_updown_indexed(table_updown)

@@ -19,7 +19,7 @@ from .core.compat import rootresults
 from .core.rootresults import RootResultDict, rootresults_to_rootresultdict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Mapping, Sequence
     from typing import Any, Literal
 
     from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
@@ -555,14 +555,14 @@ class _SolveBinodal:
         return array_to_scalar(out)
 
     def solve(
-        self, ids: tuple[int, int], lnz_min: float, lnz_max: float, **kws: Any
+        self, ids: Sequence[int], lnz_min: float, lnz_max: float, **kws: Any
     ) -> tuple[lnPiCollection, RootResultTotal]:
         """
         Calculate binodal point where Omega[ID[0]]==Omega[ID[1]]
 
         Parameters
         ----------
-        ids : tuple
+        ids : sequence of int
             phase index of pair to equate
         lnz_min, lnz_max : float
             lnz_index values bracketing solution
@@ -809,7 +809,7 @@ class Spinodals(StabilityBase):
         from .segment import BuildPhasesBase
 
         if not isinstance(build_phases, BuildPhasesBase):
-            msg = (
+            msg = (  # type: ignore[unreachable]
                 "`build_phases` should be an instance of `BuildPhasesBase`."
                 "Its likely an instance of `PhaseCreator.builphases`."
                 "Instead, use an instance of `PhaseCreator.buildphases_mu`."
@@ -997,7 +997,7 @@ class Binodals(StabilityBase):
             if inplace:
                 return self
 
-            out = self._items if as_dict else self.access
+            out = self._items if as_dict else self.access  # type: ignore[unreachable]
             return out, self._info
 
         self._solver = _SolveBinodal(  # pylint: disable=attribute-defined-outside-init

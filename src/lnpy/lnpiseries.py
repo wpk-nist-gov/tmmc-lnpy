@@ -20,6 +20,7 @@ from .core.mask import labels_to_masks, masks_to_labels
 
 # lazy loads
 from .core.progress import get_tqdm_build as get_tqdm
+from .core.utils import peek_at
 from .extensions import AccessorMixin
 
 if TYPE_CHECKING:
@@ -185,7 +186,7 @@ class _LocIndexer_unstack_zloc:  # noqa: N801
         else:
             msg = "unknown indexer for zloc"
             raise TypeError(msg)
-        return out  # type: ignore[no-any-return]
+        return out
 
 
 # @SeriesWrapper.decorate_accessor("mloc")
@@ -215,7 +216,7 @@ class _LocIndexer_unstack_mloc:  # noqa: N801
         else:
             drop = list(set(index.names) - {idx.name})
             index = index.droplevel(drop)
-        return index.get_indexer_for(idx)  # type: ignore[no-untyped-call]
+        return index.get_indexer_for(idx)
 
     def __getitem__(self, idx: pd.MultiIndex | IndexAny) -> lnPiCollection:
         indexer = self._get_loc_idx(idx)
@@ -226,7 +227,7 @@ class _LocIndexer_unstack_mloc:  # noqa: N801
         else:
             msg = "unknown indexer for mloc"
             raise TypeError(msg)
-        return out  # type: ignore[no-any-return]
+        return out
 
 
 class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
@@ -267,7 +268,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
     def __init__(
         self,
-        data: Sequence[lnPiMasked] | pd.Series[Any],
+        data: Self | Sequence[lnPiMasked] | pd.Series[Any],
         index: ArrayLike | IndexAny | pd.MultiIndex | None = None,
         xarray_output: bool = True,
         concat_dim: str | None = None,
@@ -633,7 +634,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         elif not isinstance(drop, tuple):
             drop = (drop,)
 
-        by = allbut(self.index.names, *drop)  # pyright: ignore[reportArgumentType]
+        by = allbut(self.index.names, *drop)
 
         # To suppress annoying errors.
         if len(by) == 1:
@@ -643,23 +644,19 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     @classmethod
     def _concat_to_series(
         cls,
-        objs: Sequence[Self]
-        | Sequence[pd.Series[Any]]
+        objs: Iterable[Self]
+        | Iterable[pd.Series[Any]]
         | Mapping[Hashable, Self]
         | Mapping[Hashable, pd.Series[Any]],
         **concat_kws: Any,
     ) -> pd.Series[Any]:
-        from collections.abc import Mapping, Sequence
+        from collections.abc import Mapping
 
-        if isinstance(objs, Sequence):
-            first = objs[0]
-            if isinstance(first, cls):
-                objs = tuple(x._series for x in objs)
-        elif isinstance(objs, Mapping):  # pylint: disable=confusing-consecutive-elif
+        if isinstance(objs, Mapping):
             out = {}
             remap = None
             for k in objs:
-                v = objs[k]
+                v = objs[k]  # pyright: ignore[reportArgumentType]
                 if remap is None:
                     remap = bool(isinstance(v, cls))
                 if remap:
@@ -668,8 +665,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
                     out[k] = v
             objs = out  # pylint: disable=redefined-variable-type
         else:
-            msg = f"bad input type {type(objs[0])}"
-            raise TypeError(msg)
+            first, objs = peek_at(objs)  # type: ignore[assignment]
+            if isinstance(first, cls):
+                objs = (x._series for x in objs)  # pyright: ignore[reportAttributeAccessIssue]
 
         return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]
 

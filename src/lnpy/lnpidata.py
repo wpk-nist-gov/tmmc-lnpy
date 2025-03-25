@@ -409,12 +409,12 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
     @property
     def volume(self) -> float | None:
         """Accessor to self.state_kws['volume']."""
-        return self.state_kws.get("volume", None)  # type: ignore[no-any-return]
+        return self.state_kws.get("volume", None)
 
     @property
     def beta(self) -> float | None:
         """Accessor to self.state_kws['beta']."""
-        return self.state_kws.get("beta", None)  # type: ignore[no-any-return]
+        return self.state_kws.get("beta", None)
 
     def __repr__(self) -> str:
         return f"<lnPi(lnz={self._lnz})>"
@@ -423,7 +423,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         return repr(self)
 
     def _index_dict(self, phase: int | str | None = None) -> dict[str, Any]:
-        out = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
+        out: dict[str, Any] = {f"lnz_{i}": v for i, v in enumerate(self.lnz)}
         if phase is not None:
             out["phase"] = phase
         return out

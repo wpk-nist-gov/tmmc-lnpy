@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from lnpy.core.validate import is_dataarray, is_dataframe, is_xarray
+from lnpy.core.validate import is_dataframe, is_xarray
 from lnpy.core.xr_utils import select_axis_dim
 
 if TYPE_CHECKING:
@@ -108,10 +108,10 @@ def factor_by(
 
     codes = codes.astype(np.int64)
     if isinstance(by_, (pd.Index, pd.MultiIndex)):
-        if not isinstance(groups, (pd.Index, pd.MultiIndex)):  # pragma: no cover
+        if not isinstance(groups, (pd.Index, pd.MultiIndex)):  # type: ignore[unreachable] # pragma: no cover
             msg = f"{type(groups)=} should be instance of pd.Index"  # pyright: ignore[reportUnknownArgumentType]
             raise TypeError(msg)
-        groups.names = by_.names
+        groups.names = by_.names  # type: ignore[unreachable]
         return groups, codes  # pyright: ignore[reportUnknownVariableType]
 
     return list(groups), codes  # pyright: ignore[reportUnknownArgumentType]
@@ -267,10 +267,10 @@ class IndexedGrouper:
         if is_xarray(data):
             axis, dim = select_axis_dim(data, axis, dim)
             size = data.sizes[dim]  # type: ignore[index]
-        elif is_dataarray(data):
-            size = data.shape[axis]
-        else:
+        elif is_dataframe(data):
             size = len(data)
+        else:
+            size = data.shape[axis]
 
         return cls(
             index=range(size),

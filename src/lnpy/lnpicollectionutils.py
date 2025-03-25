@@ -58,7 +58,7 @@ def get_lnz_min(
     collection: lnPiCollection,
     build_phases: BuildPhasesBase,
     phase_id: int | None = 0,
-    component: int | None = None,
+    component: int | str | None = None,
     dlnz: float = 0.5,
     dfac: float = 1.0,
     ref: lnPiMasked | None = None,
@@ -381,7 +381,7 @@ def build_grid(
             if new_range[1] > x_range[1]:
                 new_range[1] -= dx
             x_range = new_range
-        x = np.arange(x_range[0], x_range[1] + dx * 0.5, dx)  # type: ignore[index]
+        x = np.arange(x_range[0], x_range[1] + dx * 0.5, dx)
     else:
         x = np.asarray(x)
 
@@ -394,13 +394,13 @@ def build_grid(
         x = np.round(x / dx) * dx
 
     if digits is not None:
-        x = np.round(x, digits)  # type: ignore[arg-type]
+        x = np.round(x, digits)
 
     if unique:
-        x = np.unique(x)  # type: ignore[arg-type]
+        x = np.unique(x)
 
     if not outlier:
-        x = x[(lb <= x) & (x <= ub)]  # type: ignore[index]
+        x = x[(lb <= x) & (x <= ub)]
 
     return x  # type: ignore[return-value]
 

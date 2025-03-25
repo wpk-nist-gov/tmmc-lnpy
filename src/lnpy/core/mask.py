@@ -25,7 +25,7 @@ def _convention_to_bool(convention: MaskConvention) -> bool:
     elif convention == "masked":
         convention = False
     elif not isinstance(convention, bool):
-        msg = f"Bad value {convention} sent to _convention_to_bool"
+        msg = f"Bad value {convention} sent to _convention_to_bool"  # type: ignore[unreachable]
         raise ValueError(msg)
     return convention
 

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import Any, Literal
 
-    from .core.typing import MaskConvention, NDArrayAny
+    from .core.typing import MaskConvention, NDArrayAny, NDArrayInt
     from .core.typing_compat import IndexAny, Self, TypeAlias
     from .lnpiseries import lnPiCollection
 
@@ -185,11 +185,7 @@ def find_boundaries_overlap(
 
     if method == "approx":
         return _get_approx()
-    if method == "exact":
-        return _get_exact()
-
-    msg = f"unknown method={method}"
-    raise ValueError(msg)
+    return _get_exact()
 
 
 @docfiller.decorate
@@ -235,7 +231,7 @@ def find_masked_extrema(
     elif extrema == "min":
         func = np.argmin
     else:
-        msg = 'extrema must be on of {"min", "max}'
+        msg = 'extrema must be on of {"min", "max}'  # type: ignore[unreachable]
         raise ValueError(msg)
 
     masks = masks_change_convention(masks, convention, "image")
@@ -256,10 +252,10 @@ def find_masked_extrema(
         else:
             mask_flat = mask.reshape(-1)
             arg = positions_flat[mask_flat][func(data_flat[mask_flat])]
-            val = data_flat[arg]  # type: ignore[assignment]
+            val = data_flat[arg]  # pyright: ignore[reportAssignmentType]
 
             if unravel:
-                arg = np.unravel_index(arg, data.shape)  # type: ignore[assignment,arg-type]
+                arg = np.unravel_index(arg, data.shape)  # type: ignore[assignment]
 
         out_arg.append(arg)
         out_val.append(val)
@@ -415,10 +411,11 @@ class wFreeEnergy:  # noqa: N801
         # make sure masks in image convention
         self.masks = masks_change_convention(masks, convention, "image")
 
+        self.index: NDArrayInt
         if index is None:
-            self.index = np.arange(self.nfeature)
+            self.index = np.arange(self.nfeature).astype(np.int64)
         else:
-            self.index = np.asarray(self.index, dtype=np.int_)
+            self.index = np.asarray(index, dtype=np.int64)
 
         if connectivity is None:
             connectivity = self.data.ndim
@@ -793,7 +790,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
     # pylint: disable=invalid-overridden-method
 
     @cached.prop
-    def dwx(self) -> xr.DataArray:  # type: ignore[override]
+    def dwx(self) -> xr.DataArray:
         index = list(self._parent.index.get_level_values("phase"))
         masks = [x.mask for x in self._parent]
         w = wFreeEnergy(data=self._parent.iloc[0].data, masks=masks, convention=False)
@@ -804,7 +801,7 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
         return xr.DataArray(dw, dims=dims, coords=coords)
 
     @cached.prop
-    def dw(self) -> pd.Series[Any]:  # type: ignore[override]
+    def dw(self) -> pd.Series[Any]:
         """Series representation of delta_w"""
         return self.dwx.to_series()
 

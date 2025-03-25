@@ -21,7 +21,6 @@ requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
-    "License :: Public Domain",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
@@ -65,15 +64,20 @@ urls.Homepage = "https://github.com/usnistgov/tmmc-lnpy"
 
 [dependency-groups]
 dev = [
-    "tmmc-lnpy[all]",
-    { include-group = "dev-extras" },
     { include-group = "mypy" },
-    { include-group = "nbval" },
+    { include-group = "notebook" },
+    { include-group = "nox" },
+    { include-group = "optional" },
+    { include-group = "pytest-accept" },
     { include-group = "test" },
-    { include-group = "typing" },
+    { include-group = "test-notebook" },
+    { include-group = "typecheck" },
 ]
 test = [
-    { include-group = "test-extras" },
+    "pytest-cov",
+    "pytest-sugar",
+    "pytest-xdist",
+    { include-group = "pytest" },
 ]
 docs = [
     "autodocsumm",
@@ -83,37 +87,41 @@ docs = [
     "sphinx-book-theme",
     "sphinx-copybutton",
     "sphinxcontrib-spelling",
-    "tmmc-lnpy[viz]",
+    { include-group = "viz" },
 ]
-dev-extras = [
-    "ipykernel",
-    "ipython",
-    "nbclient>=0.10.0",
-    "nox>=2024.10.9",
-    "pytest-accept",
-]
+# other packages/tools
+ipython = [ "ipython" ]
+mypy = [ "mypy>=1.15.0", "orjson" ]
+notebook = [ "ipykernel", "nbclient" ]
+nox = [ "nox>=2025.5.1" ]
+pylint = [ "pylint" ]
+pytest = [ "pytest!=8.4" ]
+pytest-accept = [ "pytest-accept" ]
+# other environments
+optional = [ "tmmc-lnpy[all]" ]
+viz = [ "tmmc-lnpy[viz]" ]
 docs-live = [
     "sphinx-autobuild",
     { include-group = "docs" },
 ]
-mypy = [ "mypy>=1.15.0" ]
-nbval = [ "nbclient>=0.10.0", "nbval" ]
+docs-spelling = [
+    "pyenchant",
+    "sphinxcontrib-spelling",
+    { include-group = "docs" },
+]
 test-extras = [
-    "pytest",
-    "pytest-cov",
-    "pytest-sugar",
-    "pytest-xdist",
+    { include-group = "test" },
 ]
 test-notebook = [
-    "tmmc-lnpy[viz]",
-    { include-group = "nbval" },
-    { include-group = "test-extras" },
+    "nbval",
+    { include-group = "test" },
+    { include-group = "viz" },
 ]
-typing = [
+typecheck = [
     "pandas-stubs",
-    "pylint",
-    "pytest",
     "types-tqdm",
+    { include-group = "pylint" },
+    { include-group = "pytest" },
 ]
 
 [tool.hatch.version]
@@ -148,6 +156,15 @@ fragments = [
 [tool.nbqa.exclude]
 codespell = "^examples/archived"
 
+[tool.repo-review]
+ignore = [
+    "GH",    # enable for actions
+    "PC140", # do this externally
+    "PC170", # pygrep
+    "PC901", # ci message
+    "RTD",
+]
+
 [tool.check-wheel-contents]
 toplevel = [
     "lnpy",
@@ -164,6 +181,9 @@ max_supported_python = "3.13"
 
 [tool.pytest.ini_options]
 addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
     "--doctest-modules",
     "--doctest-glob=*.md",
     "--cov-config=pyproject.toml",
@@ -176,6 +196,17 @@ testpaths = [
     "lnPi",
     "lnpy",
     "tests",
+]
+minversion = "8"
+log_cli_level = "INFO"
+xfail_strict = true
+filterwarnings = [
+    "error",
+    "ignore: lnPi is deprecated.  Please transition to using lnpy instead:DeprecationWarning",
+    "ignore: FNV hashing is not implemented in Numba:UserWarning",
+    "ignore: This process:DeprecationWarning",
+    "ignore: Module lnpy was never imported:coverage.exceptions.CoverageWarning",
+    "ignore: No data was collected:coverage.exceptions.CoverageWarning",
 ]
 
 [tool.coverage.run]
@@ -201,17 +232,17 @@ source = [
     ".nox/**/site-packages/",
 ]
 
-# * Typing ---------------------------------------------------------------------
+# * typecheck ---------------------------------------------------------------------
 
 [tool.mypy]
 files = [
     "src",
     "tests",
 ]
-show_error_codes = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unused_configs = true
+warn_unreachable = true
 exclude = [
     ".eggs",
     ".tox",
@@ -222,6 +253,11 @@ exclude = [
 ]
 check_untyped_defs = true
 strict = true
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool",
+]
 untyped_calls_exclude = [
     "skimage",
 ]
@@ -297,9 +333,10 @@ inputs = [
 # * Dependency creation --------------------------------------------------------
 
 [tool.pyproject2conda]
-user_config = "config/userconfig.toml"
-template_python = "requirements/py{py}-{env}"
+user-config = "config/userconfig.toml"
+template-python = "requirements/py{py}-{env}"
 template = "requirements/{env}"
+name = "py{py}-{env}"
 python = "default"
 channels = "conda-forge"
 style = "yaml"
@@ -323,21 +360,27 @@ python = "all"
 reqs = [
     # these used solely for specking tools to be used with uvx ...
     "conda-lock>=2.5.5",
+    "cruft",
     "grayskull>=2.5.3",
     "nbqa>=1.8.4",
-    "pre-commit",
+    "pre-commit>=4.0.0",
     "pre-commit-uv",
+    "pyrefly",
     "pyright>=1.1.396",
     "scriv",
     "twine>=5.0.0",
+    "ty",
 ]
-groups = [ "mypy" ]
-skip_package = true
+groups = [
+    "mypy",
+    "nox",
+]
+skip-package = true
 style = "requirements"
 
 [tool.pyproject2conda.envs.test-extras]
 groups = [ "test-extras" ]
-skip_package = true
+skip-package = true
 python = "all"
 
 # * uv -------------------------------------------------------------------------
@@ -346,10 +389,22 @@ python = "all"
 managed = true
 default-groups = [ "dev" ]
 fork-strategy = "requires-python"
-required-version = ">=0.6.5"
+required-version = ">=0.7.15"
 
 [tool.uv.pip]
 annotation-style = "line"
+generate-hashes = true
+
+[tool.uv.dependency-groups]
+dev.requires-python = ">=3.12"
+docs.requires-python = ">=3.12"
+docs-live.requires-python = ">=3.12"
+docs-spelling.requires-python = ">=3.12"
+# other tools
+ipython.requires-python = ">=3.12"
+mypy.requires-python = ">=3.12"
+notebook.requires-python = ">=3.12"
+nox.requires-python = ">=3.12"
 
 # * Other tools ----------------------------------------------------------------
 

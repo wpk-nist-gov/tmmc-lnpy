@@ -23,7 +23,7 @@ from lnpy.extensions import AccessorMixin
 # [ ] : split splitting into separate classes
 
 
-class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
+class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-arg]
     r"""
     Class to store masked version of :math:`\ln\Pi(N)`.
     shape is (N0,N1,...) where Ni is the span of each dimension)
@@ -97,7 +97,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     @property
     def optinfo(self):
         """All extra properties"""
-        return self._optinfo  # type: ignore
+        return self._optinfo  # type: ignore[attr-defined]
 
     @property
     def state_kws(self):
@@ -376,7 +376,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
     def __setstate__(self, state):
         ma, opt = state
         super().__setstate__(ma)
-        self._optinfo.update(opt)  # type: ignore
+        self._optinfo.update(opt)  # type: ignore[attr-defined]
 
     @classmethod
     def from_table(
@@ -499,8 +499,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore
 
     @cached.prop
     def xge(self) -> GrandCanonicalEnsemble:
-        return GrandCanonicalEnsemble(self)  # type: ignore
+        return GrandCanonicalEnsemble(self)  # type: ignore[arg-type]
 
     @cached.prop
     def xce(self) -> CanonicalEnsemble:
-        return CanonicalEnsemble(self)  # type: ignore
+        return CanonicalEnsemble(self)  # type: ignore[arg-type]

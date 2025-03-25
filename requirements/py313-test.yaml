@@ -7,6 +7,7 @@
 # You should not manually edit this file.
 # Instead edit the corresponding pyproject.toml file.
 #
+name: py313-test
 channels:
   - conda-forge
 dependencies:
@@ -17,7 +18,7 @@ dependencies:
   - module-utilities>=0.9.0
   - numba
   - numpy
-  - pytest
+  - pytest!=8.4
   - pytest-cov
   - pytest-sugar
   - pytest-xdist

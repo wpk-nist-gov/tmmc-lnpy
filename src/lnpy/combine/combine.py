@@ -523,7 +523,7 @@ def _create_overlap_total_table(
         # Equivalent to not shifting last window.
         .query(f"{window_index_name} < {window_max}")
         # assign eq_idx
-        .assign(eq_idx=lambda x: range(len(x)))
+        .assign(eq_idx=lambda x: range(len(x)))  # type: ignore[arg-type,return-value]
     )
 
 
@@ -1239,11 +1239,7 @@ def delta_lnpi_from_updown(
         Calculated value of same type as ``up``.
     """
     if is_ndarray(down):  # pragma: no branch
-        up_ = (
-            up.to_numpy()
-            if isinstance(up, (pd.Series, xr.DataArray))
-            else cast("NDArray[Any]", up)
-        )
+        up_ = up.to_numpy() if isinstance(up, (pd.Series, xr.DataArray)) else up
 
         delta = np.empty_like(up)
         up_, down_, delta = (np.moveaxis(x, axis, -1) for x in (up_, down, delta))
@@ -1397,7 +1393,7 @@ def assign_lnpi_from_updown(
     )
 
     if is_dataframe(table):
-        return table.assign(**{lnpi_name: ln_prob})
+        return table.assign(**{lnpi_name: ln_prob})  # pyright: ignore[reportArgumentType]
     return table.assign({lnpi_name: table[down_name].copy(data=ln_prob)})
 
 
@@ -1455,7 +1451,7 @@ def _apply_indexed_function(
             keep_attrs=keep_attrs,
             **factory_apply_ufunc_kwargs(
                 apply_ufunc_kwargs=apply_ufunc_kwargs,
-                output_dtypes=dtype or np.float64,
+                output_dtypes=dtype if dtype is not None else np.float64,  # type: ignore[redundant-expr]
             ),
         ).transpose(*first.dims)
         return xout  # pyright: ignore[reportReturnType]
@@ -1703,7 +1699,7 @@ def _assign_indexed_function_result(
 ) -> FrameOrDatasetT:
     args: Iterator[NDArrayAny | xr.DataArray] = (
         (table[key].to_numpy() for key in keys)
-        if is_dataframe(table)
+        if is_dataframe(table)  # type: ignore[redundant-expr]
         else (table[key] for key in keys)
     )
 

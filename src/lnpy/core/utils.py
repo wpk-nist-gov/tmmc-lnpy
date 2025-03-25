@@ -13,7 +13,7 @@ import numpy as np
 from .mask import mask_change_convention
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from typing import Any
 
     import xarray as xr
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 # * pandas stuff --------------------------------------------------------------
-def allbut(levels: Iterable[str], *names: str) -> list[str]:
+def allbut(levels: Iterable[Hashable], *names: Hashable) -> list[Hashable]:
     name_set = set(names)
     return [item for item in levels if item not in name_set]
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
-from lnpy.core.validate import is_dataset
+from lnpy.core.validate import is_dataarray, is_dataset
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping
@@ -88,14 +88,9 @@ def dim_to_suffix(
 def dim_to_suffix(
     ds: xr.DataArray | xr.Dataset, dim: Hashable = "component", join: str = "_"
 ) -> xr.DataArray | xr.Dataset:
-    from xarray import DataArray, Dataset
-
-    if isinstance(ds, DataArray):
+    if is_dataarray(ds):
         return dim_to_suffix_dataarray(ds, dim=dim, join=join)
-    if isinstance(ds, Dataset):
-        return dim_to_suffix_dataset(ds, dim=dim, join=join)
-    msg = "`ds` must be `DataArray` or `Dataset`"
-    raise ValueError(msg)
+    return dim_to_suffix_dataset(ds, dim=dim, join=join)
 
 
 # * Select Axis ---------------------------------------------------------------

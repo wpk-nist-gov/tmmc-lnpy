@@ -150,7 +150,7 @@ def peak_local_max_adaptive(
     data: NDArrayAny,
     *,
     mask: NDArrayAny | None = None,
-    min_distance: Sequence[int] | None = None,
+    min_distance: int | Sequence[int] | None = None,
     style: PeakStyle | str = "indices",
     threshold_rel: float = 0.0,
     threshold_abs: float = 0.2,
@@ -254,7 +254,7 @@ def peak_local_max_adaptive(
 
     if style == "marker":
         out = morphology_label(out, connectivity=connectivity)
-    return cast("NDArrayAny", out)
+    return out  # pyright: ignore[reportReturnType]
 
 
 @docfiller_local

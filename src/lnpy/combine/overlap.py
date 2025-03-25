@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -176,7 +176,7 @@ def _create_overlap_total_table(
         # Equivalent to not shifting last window.
         .query(f"{window_index_name} < {window_max}")
         # assign eq_idx
-        .assign(eq_idx=lambda x: range(len(x)))
+        .assign(eq_idx=lambda x: range(len(x)))  # type: ignore[arg-type,return-value]
     )
 
 
@@ -395,18 +395,15 @@ def shift_lnpi_windows(
             ),
         )
 
-    return cast(  # pyright: ignore[reportReturnType]
-        "NDArrayAny",
-        _shift_lnpi_windows_indexed(
-            lnpi,
-            window,  # pyright: ignore[reportArgumentType]
-            np.stack(macrostate, axis=-1),
-            grouper.index,
-            grouper.start,
-            grouper.end,
-            use_sparse,
-            check_connected,
-        ),
+    return _shift_lnpi_windows_indexed(
+        lnpi,
+        window,  # pyright: ignore[reportArgumentType]
+        np.stack(macrostate, axis=-1),
+        grouper.index,
+        grouper.start,
+        grouper.end,
+        use_sparse,
+        check_connected,
     )
 
 
@@ -427,7 +424,7 @@ def assign_shift_lnpi_windows(
     grouper = factory_indexed_grouper(grouper, data=table, dim=dim, axis=-1)
 
     out = shift_lnpi_windows(
-        table if is_dataarray(table) else table[lnpi_name],
+        table if is_dataarray(table) else table[lnpi_name],  # type: ignore[redundant-expr]
         table[window_name],
         *(table[k] for k in validate_str_or_iterable(macrostate_names)),
         grouper=grouper,
