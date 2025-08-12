@@ -176,7 +176,7 @@ def _create_overlap_total_table(
         # Equivalent to not shifting last window.
         .query(f"{window_index_name} < {window_max}")
         # assign eq_idx
-        .assign(eq_idx=lambda x: range(len(x)))  # type: ignore[arg-type,return-value]
+        .assign(eq_idx=lambda x: range(len(x)))
     )
 
 
