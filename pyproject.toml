@@ -298,6 +298,7 @@ strict = [
     # "tests",
     "noxfile.py",
     "tools/*.py",
+    # "src/lnpy/*.py",
     # "src/lnpy/core/*.py",
 ]
 reportDuplicateImport = true
