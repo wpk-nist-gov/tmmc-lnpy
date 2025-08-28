@@ -188,14 +188,14 @@ def get_lnz_min(
     def f(x: float) -> float:
         lnz_new = x
         p = build_phases(lnz_new, ref=ref, **build_kws)
-        f.lnpi = p  # type: ignore[attr-defined]
+        f.lnpi = p  # type: ignore[attr-defined]  # pyright: ignore[reportFunctionMemberAccess]
         return array_to_scalar(getter(p).values) - target
 
     a, b = sorted([x._get_lnz(lnz_idx) for x in (left, right)])
 
     xx, r = brentq(f, a, b, full_output=True, **(solve_kws or {}))
 
-    return f.lnpi, rootresults_to_rootresultdict(r, residual=f(xx))  # type: ignore[attr-defined]
+    return f.lnpi, rootresults_to_rootresultdict(r, residual=f(xx))  # type: ignore[attr-defined]  # pyright: ignore[reportFunctionMemberAccess]
 
 
 def get_lnz_max(
@@ -299,9 +299,10 @@ def get_lnz_max(
     bracket = [left, right]
     values = [getter(x).to_numpy() for x in bracket]
 
-    for i in range(ntry):  # noqa: B007
+    for i in range(ntry):
         lnz = [x._get_lnz(lnz_idx) for x in bracket]
         if (delta := np.abs(lnz[1] - lnz[0])) < threshold_abs:
+            tried = i
             break
         lnz_mid = 0.5 * (lnz[0] + lnz[1])
         mid = build_phases(lnz_mid, ref=ref, **build_kws)
@@ -311,10 +312,18 @@ def get_lnz_max(
 
         bracket[index] = mid
         values[index] = y_mid
+    else:
+        tried = ntry
+        delta = 0.0
 
     left, right = bracket
 
-    info = {"ntry": i, "ntry_left": n_left, "ntry_right": n_right, "precision": delta}
+    info = {
+        "ntry": tried,
+        "ntry_left": n_left,
+        "ntry_right": n_right,
+        "precision": delta,
+    }
     return left, info
 
 
@@ -385,8 +394,7 @@ def build_grid(
     else:
         x = np.asarray(x)
 
-    if not outlier:
-        lb, ub = x.min(), x.max()
+    bounds = None if outlier else (x.min(), x.max())
 
     if even_grid:
         if dx is None:
@@ -399,8 +407,8 @@ def build_grid(
     if unique:
         x = np.unique(x)
 
-    if not outlier:
-        x = x[(lb <= x) & (x <= ub)]
+    if bounds is not None:
+        x = x[(bounds[0] <= x) & (x <= bounds[1])]
 
     return x  # type: ignore[return-value]
 

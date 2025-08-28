@@ -92,14 +92,14 @@ def factor_by(
     array([ 0,  0, -1,  1,  1, -1])
 
     """
-    from pandas import factorize  # pyright: ignore[reportUnknownVariableType]
+    from pandas import factorize
 
     # filter None and negative -> None
     by_: Groups = (
         by
         if isinstance(by, pd.Index)
         else np.fromiter(
-            (None if isinstance(x, (int, np.integer)) and x < 0 else x for x in by),  # pyright: ignore[reportUnknownArgumentType]
+            (None if isinstance(x, (int, np.integer)) and x < 0 else x for x in by),
             dtype=object,
         )
     )
@@ -109,12 +109,12 @@ def factor_by(
     codes = codes.astype(np.int64)
     if isinstance(by_, (pd.Index, pd.MultiIndex)):
         if not isinstance(groups, (pd.Index, pd.MultiIndex)):  # type: ignore[unreachable] # pragma: no cover
-            msg = f"{type(groups)=} should be instance of pd.Index"  # pyright: ignore[reportUnknownArgumentType]
+            msg = f"{type(groups)=} should be instance of pd.Index"
             raise TypeError(msg)
         groups.names = by_.names  # type: ignore[unreachable]
-        return groups, codes  # pyright: ignore[reportUnknownVariableType]
+        return groups, codes
 
-    return list(groups), codes  # pyright: ignore[reportUnknownArgumentType]
+    return list(groups), codes
 
 
 def factor_by_to_index(
@@ -224,7 +224,7 @@ class IndexedGrouper:
         """Create object from single `group` array"""
         kwargs.setdefault("kind", "stable")
         groups, index, start, end = factor_by_to_index(group, sort=sort, **kwargs)
-        return cls(index=index, start=start, end=end, groups=groups)  # type: ignore[arg-type]
+        return cls(index=index, start=start, end=end, groups=groups)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     @classmethod
     def from_groups(
@@ -238,7 +238,7 @@ class IndexedGrouper:
         idx = (
             pd.Index(groups[0], name=names)
             if len(groups) == 1
-            else pd.MultiIndex.from_arrays(groups, names=names)  # type: ignore[arg-type, unused-ignore]
+            else pd.MultiIndex.from_arrays(groups, names=names)  # type: ignore[arg-type, unused-ignore]  # pyright: ignore[reportArgumentType]
         )
 
         return cls.from_group(idx, sort=sort, **kwargs)
@@ -254,7 +254,7 @@ class IndexedGrouper:
         """Create object from data object and group variables/columns"""
         if isinstance(keys, str):
             keys = [keys]
-        return cls.from_groups(*(data[k] for k in keys), sort=sort, **kwargs)  # type: ignore[arg-type]
+        return cls.from_groups(*(data[k] for k in keys), sort=sort, **kwargs)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     @classmethod
     def from_size(

@@ -231,7 +231,7 @@ def find_masked_extrema(
     elif extrema == "min":
         func = np.argmin
     else:
-        msg = 'extrema must be on of {"min", "max}'  # type: ignore[unreachable]
+        msg = 'extrema must be on of {"min", "max}'  # type: ignore[unreachable]  # pyright: ignore[reportUnreachable]
         raise ValueError(msg)
 
     masks = masks_change_convention(masks, convention, "image")
@@ -255,7 +255,7 @@ def find_masked_extrema(
             val = data_flat[arg]  # pyright: ignore[reportAssignmentType]
 
             if unravel:
-                arg = np.unravel_index(arg, data.shape)  # type: ignore[assignment]
+                arg = np.unravel_index(arg, data.shape)  # type: ignore[assignment]  # pyright: ignore[reportCallIssue, reportArgumentType]
 
         out_arg.append(arg)
         out_val.append(val)
@@ -357,8 +357,8 @@ def merge_regions(
         w_tran[idx_kill, :] = w_tran[:, idx_kill] = np.inf
 
         # new mask
-        mapping[idx_keep] |= mapping[idx_kill]  # type: ignore[index]
-        del mapping[idx_kill]  # type: ignore[arg-type]
+        mapping[idx_keep] |= mapping[idx_kill]  # type: ignore[index]  # pyright: ignore[reportArgumentType]
+        del mapping[idx_kill]  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     # from mapping create some new stuff
     # new w/de
@@ -527,8 +527,8 @@ class wFreeEnergy:  # noqa: N801
                     out_arg[i, j] = None
                 else:
                     idx_min = np.nanargmin(vals)
-                    out_arg[i, j] = argmax_dict[i, j, idx_min]  # type: ignore[index]
-                    out_max[i, j] = out_max[j, i] = valmax_dict[i, j, idx_min]  # type: ignore[index]
+                    out_arg[i, j] = argmax_dict[i, j, idx_min]  # type: ignore[index]  # pyright: ignore[reportArgumentType]
+                    out_max[i, j] = out_max[j, i] = valmax_dict[i, j, idx_min]  # type: ignore[index]  # pyright: ignore[reportArgumentType]
         return out_arg, out_max
 
     @property
@@ -612,7 +612,7 @@ def _get_w_data(index: pd.MultiIndex, w: wFreeEnergy) -> dict[str, pd.Series[Any
     w_min = pd.Series(w.w_min[:, 0], index=index, name="w_min")
     w_argmin = pd.Series(w.w_argmin, index=w_min.index, name="w_argmin")
 
-    w_tran: pd.Series[Any] = (
+    w_tran: pd.Series[Any] = (  # pyright: ignore[reportAssignmentType]
         pd.DataFrame(  # type: ignore[call-overload]  # noqa: PD013
             w.w_tran,
             index=index,
@@ -716,7 +716,7 @@ class wFreeEnergyCollection:  # noqa: N801
     @property
     def dw(self) -> pd.Series[Any]:
         """Series representation of `dw = w_tran - w_min`"""
-        return (self.w_tran - self.w_min).rename("delta_w")  # pyright: ignore[reportReturnType]
+        return (self.w_tran - self.w_min).rename("delta_w")
 
     @property
     def dwx(self) -> xr.DataArray:
@@ -787,9 +787,8 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
 
     """
 
-    # pylint: disable=invalid-overridden-method
-
-    @cached.prop
+    @property
+    @cached.meth
     def dwx(self) -> xr.DataArray:
         index = list(self._parent.index.get_level_values("phase"))
         masks = [x.mask for x in self._parent]
@@ -800,12 +799,13 @@ class wFreeEnergyPhases(wFreeEnergyCollection):  # noqa: N801
         coords = dict(zip(dims, [index] * 2))
         return xr.DataArray(dw, dims=dims, coords=coords)
 
-    @cached.prop
+    @property
+    @cached.meth
     def dw(self) -> pd.Series[Any]:
         """Series representation of delta_w"""
         return self.dwx.to_series()
 
-    def get_dw(  # type: ignore[override]
+    def get_dw(  # type: ignore[override]  # pyright: ignore[reportIncompatibleMethodOverride]
         self, idx: int, idx_nebr: int | Iterable[int] | None = None
     ) -> float | NDArrayAny:
         dw = self.dwx

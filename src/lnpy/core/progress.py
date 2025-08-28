@@ -1,5 +1,6 @@
 """Routines to work with progress bar."""
 
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 from functools import lru_cache
@@ -32,7 +33,7 @@ def _get_tqdm() -> ModuleType | None:
 def _get_tqdm_default() -> Callable[..., Any]:
     if tqdm_ := _get_tqdm():
         try:
-            from IPython.core.getipython import (  # pyright: ignore[reportMissingImports]
+            from IPython.core.getipython import (
                 get_ipython,
             )
 

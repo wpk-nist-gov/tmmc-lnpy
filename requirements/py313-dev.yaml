@@ -37,6 +37,7 @@ dependencies:
   - pytest-xdist
   - scikit-image>=0.21
   - scipy
+  - scipy-stubs
   - tqdm
   - types-tqdm
   - xarray

@@ -57,7 +57,7 @@ NDArrayBool: TypeAlias = NDArray[np.bool_]
 # * TypeVars
 EnsembleT = TypeVar("EnsembleT", "GrandCanonicalEnsemble", "CanonicalEnsemble")
 """TypeVar for Ensemble."""
-FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[misc]
+FloatT = TypeVar("FloatT", np.float32, np.float64, default=Any)  # type: ignore[misc]  # pyright: ignore[reportGeneralTypeIssues]
 GenArrayT = TypeVar("GenArrayT", NDArray[Any], xr.DataArray)
 GenArrayOrSeriesT = TypeVar(
     "GenArrayOrSeriesT", NDArray[Any], xr.DataArray, "pd.Series[Any]"

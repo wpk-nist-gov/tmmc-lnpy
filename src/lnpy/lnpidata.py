@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
 
 # * Utilities -----------------------------------------------------------------
-@lru_cache(maxsize=20)
 def _get_n_ranges(shape: tuple[int, ...], dtype: DTypeLike) -> list[NDArrayAny]:
     return [np.arange(s, dtype=dtype) for s in shape]
 
@@ -43,7 +42,7 @@ def _get_shift(
     shape: tuple[int, ...], dlnz: tuple[float, ...], dtype: DTypeLike
 ) -> NDArrayAny:
     shift = np.zeros([], dtype=dtype)
-    for _i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):  # type: ignore[arg-type]
+    for _i, (nr, m) in enumerate(zip(_get_n_ranges(shape=shape, dtype=dtype), dlnz)):
         shift = np.add.outer(shift, nr * m)
     return shift
 
@@ -52,10 +51,9 @@ def _get_shift(
 def _get_data(base: lnPiArray, dlnz: tuple[float, ...]) -> NDArrayAny:
     if all(x == 0 for x in dlnz):  # pylint: disable=use-implicit-booleaness-not-comparison-to-zero
         return base.data
-    return _get_shift(base.shape, dlnz, base.data.dtype) + base.data  # pyright: ignore[reportArgumentType]
+    return _get_shift(base.shape, dlnz, base.data.dtype) + base.data
 
 
-@lru_cache(maxsize=20)
 def _get_maskedarray(
     base: lnPiArray, self: lnPiMasked, dlnz: tuple[float, ...]
 ) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
@@ -645,7 +643,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
             csv_kws = {}
 
         da = (
-            pd.read_csv(path, sep=sep, names=names, **csv_kws)  # type: ignore[call-overload]
+            pd.read_csv(path, sep=sep, names=names, **csv_kws)  # type: ignore[call-overload]  # pyright: ignore[reportCallIssue, reportArgumentType]
             .set_index(names[:-1])["lnpi"]
             .to_xarray()
         )

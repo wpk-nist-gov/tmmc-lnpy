@@ -101,7 +101,7 @@ def distance_matrix(
 
     # remove padding
     s = (slice(None, -1),) * ndim
-    return dist[s]  # type: ignore[no-any-return]
+    return dist[s]  # type: ignore[return-value, call-overload] # pyright: ignore[reportReturnType, reportCallIssue, reportArgumentType]
 
 
 def lnpimasked_to_dataset(
@@ -151,7 +151,7 @@ def dataset_to_lnpimasked(
         extra_kws = {}
 
     if pe_name in ds:
-        extra_kws[pe_name] = ds[pe_name].to_numpy()  # type: ignore[index]
+        extra_kws[pe_name] = ds[pe_name].to_numpy()  # type: ignore[index]  # pyright: ignore[reportIndexIssue]
 
     return lnPiMasked.from_dataarray(da=data, extra_kws=extra_kws, **kwargs)
 

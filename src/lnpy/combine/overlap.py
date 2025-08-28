@@ -111,7 +111,7 @@ def check_windows_overlap(
     macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
-    x: pd.DataFrame = (  # pyright: ignore[reportAssignmentType]
+    x: pd.DataFrame = (
         overlap_table.merge(
             overlap_table, on=macrostate_names, how="outer", suffixes=("", "_nebr")
         )
@@ -237,7 +237,7 @@ def _create_lhs_matrix_numpy(
 
 
 # * Shift combine -------------------------------------------------------------
-@np.vectorize(signature="(n), (n), (n, d), (), () -> (n)")  # type: ignore[call-arg]
+@np.vectorize(signature="(n), (n), (n, d), (), () -> (n)")  # type: ignore[call-arg]  # pyright: ignore[reportCallIssue]
 def _shift_lnpi_windows(
     lnpi: NDArrayAny,
     windows: NDArrayAny,
@@ -293,18 +293,18 @@ def _shift_lnpi_windows(
     )
 
     if use_sparse:
-        a = _create_lhs_matrix_sparse(
+        asp = _create_lhs_matrix_sparse(
             overlap_total_table=overlap_total_table,
             overlap_outer_table=overlap_outer_table,
             window_index_name=window_index_name,
             window_max=window_max,
         )
 
-        lhs = (a.T @ a).toarray()
+        lhs = (asp.T @ asp).toarray()
         # There's a bug with multiplying a shape=(1,1) a into b.
         # The result will be a scalar.
         # so make sure its a vector
-        rhs = np.atleast_1d(a.T @ b)
+        rhs = np.atleast_1d(asp.T @ b)
 
     else:
         a = _create_lhs_matrix_numpy(
@@ -369,7 +369,7 @@ def shift_lnpi_windows(
     if is_series(lnpi):
         return pd.Series(
             shift_lnpi_windows(
-                *(a.to_numpy() for a in chain((lnpi, window), macrostate)),  # type: ignore[arg-type]
+                *(a.to_numpy() for a in chain((lnpi, window), macrostate)),  # type: ignore[arg-type]  # pyright: ignore[reportAttributeAccessIssue]
                 grouper=grouper,
                 use_sparse=use_sparse,
                 check_connected=check_connected,
@@ -437,7 +437,7 @@ def assign_shift_lnpi_windows(
 
     if is_dataarray(table):
         return out  # pyright: ignore[reportReturnType]
-    return table.assign(**{lnpi_name: out})  # type: ignore[arg-type]
+    return table.assign(**{lnpi_name: out})  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
 
 # * Keep first combine --------------------------------------------------------
@@ -504,8 +504,8 @@ def keep_first_indexer(
 ) -> NDArrayInt:
     def _factorize(*x: str | ArrayLike, sort: bool = False) -> NDArrayInt:
         args = [table[k] if isinstance(k, str) else k for k in x]
-        idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)  # type: ignore[arg-type,unused-ignore]
-        return pd.factorize(idx, sort=sort)[0]  # type: ignore[arg-type]
+        idx = args[0] if len(args) == 1 else pd.MultiIndex.from_arrays(args)  # type: ignore[arg-type,unused-ignore]  # pyright: ignore[reportArgumentType]
+        return pd.factorize(idx, sort=sort)[0]  # type: ignore[arg-type]  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     state = np.array(table[state] if isinstance(state, str) else state)
     window = _factorize(window)

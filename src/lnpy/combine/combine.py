@@ -123,7 +123,7 @@ def check_windows_overlap(
     macrostate_names = validate_str_or_iterable(macrostate_names)
     overlap_table = overlap_table[[window_index_name, *macrostate_names]]
 
-    x: pd.DataFrame = (  # pyright: ignore[reportAssignmentType]
+    x: pd.DataFrame = (
         overlap_table.merge(
             overlap_table, on=macrostate_names, how="outer", suffixes=("", "_nebr")
         )
@@ -162,10 +162,10 @@ def _concat_windows_dataframe(
     )
     if window_name in table.columns:
         if overwrite_window:
-            return table.drop(window_name, axis=1).reset_index(window_name)  # pyright: ignore[reportReturnType]
-        return table.reset_index(window_name, drop=True)  # pyright: ignore[reportReturnType]
+            return table.drop(window_name, axis=1).reset_index(window_name)
+        return table.reset_index(window_name, drop=True)
 
-    return table.reset_index(window_name)  # pyright: ignore[reportReturnType]
+    return table.reset_index(window_name)
 
 
 def _concat_windows_xarray(
@@ -186,7 +186,7 @@ def _concat_windows_xarray(
                 )
             if overwrite_window:
                 return obj.assign_coords(
-                    {window_name: xr.full_like(obj[window_name], fill_value=window)}  # pyright: ignore[reportIndexIssue]
+                    {window_name: xr.full_like(obj[window_name], fill_value=window)}
                 )
             return obj
 
@@ -722,18 +722,18 @@ def shift_lnpi_windows(
     )
 
     if use_sparse:
-        a = _create_lhs_matrix_sparse(
+        asp = _create_lhs_matrix_sparse(
             overlap_total_table=overlap_total_table,
             overlap_outer_table=overlap_outer_table,
             window_index_name=window_index_name,
             window_max=window_max,
         )
 
-        lhs = (a.T @ a).toarray()
+        lhs = (asp.T @ asp).toarray()
         # There's a bug with multiplying a shape=(1,1) a into b.
         # The result will be a scalar.
         # so make sure its a vector
-        rhs = np.atleast_1d(a.T @ b)
+        rhs = np.atleast_1d(asp.T @ b)
 
     else:
         a = _create_lhs_matrix_numpy(
@@ -750,7 +750,7 @@ def shift_lnpi_windows(
     shift[:-1] = np.linalg.solve(lhs, rhs)
     shift -= shift[0]
 
-    return table.assign(  # pyright: ignore[reportReturnType]
+    return table.assign(
         **{lnpi_name: table[lnpi_name] + shift[table[window_index_name].to_numpy()]}
     ).drop(window_index_name, axis=1)
 
@@ -796,7 +796,7 @@ def _filter_min_max_keep_first(
     keep_max = min_max["max"]
     query = f"_keep_min < {state_name} <= _keep_max"
 
-    return (  # pyright: ignore[reportReturnType]
+    return (
         table.assign(
             _keep_min=lambda x: keep_min[x[window_index_name]].to_numpy(),
             _keep_max=lambda x: keep_max[x[window_index_name]].to_numpy(),
@@ -986,7 +986,7 @@ def keep_first(
 
         # indexing dataframe
         frame = (
-            data[index_name]  # pyright: ignore[reportIndexIssue]  # py38 only
+            data[index_name]
             .pipe(lambda x: x.copy(data=range(len(x))))  # pyright: ignore[reportArgumentType]
             .to_dataframe()[index_name]
             .reset_index()
@@ -1086,12 +1086,12 @@ def updown_mean(
     """
     if use_running:
         columns = [weight_name, down_name, up_name]
-        return table.groupby(by, as_index=as_index, **kwargs)[columns].apply(  # type: ignore[no-any-return,call-overload,arg-type,unused-ignore]  # no clue why this is throwing an error
+        return table.groupby(by, as_index=as_index, **kwargs)[columns].apply(  # type: ignore[no-any-return,call-overload,arg-type,unused-ignore]  # no clue why this is throwing an error  # pyright: ignore[reportCallIssue, reportArgumentType]
             _factory_average_updown(*columns)
         )
 
     return (  # type: ignore[no-any-return,unused-ignore]
-        table.assign(  # type: ignore[call-overload,unused-ignore]
+        table.assign(  # type: ignore[call-overload,unused-ignore]  # pyright: ignore[reportCallIssue]
             **{
                 down_name: lambda x: x[down_name] * x[weight_name],
                 up_name: lambda x: x[up_name] * x[weight_name],
@@ -1199,7 +1199,7 @@ def assign_updown_from_collectionmatrix(
         New dataframe with assigned columns.
     """
     return table.assign(
-        **dict(  # type: ignore[arg-type]
+        **dict(  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
             zip(
                 [weight_name, down_name, up_name],
                 updown_from_collectionmatrix(*(table[c] for c in matrix_names)),
@@ -1274,7 +1274,9 @@ def delta_lnpi_from_updown(
             index=down.index,
         )
 
-    msg = f"Unknown {type(up)=}"  # pragma: no cover
+    msg = (
+        f"Unknown {type(up)=}"  # pragma: no cover  # pyright: ignore[reportUnreachable]
+    )
     raise TypeError(msg)  # pragma: no cover
 
 
@@ -1334,7 +1336,7 @@ def lnpi_from_updown(
             index=down.index,
         )
 
-    msg = f"Unknown {type(up)=}"
+    msg = f"Unknown {type(up)=}"  # pyright: ignore[reportUnreachable]
     raise ValueError(msg)
 
 
@@ -1417,7 +1419,7 @@ def _apply_indexed_function(
     grouper = factory_indexed_grouper(grouper, data=first, dim=dim, axis=axis)
 
     if is_series(first):
-        return pd.Series(  # pyright: ignore[reportReturnType]
+        return pd.Series(
             _apply_indexed_function(
                 *(a.to_numpy() for a in args),  # pyright: ignore[reportAttributeAccessIssue]
                 factory_gufunc=factory_gufunc,

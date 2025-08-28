@@ -143,7 +143,7 @@ def state_max_window(
         end = window_end[window]
         max_ = state[window_index[start]]
         for i in range(start + 1, end):
-            max_ = max(max_, state[window_index[i]])  # pyright: ignore[reportArgumentType]
+            max_ = max(max_, state[window_index[i]])
         out[window] = max_
 
 

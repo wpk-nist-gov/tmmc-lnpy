@@ -22,9 +22,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from typing import Any, Literal
 
-    from scipy.optimize import RootResults  # pyright: ignore[reportMissingTypeStubs]
+    from scipy.optimize import RootResults
 
-    from .core.typing import NDArrayAny
     from .core.typing_compat import Self
     from .lnpidata import lnPiMasked
     from .lnpiseries import lnPiCollection
@@ -53,7 +52,7 @@ def _rootresults_to_rootresulttotal(
     info: str | None = None,
     bracket_iteration: int | None = None,
     from_solve: bool | None = None,
-    residual: float | None = None,
+    residual: float | np.floating[Any] = np.nan,
 ) -> RootResultTotal:
     output = RootResultTotal(**rootresults_to_rootresultdict(r, residual=residual))  # type: ignore[typeddict-item]
 
@@ -249,7 +248,7 @@ def _refine_bracket_spinodal_right(
         # checks
         if left_done and right_done:
             # find bracket
-            r = rootresults(root=None, iterations=i, function_calls=i, flag=1)
+            r = rootresults(root=np.nan, iterations=i, function_calls=i, flag=1)
             return left, right, _rootresults_to_rootresulttotal(r)
 
         ########
@@ -260,10 +259,13 @@ def _refine_bracket_spinodal_right(
             if left_done:
                 # can't find a lower bound to efac, just return where we're at
                 r = rootresults(
-                    root=left._get_lnz(), iterations=i + 1, function_calls=i, flag=0
+                    root=left._get_lnz(),  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+                    iterations=i + 1,
+                    function_calls=i,
+                    flag=0,
                 )
 
-                r = _rootresults_to_rootresulttotal(
+                rd = _rootresults_to_rootresulttotal(
                     r,
                     left=left,
                     right=right,
@@ -271,12 +273,12 @@ def _refine_bracket_spinodal_right(
                     right_done=right_done,
                     info="all close and left_done",
                 )
-                return left, right, r
+                return left, right, rd
 
             # all close, and no good on either end -> no spinodal
-            r = rootresults(root=None, iterations=i + 1, function_calls=i, flag=1)
+            r = rootresults(root=np.nan, iterations=i + 1, function_calls=i, flag=1)
 
-            r = _rootresults_to_rootresulttotal(
+            rd = _rootresults_to_rootresulttotal(
                 r,
                 left=left,
                 right=right,
@@ -285,7 +287,7 @@ def _refine_bracket_spinodal_right(
                 info="all close and not left_done",
             )
 
-            return None, None, r
+            return None, None, rd
 
         # mid point phases
         lnz_mid = 0.5 * (
@@ -304,7 +306,7 @@ def _refine_bracket_spinodal_right(
 
     msg = f"""
     did not finish
-    ntry      : {i}
+    ntry      : {nmax}
     idx       : {idx}
     idx_nebr  : {idx_nebr}
     left lnz   : {left._get_lnz()}
@@ -542,7 +544,7 @@ class _SolveBinodal:
         self.ref = ref
         self.build_kws = build_kws or {}
 
-    def objective(self, x: float) -> float | NDArrayAny:
+    def objective(self, x: float) -> float:
         self.collection = self.build_phases(x, ref=self.ref, **self.build_kws)
         out = (
             self.collection.xge.betaOmega()
@@ -594,7 +596,7 @@ class _SolveBinodal:
 
         return self.collection, _rootresults_to_rootresulttotal(
             r,
-            residual=self.objective(xx),  # type: ignore[arg-type]
+            residual=self.objective(xx),
         )
 
 
@@ -647,7 +649,7 @@ class StabilityBase:
         concat_kws = {"names": [self._NAME], **concat_kws}
         kwargs = dict(self.access_kws, **kwargs)
 
-        return self._parent.concat(items, concat_kws=concat_kws, **kwargs)  # type: ignore[arg-type]
+        return self._parent.concat(items, concat_kws=concat_kws, **kwargs)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     @cached.prop
     def access(self) -> lnPiCollection:
@@ -809,7 +811,7 @@ class Spinodals(StabilityBase):
         from .segment import BuildPhasesBase
 
         if not isinstance(build_phases, BuildPhasesBase):
-            msg = (  # type: ignore[unreachable]
+            msg = (  # type: ignore[unreachable]  # pyright: ignore[reportUnreachable]
                 "`build_phases` should be an instance of `BuildPhasesBase`."
                 "Its likely an instance of `PhaseCreator.builphases`."
                 "Instead, use an instance of `PhaseCreator.buildphases_mu`."
@@ -993,11 +995,12 @@ class Binodals(StabilityBase):
             if inplace, return self
             if not inplace, and as dict, return dict, else return lnPiCollection with phase_id in index
         """
+        out: dict[int, lnPiCollection] = {}
         if inplace and hasattr(self, "_items") and not force:
             if inplace:
                 return self
 
-            out = self._items if as_dict else self.access  # type: ignore[unreachable]
+            out = self._items if as_dict else self.access  # type: ignore[unreachable]  # pyright: ignore[reportUnreachable]
             return out, self._info
 
         self._solver = _SolveBinodal(  # pylint: disable=attribute-defined-outside-init
@@ -1006,8 +1009,7 @@ class Binodals(StabilityBase):
 
         phase_ids = list(range(phase_ids) if isinstance(phase_ids, int) else phase_ids)
 
-        out = {}
-        info = {}
+        info: dict[int, RootResultTotal] = {}
         index = {}
         for idx, ids in enumerate(itertools.combinations(phase_ids, 2)):
             s, r = self.get_pair(
@@ -1031,7 +1033,7 @@ class Binodals(StabilityBase):
 
         # either build output or inplace
         if inplace:
-            self._items = out
+            self._items = out  # pyright: ignore[reportIncompatibleVariableOverride]
             self._info = info
             self._index = index  # pylint: disable=attribute-defined-outside-init
             return self

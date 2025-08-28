@@ -112,9 +112,9 @@ def test_collection(obj, build_phases, lnzs) -> None:
         test = pd.read_csv(path_data / (path + ".csv"))
         other = get_test_table(y, ref)
 
-        pd.testing.assert_frame_equal(test, other)  # pyright: ignore[reportArgumentType]
+        pd.testing.assert_frame_equal(test, other)
 
         test = pd.read_csv(path_data / (path + "_dw.csv"))
         other = y.wfe.dw.to_frame().reset_index()
 
-        pd.testing.assert_frame_equal(test, other)  # pyright: ignore[reportArgumentType]
+        pd.testing.assert_frame_equal(test, other)

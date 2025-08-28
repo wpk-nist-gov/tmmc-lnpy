@@ -351,7 +351,7 @@ def test_combine_keep_first_xarray_routines(table_dataset: xr.Dataset) -> None:
         combine.keep_first(table_dataset)
 
     with pytest.raises(TypeError, match=r"Unknown .*"):
-        combine.concat_windows(["hello"])  # type: ignore[list-item]  # on purpose error
+        combine.concat_windows(["hello"])  # type: ignore[list-item]  # on purpose error  # pyright: ignore[reportCallIssue,reportArgumentType]
 
 
 def test_combine_keep_first_split(
@@ -412,7 +412,7 @@ def test_combine_keep_first_split_dataset(
             np.testing.assert_allclose(table_dataset["z"], new["z"])
 
     _test_output(
-        combine.keep_first(combine.concat_windows(seq, coord_names="x"), state_name="x")  # type: ignore[type-var]
+        combine.keep_first(combine.concat_windows(seq, coord_names="x"), state_name="x")  # type: ignore[type-var]  # pyright: ignore[reportArgumentType]
     )
 
     # test odd window names:
@@ -585,7 +585,7 @@ def table_updown(rng: np.random.Generator) -> pd.DataFrame:
 
 
 def test_assign_delta_assign_lnpi_from_updown(table_updown: pd.DataFrame) -> None:
-    delta_lnpi = np.log(
+    delta_lnpi = np.log(  # type: ignore[attr-defined]
         table_updown["prob_up"].shift(1) / table_updown["prob_down"]
     ).fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
 

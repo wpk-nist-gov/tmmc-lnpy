@@ -57,14 +57,14 @@ def select_dtype(
             return dtype
         dtype = np.dtype(dtype)
     elif out is not None:
-        dtype = out.dtype  # pyright: ignore[reportUnknownMemberType]
+        dtype = out.dtype
     elif dtype is not None:
         dtype = np.dtype(dtype)
     else:
         dtype = getattr(x, "dtype", np.dtype(np.float64))
 
     if dtype in _ALLOWED_FLOAT_DTYPES:
-        return dtype  # type: ignore[return-value]
+        return dtype  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     msg = f"{dtype=} not supported.  dtype must be conformable to float32 or float64."
     raise ValueError(msg)

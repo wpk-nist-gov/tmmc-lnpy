@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from scipy.optimize import RootResults
+    from typing import Any
 
-    from .typing import NDArrayAny
+    from numpy import floating
+    from scipy.optimize import RootResults
 
 
 # --- Root results ---------------------------------------------------------------------
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 class RootResultDictReq(TypedDict, total=True):
     """Base root results"""
 
-    root: float | NDArrayAny | None
+    root: float | floating[Any]
     iterations: int
     function_calls: int
     converged: bool
@@ -26,11 +27,12 @@ class RootResultDictReq(TypedDict, total=True):
 class RootResultDict(RootResultDictReq, total=False):
     """Interface to :class:`scipy.optimize.RootResults`."""
 
-    residual: float | NDArrayAny
+    residual: float | floating[Any]
 
 
 def rootresults_to_rootresultdict(
-    r: RootResults, residual: float | NDArrayAny | None
+    r: RootResults,
+    residual: float | floating[Any],
 ) -> RootResultDict:
     """Convert :class:`scipy.optimize.RootResults` to typed dictionary"""
     out = RootResultDict(
@@ -38,7 +40,7 @@ def rootresults_to_rootresultdict(
         iterations=r.iterations,
         function_calls=r.function_calls,
         converged=r.converged,
-        flag=r.flag,  # pyright: ignore[reportArgumentType]
+        flag=r.flag,
     )
 
     if residual is not None:

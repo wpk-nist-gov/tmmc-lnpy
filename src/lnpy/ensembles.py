@@ -214,7 +214,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         first: lnPiMasked
         if isinstance(parent, lnPiCollection):
             self._rec_name = parent._concat_dim
-            first = parent._series.iloc[0]  # pyright: ignore[reportAssignmentType]
+            first = parent._series.iloc[0]
         else:
             self._rec_name = None
             first = parent
@@ -302,7 +302,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
 
     @cached_prop
     def coords_state(self) -> dict[str, xr.DataArray]:
-        return {k: self.pi_norm.coords[k] for k in self.dims_state}  # pyright: ignore[reportUnknownMemberType]
+        return {k: self.pi_norm.coords[k] for k in self.dims_state}
 
     @cached_prop
     @xr_name(r"$\beta {\bf \mu}$")
@@ -561,9 +561,9 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
     @cached_meth
     def _argmax_indexer(self) -> tuple[NDArrayAny, ...]:
         x: NDArrayAny = self.pi_norm.to_numpy()
-        xx = x.reshape(x.shape[0], -1)  # pyright: ignore[reportUnknownVariableType]
+        xx = x.reshape(x.shape[0], -1)
         idx_flat = xx.argmax(-1)
-        return np.unravel_index(idx_flat, x.shape[1:])  # pyright: ignore[reportUnknownVariableType]
+        return np.unravel_index(idx_flat, x.shape[1:])
 
     @cached_prop
     def _argmax_indexer_dict(self) -> dict[str, xr.DataArray]:
@@ -603,7 +603,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         # coords = {k : out[k].isel(**{k : v}) for k, v in self._argmax_index_dict.items()}  # noqa: ERA001
 
         if add_n_coords:
-            out = out.assign_coords(self._argmax_indexer_dict)  # pyright: ignore[reportUnknownMemberType]
+            out = out.assign_coords(self._argmax_indexer_dict)
 
         return out
 
@@ -611,7 +611,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
         r"""Maximum value :math:`\max_N \Pi_{\rm norm}(N, meta)`"""
         out = self.pi_norm.isel(self._sample_argmax_indexer_dict)
         if add_n_coords:
-            out = out.assign_coords(self._argmax_indexer_dict)  # pyright: ignore[reportUnknownMemberType]
+            out = out.assign_coords(self._argmax_indexer_dict)
         return out
 
     @cached_meth
@@ -661,7 +661,7 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
     def _betaOmega(self, lnpi_zero: XArrayLike | None = None) -> xr.DataArray:
         if lnpi_zero is None:
             lnpi_zero = self._lnpi_zero
-        return lnpi_zero - np.log(self.pi_sum)  # type: ignore[return-value]
+        return lnpi_zero - np.log(self.pi_sum)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     def betaOmega(self, lnpi_zero: XArrayLike | None = None) -> xr.DataArray:
         r"""
@@ -734,14 +734,14 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
             # raise Value'only mask with unstack')
             pv = self.betapV()
             sample = self._parent._concat_dim
-            return (  # type: ignore[no-any-return] # pyright: ignore[reportUnknownVariableType]
-                pv.unstack(sample)  # pyright: ignore[reportUnknownMemberType]  # noqa: PD010, PD013
-                .pipe(lambda x: x.max("phase") == x)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType]
-                .stack(sample=pv.indexes[sample].names)  # pyright: ignore[reportUnknownMemberType]
-                .loc[pv.indexes["sample"]]  # pyright: ignore[reportUnknownMemberType]
+            return (  # type: ignore[no-any-return]
+                pv.unstack(sample)  # noqa: PD010, PD013
+                .pipe(lambda x: x.max("phase") == x)
+                .stack(sample=pv.indexes[sample].names)
+                .loc[pv.indexes["sample"]]
             )
 
-        return self.betapV().pipe(lambda x: x.max("phase") == x)  # type: ignore[no-any-return,unused-ignore] # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
+        return self.betapV().pipe(lambda x: x.max("phase") == x)  # type: ignore[no-any-return,unused-ignore]
 
     # @cached_meth
     @xr_name(r"$\beta p(\mu,V,T)/\rho$", standard_name="compressibility_factor")
@@ -819,10 +819,10 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
             except Exception:  # noqa: PERF203, BLE001, S110  # pylint: disable=broad-exception-caught
                 pass
 
-        ds: xr.Dataset = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
+        ds: xr.Dataset = xr.merge(out, compat="no_conflicts")
         if "lnz" in keys:
             # if including property lnz, then drop lnz_0, lnz_1,...
-            ds = ds.drop(ds["lnz"]["dims_lnz"])  # pyright: ignore[reportUnknownMemberType]
+            ds = ds.drop(ds["lnz"]["dims_lnz"])
 
         if mask_stable:
             # mask_stable inserts nan in non-stable
@@ -832,9 +832,9 @@ class GrandCanonicalEnsemble:  # noqa: PLR0904
             else:
                 phase = ds.phase
                 ds = (
-                    ds.where(mask)  # pyright: ignore[reportUnknownMemberType]
+                    ds.where(mask)
                     .max("phase")
-                    .assign_coords(phase=lambda x: phase[mask.argmax("phase")])  # noqa: ARG005  # pyright: ignore[reportUnknownLambdaType]
+                    .assign_coords(phase=lambda x: phase[mask.argmax("phase")])  # noqa: ARG005
                 )
 
         if dim_to_suffix is not None:
@@ -920,7 +920,7 @@ class CanonicalEnsemble:
         return (
             self._xge.ncoords
             # NOTE: if don't use '.values', then get extra coords don't want
-            .where(~self._xge.lnpi(np.nan).isnull().to_numpy())  # pyright: ignore[reportUnknownMemberType]  # noqa: PD003
+            .where(~self._xge.lnpi(np.nan).isnull().to_numpy())  # noqa: PD003
         )
 
     @property
@@ -1015,7 +1015,7 @@ class CanonicalEnsemble:
     @cached_meth
     @xr_name(r"$\beta {\bf\mu}({bf n},V,T)$", standard_name="absolute_activity")
     def _betamu(self, lnpi_zero: XArrayLike | None = None) -> xr.DataArray:
-        return xr.concat(  # pyright: ignore[reportUnknownMemberType]
+        return xr.concat(
             [self.betaF(lnpi_zero).differentiate(n) for n in self._xge.dims_n],
             dim=self._xge.dims_comp[0],
         ).assign_attrs(self._xge._standard_attrs)
@@ -1111,7 +1111,7 @@ class CanonicalEnsemble:
             except Exception:  # noqa: PERF203, BLE001, S110  # pylint: disable=broad-exception-caught
                 pass
 
-        ds = xr.merge(out)  # pyright: ignore[reportUnknownMemberType]
+        ds = xr.merge(out, compat="no_conflicts")
 
         if dim_to_suffix is not None:
             if isinstance(dim_to_suffix, str):

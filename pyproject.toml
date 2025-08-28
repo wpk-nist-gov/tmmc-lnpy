@@ -119,6 +119,7 @@ test-notebook = [
 ]
 typecheck = [
     "pandas-stubs",
+    "scipy-stubs; python_version>='3.10'",
     "types-tqdm",
     { include-group = "pylint" },
     { include-group = "pytest" },
@@ -278,10 +279,6 @@ module = [
     "numba.*",
 ]
 
-# [[tool.mypy.overrides]]
-# ignore_errors = true
-# module = [ ]
-
 [tool.pyright]
 include = [
     "src",
@@ -295,16 +292,14 @@ exclude = [
     "**/.mypy_cache",
     "**/.numba_cache",
 ]
-# strict = ["src/lnpy", "noxfile.py", "tools/*.py"]  # TODO(wpk): enable strict mode for src
+typeCheckingMode = "standard"
 strict = [
+    # "src",
+    # "tests",
     "noxfile.py",
     "tools/*.py",
+    # "src/lnpy/core/*.py",
 ]
-pythonVersion = "3.11"
-# useLibraryCodeForTypes = true
-# typeCheckingMode = "strict"
-typeCheckingMode = "basic"
-# enable subset of "strict"
 reportDuplicateImport = true
 reportInvalidStubStatement = true
 reportOverlappingOverload = true
@@ -313,16 +308,10 @@ reportUntypedClassDecorator = true
 reportUntypedFunctionDecorator = true
 reportUntypedNamedTuple = true
 reportUnusedImport = true
-# disable subset of "basic"
-reportGeneralTypeIssues = false
-reportMissingModuleSource = false
-reportOptionalCall = false
-reportOptionalIterable = false
-reportOptionalMemberAccess = false
-reportOptionalOperand = false
-reportOptionalSubscript = false
-reportPrivateImportUsage = false
-reportUnboundVariable = false
+# Extra flags
+enableTypeIgnoreComments = false
+reportUnnecessaryTypeIgnoreComment = true
+reportUnreachable = "warning"
 
 [tool.pytype]
 inputs = [
@@ -367,6 +356,7 @@ reqs = [
     "pre-commit-uv",
     "pyrefly",
     "pyright>=1.1.396",
+    "basedpyright>=1.31.3",
     "scriv",
     "twine>=5.0.0",
     "ty",

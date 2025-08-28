@@ -64,10 +64,10 @@ def _initial_bracket_molfrac(
     if len(ss) > 0:
         left = collection.mloc[ss.index[[-1]]]
     else:
-        index = s.index[[0]] if len(s) > 0 else collection.index[[0]].droplevel("phase")  # pyright: ignore[reportArgumentType]
+        index = s.index[[0]] if len(s) > 0 else collection.index[[0]].droplevel("phase")
         new_lnz = collection.mloc[index]._get_lnz(lnz_idx)
         dlnz_ = dlnz
-        for i in range(ntry):  # noqa: B007
+        for i in range(ntry):
             new_lnz -= dlnz_
             dlnz_ *= dfac
             p = build_phases(new_lnz, ref=ref, **build_kws)
@@ -75,8 +75,10 @@ def _initial_bracket_molfrac(
                 p
             ).to_numpy() < target:
                 left = p
+                ntry_left = i
                 break
-        ntry_left = i
+        else:
+            ntry_left = ntry
 
     if left is None:
         msg = "could not find left bounds"
@@ -90,12 +92,12 @@ def _initial_bracket_molfrac(
         right = collection.mloc[ss.index[[0]]]
     else:
         index = (
-            s.index[[-1]] if len(s) > 0 else collection.index[[-1]].droplevel("phase")  # pyright: ignore[reportArgumentType]
+            s.index[[-1]] if len(s) > 0 else collection.index[[-1]].droplevel("phase")
         )
         new_lnz = collection.mloc[index]._get_lnz(lnz_idx)
         dlnz_ = dlnz
 
-        for i in range(ntry):  # noqa: B007
+        for i in range(ntry):
             new_lnz += dlnz_
             p = build_phases(new_lnz, ref=ref, **build_kws)
             if (not skip_phase_id) and (phase_id not in p._get_level("phase")):
@@ -105,10 +107,12 @@ def _initial_bracket_molfrac(
                 dlnz_ *= 0.5
             elif getter(p).to_numpy() > target:
                 right = p
+                ntry_right = i
                 break
             else:
                 dlnz_ *= dfac
-        ntry_right = i
+        else:
+            ntry_right = ntry
 
     if right is None:
         msg = "could not find right bounds"
@@ -189,7 +193,7 @@ def _solve_lnz_molfrac(
 
     def f(x: float) -> float:
         p = build_phases(x, ref=ref, **build_kws)
-        f.lnpi = p  # type: ignore[attr-defined]
+        f.lnpi = p  # type: ignore[attr-defined]  # pyright: ignore[reportFunctionMemberAccess]
 
         # by not using the ListAccessor,
         # can parallelize
@@ -208,7 +212,7 @@ def _solve_lnz_molfrac(
         msg = "something went wrong with solve"
         raise RuntimeError(msg)
 
-    return f.lnpi, rootresults_to_rootresultdict(r, residual=residual)  # type: ignore[attr-defined]
+    return f.lnpi, rootresults_to_rootresultdict(r, residual=residual)  # type: ignore[attr-defined]  # pyright: ignore[reportFunctionMemberAccess]
 
 
 def find_lnz_molfrac(

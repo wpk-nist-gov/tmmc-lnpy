@@ -111,7 +111,7 @@ class _LocIndexer:
     def __setitem__(
         self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
-        self._parent._series.loc[idx] = values  # pyright: ignore[reportCallIssue,reportArgumentType]
+        self._parent._series.loc[idx] = values
 
 
 # @SeriesWrapper.decorate_accessor("iloc")
@@ -144,7 +144,7 @@ class _iLocIndexer:  # noqa: N801
     def __setitem__(
         self, idx: Any, values: lnPiMasked | pd.Series[Any] | Sequence[lnPiMasked]
     ) -> None:
-        self._parent._series.iloc[idx] = values  # pyright: ignore[reportCallIssue,reportArgumentType]
+        self._parent._series.iloc[idx] = values
 
 
 # @SeriesWrapper.decorate_accessor("query")
@@ -157,7 +157,7 @@ class _Query:
 
     def __init__(self, parent: lnPiCollection) -> None:
         self._parent = parent
-        self._frame: pd.DataFrame = self._parent.index.to_frame().reset_index(drop=True)  # pyright: ignore[reportAttributeAccessIssue]
+        self._frame: pd.DataFrame = self._parent.index.to_frame().reset_index(drop=True)
 
     def __call__(self, expr: str, **kwargs: Any) -> lnPiCollection:
         idx = self._frame.query(expr, **kwargs).index
@@ -294,10 +294,10 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         self._base_class = base_class
         self._verify = self._base_class is not None
 
-        series: pd.Series[Any] = pd.Series(  # type: ignore[misc]
-            data=data,  # type: ignore[arg-type,unused-ignore]
-            index=index,  # type: ignore[arg-type]
-            dtype=dtype,  # type: ignore[arg-type]
+        series: pd.Series[Any] = pd.Series(  # type: ignore[misc]  # pyright: ignore[reportCallIssue]
+            data=data,  # type: ignore[arg-type,unused-ignore]  # pyright: ignore[reportArgumentType]
+            index=index,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+            dtype=dtype,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
             name=name,
         )
         self._verify_series(series)
@@ -369,7 +369,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         return self.series
 
     def __iter__(self) -> Iterator[lnPiMasked]:
-        return iter(self._series)  # pyright: ignore[reportCallIssue,reportArgumentType]
+        return iter(self._series)
 
     @property
     def values(self) -> NDArrayAny:
@@ -418,7 +418,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
     def __getitem__(self, key: Any) -> Self | lnPiMasked:
         """Interface to :meth:`pandas.Series.__getitem__`"""
-        return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)  # type: ignore[return-value]
+        return self._wrapped_pandas_method("__getitem__", wrap=True, key=key)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     def __setitem__(
         self, idx: Any, values: lnPiMasked | Sequence[lnPiMasked] | pd.Series[Any]
@@ -498,7 +498,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         **kwds: Any,
     ) -> Self | pd.Series[Any]:
         """Interface to :meth:`pandas.Series.apply`"""
-        return self._wrapped_pandas_method(  # type: ignore[return-value]
+        return self._wrapped_pandas_method(  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
             "apply",
             wrap=wrap,
             func=func,
@@ -509,7 +509,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
 
     def sort_index(self, *args: Any, **kwargs: Any) -> Self:
         """Interface to :meth:`pandas.Series.sort_index`"""
-        return self._wrapped_pandas_method("sort_index", *args, wrap=True, **kwargs)  # type: ignore[return-value]
+        return self._wrapped_pandas_method("sort_index", *args, wrap=True, **kwargs)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     @overload
     def groupby(
@@ -577,8 +577,8 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         --------
         pandas.Series.groupby
         """
-        group = self.s.groupby(  # type: ignore[call-overload]
-            by=by,  # pyright: ignore[reportArgumentType]
+        group = self.s.groupby(  # type: ignore[call-overload]  # pyright: ignore[reportCallIssue]
+            by=by,
             axis=0,
             level=level,
             as_index=as_index,
@@ -665,11 +665,11 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
                     out[k] = v
             objs = out  # pylint: disable=redefined-variable-type
         else:
-            first, objs = peek_at(objs)  # type: ignore[assignment]
+            first, objs = peek_at(objs)  # type: ignore[assignment]  # pyright: ignore[reportAssignmentType]
             if isinstance(first, cls):
                 objs = (x._series for x in objs)  # pyright: ignore[reportAttributeAccessIssue]
 
-        return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]
+        return pd.concat(objs, **concat_kws)  # type: ignore[return-value,arg-type]  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     def concat_like(
         self,
@@ -759,7 +759,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
             .to_frame()
             .assign(lnz_sample=lambda x: np.arange(len(x)))["lnz_sample"]
         )
-        return (  # pyright: ignore[reportReturnType]
+        return (
             self.index.to_frame()
             .reset_index("phase", drop=True)[["phase"]]
             .assign(lnz_index=lambda x: sample_frame[x.index])
@@ -783,9 +783,9 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         Helper function to.
         returns self.iloc[idx].lnz[component]
         """
-        v: lnPiMasked = (  # pyright: ignore[reportAssignmentType]
-            (self.zloc[zloc]._series if zloc is not None else self._series).iloc[iloc]
-        )
+        v: lnPiMasked = (
+            self.zloc[zloc]._series if zloc is not None else self._series
+        ).iloc[iloc]
         lnz = v.lnz
         if component is not None:
             lnz = lnz[component]
@@ -853,7 +853,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
     ) -> Sequence[Any] | xr.DataArray:
         """Utility to wrap output in :class:xarray.DataArray"""
         if self._xarray_output and isinstance(items[0], xr.DataArray):
-            return xr.concat(items, self.index, coords=self._concat_coords)  # type: ignore[call-overload,no-any-return]
+            return xr.concat(items, self.index, coords=self._concat_coords)
         return items
 
     ##################################################
@@ -968,7 +968,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
                 masks_to_labels(masks, features=features, convention=False, dtype=dtype)
             )
 
-        index = indexes[0].append(indexes[1:])  # type: ignore[no-untyped-call]
+        index = indexes[0].append(indexes[1:])
 
         data = np.stack(labels)
 
@@ -1084,7 +1084,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         labels = []
         lnzs = []
 
-        for _, g in da.groupby(grouper):  # type: ignore[arg-type, unused-ignore]
+        for _, g in da.groupby(grouper):  # type: ignore[arg-type, unused-ignore]  # pyright: ignore[reportArgumentType]
             lnzs.append(np.array([g.coords[k] for k in da.attrs["dims_lnz"]]))
             labels.append(g.values)
 
@@ -1177,7 +1177,7 @@ class lnPiCollection(AccessorMixin):  # noqa: PLR0904, N801
         spin = other.spinodal
         bino = other.binodal
         if append:
-            new = self.append(spin.appender).append(bino.appender)  # type: ignore[arg-type]
+            new = self.append(spin.appender).append(bino.appender)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
             if sort:
                 new = new.sort_index()
         else:

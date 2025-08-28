@@ -56,7 +56,7 @@ def dim_to_suffix_dataarray(
 ) -> xr.Dataset:
     if dim in da.dims:
         return da.assign_coords(  # type: ignore[misc]
-            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]
+            **{dim: lambda x: [f"{x.name}{join}{c}" for c in x[dim].to_numpy()]}  # type: ignore[arg-type]  # pyright: ignore[reportCallIssue]
         ).to_dataset(dim=dim)
     return da.to_dataset()
 
@@ -67,7 +67,7 @@ def dim_to_suffix_dataset(
     out = table
     for k in out:
         if dim in out[k].dims:
-            out = out.drop_vars(k).update(  # type: ignore[arg-type,unused-ignore]
+            out = out.drop_vars(k).update(  # type: ignore[arg-type,unused-ignore]  # pyright: ignore[reportArgumentType]
                 table[k].pipe(dim_to_suffix_dataarray, dim, join)
             )
     return out

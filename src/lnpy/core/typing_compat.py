@@ -1,4 +1,5 @@
 """Handle typing compatibility issues."""
+# pyright: reportUnreachable=false
 
 import sys
 from typing import TYPE_CHECKING, Any  # pylint: disable=unused-import

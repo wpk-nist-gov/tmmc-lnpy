@@ -1,3 +1,3 @@
 """Interface to :mod:`lnpy.stability`"""
 
-from lnpy.stability import *  # noqa: F403 # pyright: ignore  # pylint: disable=wildcard-import,unused-wildcard-import
+from lnpy.stability import *  # noqa: F403  # pylint: disable=wildcard-import,unused-wildcard-import

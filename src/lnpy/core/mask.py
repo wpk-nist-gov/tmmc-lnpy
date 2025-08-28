@@ -20,14 +20,15 @@ if TYPE_CHECKING:
 
 # * Mask conventions ----------------------------------------------------------
 def _convention_to_bool(convention: MaskConvention) -> bool:
+    if isinstance(convention, bool):
+        return convention
     if convention == "image":
-        convention = True
-    elif convention == "masked":
-        convention = False
-    elif not isinstance(convention, bool):
-        msg = f"Bad value {convention} sent to _convention_to_bool"  # type: ignore[unreachable]
-        raise ValueError(msg)
-    return convention
+        return True
+    if convention == "masked":
+        return False
+
+    msg = f"Bad value {convention} sent to _convention_to_bool"  # type: ignore[unreachable]  # pyright: ignore[reportUnreachable]
+    raise ValueError(msg)
 
 
 @overload
@@ -207,7 +208,7 @@ def labels_to_masks(
             # fmt: off
             b = cast(
                 "NDArray[np.bool_]",
-                segmentation.find_boundaries(m.astype(int), **kwargs),  # pyright: ignore[reportUnknownMemberType]
+                segmentation.find_boundaries(m.astype(int), **kwargs),
             )
             # fmt: on
             m |= b

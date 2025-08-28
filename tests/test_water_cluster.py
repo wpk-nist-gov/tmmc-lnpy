@@ -40,7 +40,7 @@ def load_ref():
     # Build the lnPi object
     # DWS Note to self: I'm doing something sloppy here, in that the N values are not specified
     return lnpy.lnPiMasked.from_data(
-        data=data["lnPi"].values,  # type: ignore[arg-type]
+        data=data["lnPi"].to_numpy(),
         fill_value=np.nan,
         lnz=lnz,
         lnz_data=lnz,

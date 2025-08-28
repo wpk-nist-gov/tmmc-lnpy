@@ -97,7 +97,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-a
     @property
     def optinfo(self):
         """All extra properties"""
-        return self._optinfo  # type: ignore[attr-defined]
+        return self._optinfo  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
     @property
     def state_kws(self):
@@ -330,10 +330,10 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-a
         else:
             new = self.copy()
 
-        gaussian_filter(
+        gaussian_filter(  # pyright: ignore[reportCallIssue]
             new.data,
             output=new.data,
-            mode=mode,
+            mode=mode,  # pyright: ignore[reportArgumentType]
             truncate=truncate,
             sigma=sigma,
             **kwargs,
@@ -376,7 +376,7 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-a
     def __setstate__(self, state):
         ma, opt = state
         super().__setstate__(ma)
-        self._optinfo.update(opt)  # type: ignore[attr-defined]
+        self._optinfo.update(opt)  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
     @classmethod
     def from_table(
@@ -499,8 +499,8 @@ class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-a
 
     @cached.prop
     def xge(self) -> GrandCanonicalEnsemble:
-        return GrandCanonicalEnsemble(self)  # type: ignore[arg-type]
+        return GrandCanonicalEnsemble(self)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
     @cached.prop
     def xce(self) -> CanonicalEnsemble:
-        return CanonicalEnsemble(self)  # type: ignore[arg-type]
+        return CanonicalEnsemble(self)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
