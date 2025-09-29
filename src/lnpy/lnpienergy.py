@@ -548,7 +548,7 @@ class wFreeEnergy:  # noqa: N801
 
         `w_tran[i, j]` is the transition energy between phases `i` and `j`.
         """
-        return np.nan_to_num(-self._boundary_max()[1], nan=np.inf)
+        return np.nan_to_num(-self._boundary_max()[1], nan=np.inf)  # type: ignore[no-any-return]
 
     @property
     def w_argtran(self) -> dict[tuple[int, int], _ExtremaArg]:
@@ -676,7 +676,7 @@ class wFreeEnergyCollection:  # noqa: N801
         ws = []
         for _, phases in self._parent.groupby_allbut("phase"):
             indexes.append(phases.index)
-            masks = [x.mask for x in phases.to_numpy()]
+            masks = [x.mask for x in phases.to_numpy()]  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
             ws.append(
                 wFreeEnergy(data=phases.iloc[0].data, masks=masks, convention=False)

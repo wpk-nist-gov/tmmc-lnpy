@@ -23,7 +23,7 @@ from lnpy.extensions import AccessorMixin
 # [ ] : split splitting into separate classes
 
 
-class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):  # type: ignore[type-arg]
+class MaskedlnPiLegacy(np.ma.MaskedArray, AccessorMixin):
     r"""
     Class to store masked version of :math:`\ln\Pi(N)`.
     shape is (N0,N1,...) where Ni is the span of each dimension)

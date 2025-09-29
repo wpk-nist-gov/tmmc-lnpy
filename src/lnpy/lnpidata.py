@@ -71,7 +71,7 @@ def _get_filled(
     dlnz: tuple[float, ...],
     fill_value: float | None = None,
 ) -> np.ma.MaskedArray[Any, np.dtype[Any]]:
-    return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore[no-any-return, no-untyped-call]
+    return _get_maskedarray(base, self, dlnz).filled(fill_value)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
 
 # * lnPiArray -----------------------------------------------------------------
@@ -465,7 +465,7 @@ class lnPiMasked(AccessorMixin):  # noqa: N801
         numpy.ma.MaskedArray.argmax
         numpy.unravel_index
         """
-        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)  # type: ignore[return-value,no-untyped-call]
+        return np.unravel_index(self.ma.argmax(*args, **kwargs), self.shape)  # pyright: ignore[reportReturnType]
 
     # @cached.meth
     def local_max(
