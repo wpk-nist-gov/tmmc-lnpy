@@ -4572,8 +4572,8 @@ viz = [
 [package.metadata]
 requires-dist = [
     { name = "bottleneck" },
-    { name = "cmomy", marker = "extra == 'all'", specifier = ">=0.23.4" },
-    { name = "cmomy", marker = "extra == 'resample'", specifier = ">=0.23.4" },
+    { name = "cmomy", marker = "extra == 'all'", specifier = ">=1.0.1" },
+    { name = "cmomy", marker = "extra == 'resample'", specifier = ">=1.0.1" },
     { name = "dask", extras = ["diagnostics"], marker = "extra == 'all'" },
     { name = "dask", extras = ["diagnostics"], marker = "extra == 'resample'" },
     { name = "importlib-resources", marker = "python_full_version < '3.10'" },

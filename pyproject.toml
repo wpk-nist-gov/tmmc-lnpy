@@ -51,7 +51,7 @@ dependencies = [
 ]
 optional-dependencies.all = [ "tmmc-lnpy[viz,resample]" ]
 optional-dependencies.resample = [
-    "cmomy>=0.23.4",
+    "cmomy>=1.0.1",
     "dask[diagnostics]",
     "netcdf4",
 ]
