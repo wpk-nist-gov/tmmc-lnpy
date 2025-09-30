@@ -30,6 +30,7 @@
 [conda-link]: https://anaconda.org/conda-forge/tmmc-lnpy
 [license-badge]: https://img.shields.io/pypi/l/tmmc-lnpy?color=informational
 [license-link]: https://github.com/usnistgov/tmmc-lnpy/blob/main/LICENSE
+[changelog-link]: https://github.com/usnistgov/tmmc-lnpy/blob/main/CHANGELOG.md
 
 <!-- other links -->
 
@@ -141,6 +142,10 @@ conda install -c conda-forge tmmc-lnpy
 ## Documentation
 
 See the [documentation][docs-link] for a look at `tmmc-lnpy` in action.
+
+## What's new?
+
+See [changelog][changelog-link].
 
 ## License
 
