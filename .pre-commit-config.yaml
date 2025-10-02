@@ -172,6 +172,20 @@ repos:
         files: ^src/lnpy/_lib/.*\.py$
         pass_filenames: false
 
+  # * pooch
+  - repo: local
+    hooks:
+      - id: pooch-registry
+        name: pooch-registry
+        entry:
+          python -c  "import pooch; pooch.make_registry('examples/data',
+          'src/lnpy/data/registry.txt')"
+        language: python
+        additional_dependencies:
+          - pooch >= 1.8.2
+        files: ^examples/data
+        pass_filenames: false
+
   # * Notebook specific --------------------------------------------------------
   # * Strip out metadata from notebooks
   - repo: https://github.com/kynan/nbstripout

@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
+import pooch
 import xarray as xr
 
 from .core.compat import resources
@@ -18,6 +20,7 @@ from .segment import BuildPhasesBase, PhaseCreator
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
+    from pathlib import Path
     from typing import Any, Literal
 
     from .core.typing import NDArrayAny
@@ -26,11 +29,30 @@ if TYPE_CHECKING:
     _ExampleNames = Literal["lj_sub", "lj_sup", "ljmix_sup", "hsmix", "watermof"]
 
 
+_default_pooch_dir = "tmmc-lnpy"
+
+
+@lru_cache
+def _get_pooch() -> pooch.Pooch:
+    obj = pooch.create(
+        path=pooch.os_cache(_default_pooch_dir),
+        # TODO(wpk): update when appropriate
+        base_url="https://github.com/usnistgov/tmmc-lnpy/raw/v0.8.0/src/lnpy/data",
+        registry=None,
+        env="TMMC_LNPY_DATA_DIR",
+    )
+
+    obj.load_registry(resources.files("lnpy.data").joinpath("registry.txt"))
+    return obj
+
+
+def cache_path() -> Path:
+    return _get_pooch().path
+
+
 def json_to_dict(basename: str) -> dict[str, Any]:
     """
-    Load a json file into a dict.
-
-    All files names are relative to 'lnpy/data/'
+    Load an example json file.
 
     Parameters
     ----------
@@ -49,10 +71,9 @@ def json_to_dict(basename: str) -> dict[str, Any]:
     else:
         fopen = open  # type: ignore[assignment]
 
-    with (
-        resources.as_file(resources.files("lnpy.data").joinpath(basename)) as path,
-        fopen(path, "r") as f,
-    ):
+    path = _get_pooch().fetch(basename)
+
+    with fopen(path, "r") as f:
         return json.load(f)  # type: ignore[no-any-return]
 
 

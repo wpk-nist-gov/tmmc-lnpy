@@ -30,9 +30,11 @@ dependencies:
   - numpy
   - orjson
   - pandas-stubs
+  - pooch
   - pylint
   - pytest!=8.4
   - pytest-cov
+  - pytest-env
   - pytest-sugar
   - pytest-xdist
   - scikit-image>=0.21

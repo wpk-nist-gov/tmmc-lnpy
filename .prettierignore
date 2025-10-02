@@ -14,7 +14,7 @@ pyproject.toml
 examples/archived/
 
 # exclude data files
-src/lnpy/data/
+examples/data/
 
 # exclude water_cluster
 tests/water_cluster/

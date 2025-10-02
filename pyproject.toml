@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "tmmc-lnpy"
-version = "0.8.0.post0"
+version = "0.8.0.dev0"
 description = "Analysis of lnPi results from TMMC simulation"
 readme = "README.md"
 keywords = [
@@ -39,6 +39,7 @@ dependencies = [
     "module-utilities>=0.9.0",
     "numba",
     "numpy",
+    "pooch",
     "scikit-image>=0.21",
     "scipy",
     "tqdm",
@@ -71,6 +72,7 @@ dev = [
 ]
 test = [
     "pytest-cov",
+    "pytest-env",
     "pytest-sugar",
     "pytest-xdist",
     { include-group = "pytest" },
@@ -386,6 +388,7 @@ extend-ignore-identifiers-re = [ "NDArray.*" ]
 
 [tool.typos.default.extend-words]
 datas = "datas"
+STABL = "STABL"
 
 [tool.typos.default.extend-identifiers]
 fileprefix_inh = "fileprefix_inh"

@@ -3217,6 +3217,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pooch"
+version = "1.8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "platformdirs" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c6/77/b3d3e00c696c16cf99af81ef7b1f5fe73bd2a307abca41bd7605429fe6e5/pooch-1.8.2.tar.gz", hash = "sha256:76561f0de68a01da4df6af38e9955c4c9d1a5c90da73f7e40276a5728ec83d10", size = 59353, upload-time = "2024-06-06T16:53:46.224Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/87/77cc11c7a9ea9fd05503def69e3d18605852cd0d4b0d3b8f15bbeb3ef1d1/pooch-1.8.2-py3-none-any.whl", hash = "sha256:3529a57096f7198778a5ceefd5ac3ef0e4d06a6ddaf9fc2d609b806f25302c47", size = 64574, upload-time = "2024-06-06T16:53:44.343Z" },
+]
+
+[[package]]
 name = "prompt-toolkit"
 version = "3.0.52"
 source = { registry = "https://pypi.org/simple" }
@@ -3382,6 +3396,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5e/f7/c933acc76f5208b3b00089573cf6a2bc26dc80a8aece8f52bb7d6b1855ca/pytest_cov-7.0.0.tar.gz", hash = "sha256:33c97eda2e049a0c5298e91f519302a1334c26ac65c1a483d6206fd458361af1", size = 54328, upload-time = "2025-09-09T10:57:02.113Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ee/49/1377b49de7d0c1ce41292161ea0f721913fa8722c19fb9c1e3aa0367eecb/pytest_cov-7.0.0-py3-none-any.whl", hash = "sha256:3b8e9558b16cc1479da72058bdecf8073661c7f57f7d3c5f22a1c23507f2d861", size = 22424, upload-time = "2025-09-09T10:57:00.695Z" },
+]
+
+[[package]]
+name = "pytest-env"
+version = "1.1.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/31/27f28431a16b83cab7a636dce59cf397517807d247caa38ee67d65e71ef8/pytest_env-1.1.5.tar.gz", hash = "sha256:91209840aa0e43385073ac464a554ad2947cc2fd663a9debf88d03b01e0cc1cf", size = 8911, upload-time = "2024-09-17T22:39:18.566Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/b8/87cfb16045c9d4092cfcf526135d73b88101aac83bc1adcf82dfb5fd3833/pytest_env-1.1.5-py3-none-any.whl", hash = "sha256:ce90cf8772878515c24b31cd97c7fa1f4481cd68d588419fd45f10ecaee6bc30", size = 6141, upload-time = "2024-09-17T22:39:16.942Z" },
 ]
 
 [[package]]
@@ -3636,10 +3663,10 @@ name = "requests"
 version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "certifi", marker = "python_full_version >= '3.12'" },
-    { name = "charset-normalizer", marker = "python_full_version >= '3.12'" },
-    { name = "idna", marker = "python_full_version >= '3.12'" },
-    { name = "urllib3", marker = "python_full_version >= '3.12'" },
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
+    { name = "urllib3" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf", size = 134517, upload-time = "2025-08-18T20:46:02.573Z" }
 wheels = [
@@ -4429,7 +4456,7 @@ wheels = [
 
 [[package]]
 name = "tmmc-lnpy"
-version = "0.8.0.post0"
+version = "0.8.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "bottleneck", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -4443,6 +4470,7 @@ dependencies = [
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pooch" },
     { name = "scikit-image", version = "0.24.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scikit-image", version = "0.25.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -4490,6 +4518,7 @@ dev = [
     { name = "pytest", marker = "python_full_version >= '3.12'" },
     { name = "pytest-accept", marker = "python_full_version >= '3.12'" },
     { name = "pytest-cov", marker = "python_full_version >= '3.12'" },
+    { name = "pytest-env", marker = "python_full_version >= '3.12'" },
     { name = "pytest-sugar", marker = "python_full_version >= '3.12'" },
     { name = "pytest-xdist", marker = "python_full_version >= '3.12'" },
     { name = "scipy-stubs", version = "1.16.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -4556,12 +4585,14 @@ pytest-accept = [
 test = [
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
 ]
 test-extras = [
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
 ]
@@ -4569,6 +4600,7 @@ test-notebook = [
     { name = "nbval" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
     { name = "tmmc-lnpy", extra = ["viz"] },
@@ -4600,6 +4632,7 @@ requires-dist = [
     { name = "netcdf4", marker = "extra == 'resample'" },
     { name = "numba" },
     { name = "numpy" },
+    { name = "pooch" },
     { name = "scikit-image", specifier = ">=0.21" },
     { name = "scipy" },
     { name = "tmmc-lnpy", extras = ["viz", "resample"], marker = "extra == 'all'" },
@@ -4622,6 +4655,7 @@ dev = [
     { name = "pytest", marker = "python_full_version >= '3.12'", specifier = "!=8.4" },
     { name = "pytest-accept", marker = "python_full_version >= '3.12'" },
     { name = "pytest-cov", marker = "python_full_version >= '3.12'" },
+    { name = "pytest-env", marker = "python_full_version >= '3.12'" },
     { name = "pytest-sugar", marker = "python_full_version >= '3.12'" },
     { name = "pytest-xdist", marker = "python_full_version >= '3.12'" },
     { name = "scipy-stubs", marker = "python_full_version >= '3.12'" },
@@ -4677,12 +4711,14 @@ pytest-accept = [{ name = "pytest-accept" }]
 test = [
     { name = "pytest", specifier = "!=8.4" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
 ]
 test-extras = [
     { name = "pytest", specifier = "!=8.4" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
 ]
@@ -4690,6 +4726,7 @@ test-notebook = [
     { name = "nbval" },
     { name = "pytest", specifier = "!=8.4" },
     { name = "pytest-cov" },
+    { name = "pytest-env" },
     { name = "pytest-sugar" },
     { name = "pytest-xdist" },
     { name = "tmmc-lnpy", extras = ["viz"] },
