@@ -65,11 +65,10 @@ def dim_to_suffix_dataset(
     table: xr.Dataset, dim: Hashable, join: str = "_"
 ) -> xr.Dataset:
     out = table
-    for k in out:
-        if dim in out[k].dims:
-            out = out.drop_vars(k).update(  # type: ignore[arg-type,unused-ignore]  # pyright: ignore[reportArgumentType]
-                table[k].pipe(dim_to_suffix_dataarray, dim, join)
-            )
+    for k, v in table.items():
+        if dim in v.dims:
+            out = out.drop_vars(k)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+            out.update(dim_to_suffix_dataarray(v, dim=dim, join=join))
     return out
 
 

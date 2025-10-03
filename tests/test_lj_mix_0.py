@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-untyped-def, no-untyped-call"
 from pathlib import Path
 
 import numpy as np

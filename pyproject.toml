@@ -235,17 +235,28 @@ untyped_calls_exclude = [
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-    "joblib.*",
-    "skimage.*",
     "bottleneck.*",
+    "IPython.*",
+    "joblib.*",
+    "lnPi.*",
+    "matplotlib.*",
+    "numba.*",
+    "pooch.*",
     "scipy.ndimage.*",
     "scipy.spatial.*",
     "scipy.optimize.*",
     "scipy.sparse.*",
-    "lnPi.*",
-    "IPython.*",
-    "matplotlib.*",
-    "numba.*",
+    "skimage.*",
+]
+
+[[tool.mypy.overrides]]
+strict = false
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+module = [
+    "tests.*",
+    "lnPi.maskedlnpi_legacy.*",
 ]
 
 [tool.pyright]

@@ -47,7 +47,7 @@ def _get_pooch() -> pooch.Pooch:
 
 
 def cache_path() -> Path:
-    return _get_pooch().path
+    return _get_pooch().path  # type: ignore[no-any-return]
 
 
 def json_to_dict(basename: str) -> dict[str, Any]:
