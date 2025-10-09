@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "tmmc-lnpy"
-version = "0.8.0.dev0"
+version = "0.8.1.dev0"
 description = "Analysis of lnPi results from TMMC simulation"
 readme = "README.md"
 keywords = [
@@ -46,7 +46,7 @@ dependencies = [
     "typing-extensions>=4.10.0; python_version<'3.13'",
     "xarray",
 ]
-optional-dependencies.all = [ "tmmc-lnpy[viz,resample]" ]
+optional-dependencies.all = [ "tmmc-lnpy[resample,viz]" ]
 optional-dependencies.resample = [
     "cmomy>=1.0.1",
     "dask[diagnostics]",
@@ -122,6 +122,35 @@ typecheck = [
     { include-group = "pylint" },
     { include-group = "pytest" },
 ]
+
+# * uv -------------------------------------------------------------------------
+
+[tool.uv]
+managed = true
+default-groups = [ "dev" ]
+fork-strategy = "requires-python"
+required-version = ">=0.7.15"
+
+[tool.uv.pip]
+annotation-style = "line"
+generate-hashes = true
+
+[tool.uv.dependency-groups]
+dev.requires-python = ">=3.13"
+docs.requires-python = ">=3.13"
+docs-live.requires-python = ">=3.13"
+docs-spelling.requires-python = ">=3.13"
+# other tools
+ipython.requires-python = ">=3.13"
+mypy.requires-python = ">=3.13"
+notebook.requires-python = ">=3.13"
+nox.requires-python = ">=3.13"
+
+[tool.uv.build-backend]
+source-include = [ "tests/**" ]
+module-name = [ "lnpy", "lnPi" ]
+
+# * Checks ---------------------------------------------------------------------
 
 [tool.nbqa.exclude]
 codespell = "^examples/archived"
@@ -354,33 +383,6 @@ style = "requirements"
 groups = [ "test-extras" ]
 skip-package = true
 python = "all"
-
-# * uv -------------------------------------------------------------------------
-
-[tool.uv]
-managed = true
-default-groups = [ "dev" ]
-fork-strategy = "requires-python"
-required-version = ">=0.7.15"
-
-[tool.uv.pip]
-annotation-style = "line"
-generate-hashes = true
-
-[tool.uv.dependency-groups]
-dev.requires-python = ">=3.12"
-docs.requires-python = ">=3.12"
-docs-live.requires-python = ">=3.12"
-docs-spelling.requires-python = ">=3.12"
-# other tools
-ipython.requires-python = ">=3.12"
-mypy.requires-python = ">=3.12"
-notebook.requires-python = ">=3.12"
-nox.requires-python = ">=3.12"
-
-[tool.uv.build-backend]
-source-include = [ "tests/**" ]
-module-name = [ "lnpy", "lnPi" ]
 
 # * Other tools ----------------------------------------------------------------
 
