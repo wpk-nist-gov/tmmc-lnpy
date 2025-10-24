@@ -157,11 +157,12 @@ codespell = "^examples/archived"
 
 [tool.repo-review]
 ignore = [
-    "GH",    # enable for actions
-    "PC140", # do this externally
-    "PC170", # pygrep
-    "PC901", # ci message
+    "GH",     # enable for actions
+    "PC140",  # do this externally
+    "PC170",  # pygrep
+    "PC901",  # ci message
     "RTD",
+    "NOX103", # I prefer using "nox.options.sessions"
 ]
 
 [tool.check-wheel-contents]
@@ -206,6 +207,7 @@ filterwarnings = [
     "ignore: This process:DeprecationWarning",
     "ignore: Module lnpy was never imported:coverage.exceptions.CoverageWarning",
     "ignore: No data was collected:coverage.exceptions.CoverageWarning",
+    "ignore: importing 'Const' from 'astroid':DeprecationWarning",
 ]
 
 [tool.coverage.run]
@@ -365,7 +367,7 @@ reqs = [
     "pre-commit>=4.0.0",
     "pre-commit-uv",
     "prek",
-    "pyrefly",
+    "pyrefly>=0.37.0",
     "pyright>=1.1.396",
     "basedpyright>=1.31.3",
     "scriv",
